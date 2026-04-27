@@ -1,0 +1,76 @@
+# Multi-Agent Configuration
+
+parameter_experience:
+  enabled: true
+  max_short_term: 100
+  max_long_term: 1000
+  similarity_threshold: 0.7
+  decay_factor: 0.95
+
+optimizer:
+  enabled: true
+  type: "ga"  # "ga" | "rl"
+
+# Genetic Algorithm Configuration
+ga:
+  population_size: 50
+  crossover_rate: 0.8
+  mutation_rate: 0.1
+  max_generations: 100
+  tournament_size: 3
+  elite_size: 2
+
+# Reinforcement Learning Configuration
+rl:
+  algorithm: "q_learning"  # "q_learning" | "dqn" | "policy_gradient"
+  learning_rate: 0.01
+  discount_factor: 0.95
+  epsilon: 0.1
+  epsilon_decay: 0.995
+  epsilon_min: 0.01
+  batch_size: 32
+  memory_size: 10000
+
+workflow:
+  max_iterations: 3
+
+# LLM Configuration (大语言模型配置)
+# 注意：可以在此处直接配置大模型参数，也可以通过 .env 文件配置
+llm:
+  # provider: "openai"  # "openrouter" | "openai" | "anthropic" | "custom"
+  # base_url: "https://api.openai.com/v1"  # 兼容 OpenAI 的代理地址或本地服务 (如 vLLM/Ollama: "http://localhost:11434/v1")
+  # model: "gpt-4o"     # 实际使用的模型名称 (如 deepseek-chat, llama3)
+  # api_key: "your_api_key_here"
+  provider: "openrouter"  # "openrouter" | "openai" | "anthropic" | "custom"
+  base_url: "https://openrouter.ai/api/v1"  # 兼容 OpenAI 的代理地址或本地服务 (如 vLLM/Ollama: "http://localhost:11434/v1")
+  model: "anthropic/claude-opus-4.7"     # 实际使用的模型名称 (如 deepseek-chat, llama3)
+  api_key: "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"
+
+# Knowledge Base (RAG)
+rag:
+  persist_dir: "./chroma_db"
+  collection: "knowledge_base"
+  # embedding_provider: "local"  # "local" | "openai" | "custom"
+  # embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  # embedding_dim: 384
+  # 如果你使用的是 openai 或者 custom 的 embedding，请设置下面的参数：
+  # embedding_provider: "openai"
+  # embedding_model: "text-embedding-3-small" 
+  # embedding_dim: 1536
+  # embedding_base_url: "https://api.openai.com/v1" # 可以选填，如果不填则默认使用 llm 的 base_url
+  # embedding_api_key: "your_embedding_api_key"     # 可以选填，如果不填则默认使用 llm 的 api_key
+
+  embedding_provider: "openrouter"
+  embedding_model: "openai/text-embedding-3-large" 
+  embedding_dim: 1024
+  embedding_base_url: "https://openrouter.ai/api/v1" # 可以选填，如果不填则默认使用 llm 的 base_url
+  embedding_api_key: "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"
+  # 可以选填，如果不填则默认使用 llm 的 api_key
+knowledge_base:
+  matlab_dir: "./knowledge_base/matlab"
+
+# Simulation Engine
+simulation:
+  engine: "octave"  # "python" | "octave" | "matlab"
+  octave_path: "octave"  # or full path like "C:/Program Files/GNU Octave/octave.bat"
+  matlab_path: "matlab"
