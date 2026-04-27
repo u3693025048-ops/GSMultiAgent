@@ -1,0 +1,51 @@
+# Core Dependencies
+numpy>=1.24.0
+python-dotenv>=1.0.0
+# hermes-agent>=1.0.0
+PyYAML>=6.0
+
+# RL Dependencies
+torch>=2.0.0
+
+# RAG Knowledge Base Dependencies
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+# Reflection Agent Dependencies
+langchain-core>=0.2.0
+langchain-openai>=0.1.0
+pydantic>=2.0.0
+
+# LLM Provider Dependencies
+openai>=1.0.0
+anthropic>=0.20.0
+
+# Development & Testing (Optional)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+ruff>=0.1.0
+
+# 需要在当前虚拟环境下的终端导入matlab安装路径，再安装matlabengine
+matlabengine
+
+# pip install git+https://github.com/NousResearch/hermes-agent.git
+
+# ─── Simulation Engine (Optional) ───────────────────────────────────────
+# At least one of the following is recommended for high-fidelity sim;
+# the framework auto-detects which is available and falls back to a
+# pure-Python simulator if none is installed.
+#
+#   GNU Octave (system package — not pip-installable)
+#       Windows: https://www.gnu.org/software/octave/download.html
+#       Ubuntu : sudo apt install octave octave-control
+#
+#   MATLAB Engine API for Python (in-process, fastest)
+#       Requires a local MATLAB installation + valid licence.
+#       Install with:
+#           cd <matlabroot>/extern/engines/python
+#           python -m pip install .
+#       Or, on R2022b+, just:
+#           pip install matlabengine
+#       (PyPI version must match your MATLAB release; see
+#        https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html)

@@ -1,0 +1,51 @@
+{
+  "memory_id": "ba2d730e878d3e9c",
+  "memory_type": "short_term",
+  "task_context": {
+    "task": "guidance_rl_optimization",
+    "algorithm": "PPO",
+    "best_reward": -0.25416666666666665
+  },
+  "parameters": {
+    "dp_w1": 40.0,
+    "dp_zeta1": 0.45,
+    "dp_tao1": 0.2,
+    "dp_w2": 35.0,
+    "dp_zeta2": 0.45,
+    "dp_tao2": 0.2,
+    "dp_w3": 40.0,
+    "dp_zeta3": 0.22,
+    "dp_N_pn": 4.0,
+    "phys_m": 1030.0,
+    "phys_P": 6350.0
+  },
+  "objectives": {
+    "hit_rate": 43.333333333333336,
+    "miss_distance": NaN,
+    "control_energy": 50.0,
+    "pitch_PM": 54.0,
+    "pitch_GM": 8.0,
+    "peak_n": 0.0
+  },
+  "fitness": 1.0,
+  "timestamp": 1778209617.4759912,
+  "metadata": {
+    "optimizer": "MatlabRLOptimizer",
+    "episode_count": 2,
+    "timestamp": 1778209617.4759493,
+    "final_status": "needs_design_path_change",
+    "guidance_params": {
+      "N_pn": 4.0
+    },
+    "autopilot_params": {
+      "w1": 40.0,
+      "zeta1": 0.45,
+      "tao1": 0.2,
+      "w2": 35.0,
+      "zeta2": 0.45,
+      "tao2": 0.2,
+      "w3": 40.0,
+      "zeta3": 0.22
+    }
+  }
+}
