@@ -1,0 +1,152 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-04 16:45:30
+Command     : cli_agent.py --prompt test
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06041645.txt
+================================================================================
+
+2026-06-04 16:45:30 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06041645.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06041645.txt
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-04 16:45:30
+Task: test
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-04 16:45:42 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-04 16:45:42 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-04 16:45:42 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+E:\PythonProject\GSMultiAgent13\.venv\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-04 16:45:42 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_135731.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_142254.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_144411.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 16:45:43 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 3/3 documents
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 3 docs from 'guidance_output\reports'
+  Indexed 3 report file(s) from ./guidance_output/reports (source_tag=reports)
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 16:45:43 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 16:45:44 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-04 16:45:44 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 4/4 documents
+2026-06-04 16:45:44 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 4 docs from 'guidance_output'
+  Indexed 4 report file(s) from ./guidance_output (source_tag=reports)
+2026-06-04 16:45:44 - multi_agent.memory.rag_knowledge_base - INFO - purge_stale_pe_docs: removed 7 non-KB doc(s) from collection.
+  [RAG Purge] Removed 7 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.
+2026-06-04 16:45:44 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:45:44 - multi_agent.memory.parameter_experience - INFO - Successfully loaded Parameter Experience memory from parameter_experience_memory.json
+2026-06-04 16:45:44 - multi_agent.simulation.engine_resolver - WARNING - engine='matlab_engine' but the MATLAB Engine API for Python is not importable.  Install with:
+    cd <matlabroot>/extern/engines/python && python -m pip install .
+2026-06-04 16:45:44 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab_engine'  (matlab.engine=no, matlab.exe=no, octave=no)
+2026-06-04 16:45:44 - langchain_openai.chat_models._client_utils - INFO - langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+
+[Pre-Step] Parsing mission conditions from prompt…
+  [DEBUG] args.prompt = 'test'
+  [DEBUG] parse_mission_conditions → {'T': [0, 1, 2, 3]}
+  Category T (目标机动 (Target Maneuver)): ['T1:匀速直飞', 'T2:低频小幅度机动', 'T3:中频中等幅度机动', 'T4:高频大幅度机动']
+  Initializing Hermes persistent memory...
+2026-06-04 16:45:47 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 0 entries from E:\PythonProject\GSMultiAgent13\guidance_output\hermes_agent_memory.json
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-04 16:45:47 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+  [Startup] Loaded previous RL best params from PE (9 values, fitness=0.7234)
+
+========================================
+Iteration 1/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+  Hermes not available. Skipping task planning.
+  [DEBUG] mission_conditions before build = {'T': [0, 1, 2, 3]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=0;
+  [Pre-RL] PE check — optimizer=ok auto_params=9 keys  script=ok
+  [Pre-RL] Re-simulating PE params under current conditions (nmc=10)…
+2026-06-04 16:45:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=55.0000', 'rl_zeta1=0.7500', 'rl_tao1=0.1200', 'rl_w2=35.0000', 'rl_zeta2=0.7500', 'rl_tao2=0.2000', 'rl_w3=40.0000', 'rl_zeta3=0.7000', 'rl_N_pn=3.5000']
+2026-06-04 16:45:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=0
+2026-06-04 16:45:47 - multi_agent.simulation.matlab_engine_backend - INFO - MATLAB Engine API for Python is not importable (No module named 'matlab'); in-process backend will be unavailable.
+2026-06-04 16:45:47 - multi_agent.simulation.guidance_simulator - WARNING - matlab.engine backend requested but failed to start; subsequent calls will need to fall back to subprocess.
+2026-06-04 16:45:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Engine diagnostic: engine=matlab_engine  matlab_engine_backend=None  matlab_path='matlab'→None  octave_path='octave'→None
+2026-06-04 16:45:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Skipping matlab_engine (Python 3.14 unsupported); using subprocess 'matlab -batch' instead.
+2026-06-04 16:45:47 - multi_agent.rl.matlab_rl_optimizer - WARNING - matlab executable not found; will use internal fallback
+2026-06-04 16:45:47 - multi_agent.rl.matlab_rl_optimizer - WARNING - MATLAB subprocess produced no output; using internal fallback
+2026-06-04 16:45:47 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-04 16:45:47 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-04 16:45:47 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-04 16:45:47 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-04 16:45:47 - multi_agent.simulation.guidance_simulator - WARNING - matlab_engine not found, falling back to Python
+2026-06-04 16:45:47 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260604_164547.json
+2026-06-04 16:45:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] internal_fallback metrics: BW=45.8 PM=57.6
+  [Pre-RL] Fresh sim result: hit=91.0% SEP=6.295m PM=57.6° BW=45.8
+2026-06-04 16:45:47 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+2026-06-04 16:45:47 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+  [Pre-RL] ✓ PE params verified on current conditions — requirements met. Skipping Steps 3-4.
+
+[Step 4] ParameterExperience Writeback & Model File Saving...
+  RL best params persisted (task requirements met (reflection)): miss=6.2952 m, hit=91.0%, PM=57.6 deg.
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Stored memory a1f618b2b8128da7 with fitness 0.1261362228921991
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  Experience written (memory_id=a1f618b2b8128da7, layer=LONG_TERM).
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Promoted memory 0e658ffc4b001e0c to long-term
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Promoted memory 199dee3e519af807 to long-term
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Promoted memory 204ca5831c70cc70 to long-term
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Promoted memory 2f51162b92109d0a to long-term
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:03 - multi_agent.memory.parameter_experience - INFO - Promoted memory 54c5f9ac996fc9de to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory 8e8903ba92d28233 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory 9ab1b957bdfd6c8d to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory af56e60a7ff60ad7 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory b4f14db3968218f7 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory b7dd13d745dfa183 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory c2233893df928f87 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory c702a8c680f2e277 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory cd43f1610d671b34 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory d88d21af4263e751 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory ec7f7d5bca141d68 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory f3a062c9e4cb33de to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory f462546d4cb69f8c to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Promoted memory 398dd15b0fdd57a4 to long-term
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - auto_promote: 18 SHORT_TERM entries promoted to LONG_TERM (composite_score >= 0.400)
+  Auto-promoted 18 short-term entries to LONG_TERM.
+2026-06-04 16:46:04 - multi_agent.memory.parameter_experience - INFO - Saved successful model to: parameter_experience_base\models\long_term\a1f618b2b8128da7_guidance_T4_PN_SL_1780393327.m
+  Successful MATLAB model saved to: parameter_experience_base\models\long_term\a1f618b2b8128da7_guidance_T4_PN_SL_1780393327.m
+  MATLAB model already in model_output: guidance_output\scripts\guidance_T4_PN_SL_1780393327.m
+
+[Step 5] Generating Report...
+  Report saved to: guidance_output\report_20260604_164604.md
+  Latest link  →  guidance_output\report_latest.md
+
+Workflow Complete!
+[0m
+================================================================================
+Finished    : 2026-06-04 16:46:04
+Exit code   : 0
+================================================================================

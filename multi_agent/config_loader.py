@@ -111,6 +111,8 @@ class AblationConfig:
     reflection_agent: bool = True
     hermes_rl_tool: bool = True
     memory_search: bool = True
+    guidance_compat_verification: bool = True
+    syntax_check: bool = True
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AblationConfig":
@@ -128,6 +130,8 @@ class AblationConfig:
             reflection_agent=_flag(data.get("reflection_agent", {})),
             hermes_rl_tool=_flag(data.get("hermes_rl_tool", {})),
             memory_search=_flag(data.get("memory_search", {})),
+            guidance_compat_verification=_flag(data.get("guidance_compat_verification", {})),
+            syntax_check=_flag(data.get("syntax_check", {})),
         )
 
 
@@ -214,9 +218,22 @@ class OptimizerConfig:
 
 
 @dataclass
+class LoggingConfig:
+    verbosity: str = "normal"
+    rl_episode_interval: int = 10
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LoggingConfig":
+        return cls(
+            verbosity=str(data.get("verbosity", "normal")).strip().lower(),
+            rl_episode_interval=int(data.get("rl_episode_interval", 10)),
+        )
+
+
+@dataclass
 class WorkflowConfig:
     """Workflow Configuration"""
-    max_iterations: int = 3
+    max_iterations: int = 4
     hermes_execution: bool = True
     hermes_tool_timeout: Optional[float] = 0.0
 
@@ -225,7 +242,7 @@ class WorkflowConfig:
         _raw = data.get("hermes_tool_timeout", None)
         _timeout = float(_raw) if _raw is not None else 0.0
         return cls(
-            max_iterations=data.get("max_iterations", 3),
+            max_iterations=data.get("max_iterations", 4),
             hermes_execution=data.get("hermes_execution", True),
             hermes_tool_timeout=_timeout,
         )
@@ -245,7 +262,13 @@ class RLRewardConfig:
     sep_mid_threshold: float = 5.0
     # PeakNy
     peak_ny_max: float = 20.0
+    peak_ny_mean_max: float = 20.0
     peak_ny_penalty: float = 1.0
+    peak_ny_progressive_low: float = 15.0
+    hard_truncation_peak_g: float = 35.0
+    baseline_reset_peak_g: float = 40.0
+    # Phase A: SEP above this threshold → no PM/BW reward terms
+    sep_survival_threshold: float = 500.0
     # PM range
     pm_bonus: float = 0.5
     pm_min: float = 30.0
@@ -271,7 +294,14 @@ class RLRewardConfig:
             sep_mid_weight=float(data.get("sep_mid_weight", 1.0)),
             sep_mid_threshold=float(data.get("sep_mid_threshold", 5.0)),
             peak_ny_max=float(data.get("peak_ny_max", 20.0)),
+            peak_ny_mean_max=float(
+                data.get("peak_ny_mean_max", data.get("peak_ny_max", 20.0))
+            ),
             peak_ny_penalty=float(data.get("peak_ny_penalty", 1.0)),
+            peak_ny_progressive_low=float(data.get("peak_ny_progressive_low", 15.0)),
+            hard_truncation_peak_g=float(data.get("hard_truncation_peak_g", 35.0)),
+            baseline_reset_peak_g=float(data.get("baseline_reset_peak_g", 40.0)),
+            sep_survival_threshold=float(data.get("sep_survival_threshold", 500.0)),
             pm_bonus=float(data.get("pm_bonus", 0.5)),
             pm_min=float(data.get("pm_min", 30.0)),
             pm_max=float(data.get("pm_max", 60.0)),
@@ -284,34 +314,211 @@ class RLRewardConfig:
 
 
 @dataclass
+class RLExplorationConfig:
+    pitch_log_std: float = -0.7
+    other_log_std: float = -1.6
+    warm_start_std_scale: float = 0.3
+    baseline_reward_threshold: float = 0.5
+    diverge_penalty_episodes: int = 3
+    diverge_log_std_delta: float = -0.5
+    diverge_reward_threshold: float = -9.5
+    adaptive_enabled: bool = True
+    adaptive_steepness_threshold: float = 2.0
+    adaptive_log_std_min_scale: float = 0.35
+    adaptive_log_std_max_scale: float = 1.0
+    adaptive_ema_alpha: float = 0.3
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RLExplorationConfig":
+        return cls(
+            pitch_log_std=float(data.get("pitch_log_std", -0.7)),
+            other_log_std=float(data.get("other_log_std", -1.6)),
+            warm_start_std_scale=float(data.get("warm_start_std_scale", 0.3)),
+            baseline_reward_threshold=float(data.get("baseline_reward_threshold", 0.5)),
+            diverge_penalty_episodes=int(data.get("diverge_penalty_episodes", 3)),
+            diverge_log_std_delta=float(data.get("diverge_log_std_delta", -0.5)),
+            diverge_reward_threshold=float(data.get("diverge_reward_threshold", -9.5)),
+            adaptive_enabled=bool(data.get("adaptive_enabled", True)),
+            adaptive_steepness_threshold=float(data.get("adaptive_steepness_threshold", 2.0)),
+            adaptive_log_std_min_scale=float(data.get("adaptive_log_std_min_scale", 0.35)),
+            adaptive_log_std_max_scale=float(data.get("adaptive_log_std_max_scale", 1.0)),
+            adaptive_ema_alpha=float(data.get("adaptive_ema_alpha", 0.3)),
+        )
+
+
+@dataclass
+class RLEarlyStopConfig:
+    enabled: bool = True
+    min_episodes: int = 25
+    patience: int = 15
+    reward_plateau_delta: float = 0.05
+    reflect_every: int = 5
+    use_rule_first: bool = True
+    use_multi_criteria_best: bool = True
+    peak_only_patience: int = 25
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RLEarlyStopConfig":
+        return cls(
+            enabled=bool(data.get("enabled", True)),
+            min_episodes=int(data.get("min_episodes", 25)),
+            patience=int(data.get("patience", 15)),
+            reward_plateau_delta=float(data.get("reward_plateau_delta", 0.05)),
+            reflect_every=int(data.get("reflect_every", 5)),
+            use_rule_first=bool(data.get("use_rule_first", True)),
+            use_multi_criteria_best=bool(data.get("use_multi_criteria_best", True)),
+            peak_only_patience=int(data.get("peak_only_patience", 25)),
+        )
+
+
+@dataclass
+class RLConstraintLocalSearchConfig:
+    enabled: bool = True
+    max_steps: int = 50
+    nmc_per_eval: int = 25
+    step_scale: float = 0.08
+    borderline_select: bool = True
+    borderline_hit_min_pct: float = 92.0
+    borderline_sep_max_m: float = 7.0
+    prefer_ppo_best_peak: bool = True
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RLConstraintLocalSearchConfig":
+        return cls(
+            enabled=bool(data.get("enabled", True)),
+            max_steps=int(data.get("max_steps", 50)),
+            nmc_per_eval=int(data.get("nmc_per_eval", 25)),
+            step_scale=float(data.get("step_scale", 0.08)),
+            borderline_select=bool(data.get("borderline_select", True)),
+            borderline_hit_min_pct=float(data.get("borderline_hit_min_pct", 92.0)),
+            borderline_sep_max_m=float(data.get("borderline_sep_max_m", 7.0)),
+            prefer_ppo_best_peak=bool(data.get("prefer_ppo_best_peak", True)),
+        )
+
+
+@dataclass
+class FREPresetConfig:
+    initial_sep: float = 100.0
+    initial_hit_rate: float = 50.0
+    target_sep: float = 7.0
+    target_hit_rate: float = 92.0
+    phase_episodes: int = 20
+    num_phases: int = 3
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "FREPresetConfig":
+        return cls(
+            initial_sep=float(data.get("initial_sep", 100.0)),
+            initial_hit_rate=float(data.get("initial_hit_rate", 50.0)),
+            target_sep=float(data.get("target_sep", 7.0)),
+            target_hit_rate=float(data.get("target_hit_rate", 92.0)),
+            phase_episodes=int(data.get("phase_episodes", 20)),
+            num_phases=int(data.get("num_phases", 3)),
+        )
+
+
+@dataclass
+class FREConfig:
+    default: FREPresetConfig = field(default_factory=FREPresetConfig)
+    t4: Optional[FREPresetConfig] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "FREConfig":
+        t4_raw = data.get("t4")
+        return cls(
+            default=FREPresetConfig.from_dict(data.get("default", {})),
+            t4=FREPresetConfig.from_dict(t4_raw) if t4_raw else None,
+        )
+
+    def preset_for_sub_idx(self, sub_idx: int) -> FREPresetConfig:
+        if sub_idx == 4 and self.t4 is not None:
+            return self.t4
+        return self.default
+
+
+@dataclass
+class RLCheckpointConfig:
+    enabled: bool = True
+    dir: str = "./parameter_experience_base/checkpoints/ppo"
+    save_every_episodes: int = 10
+    keep_last_n: int = 5
+    rolling_window: int = 20
+    stats_log_every: int = 1
+    jsonl_log_dir: str = "logs"
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "RLCheckpointConfig":
+        return cls(
+            enabled=bool(data.get("enabled", True)),
+            dir=str(data.get("dir", "./parameter_experience_base/checkpoints/ppo")),
+            save_every_episodes=int(data.get("save_every_episodes", 10)),
+            keep_last_n=int(data.get("keep_last_n", 5)),
+            rolling_window=int(data.get("rolling_window", 20)),
+            stats_log_every=int(data.get("stats_log_every", 1)),
+            jsonl_log_dir=str(data.get("jsonl_log_dir", "logs")),
+        )
+
+
+@dataclass
 class MatlabRLOptimizerConfig:
-    """PPO-based autopilot parameter optimizer"""
+    """Contextual-bandit / PPO autopilot parameter optimizer"""
+    layer3_strategy: str = "auto"  # 'expert' | 'ppo' | 'auto'
     max_episodes: int = 20
     nmc_per_eval: int = 10
-    episodes_per_update: int = 5
+    nmc_refine: int = 25
+    episodes_per_update: int = 64
     hidden_dim: int = 64
     lr_actor: float = 3e-4
     lr_critic: float = 1e-3
-    gamma: float = 0.99
+    gamma: float = 0.0
     clip_ratio: float = 0.2
+    entropy_coef: float = 0.05
     peak_n_max: float = 20.0
+    peak_ny_mean_max: float = 20.0
     peak_n_penalty: float = 1.0
     reward_weights: RLRewardConfig = field(default_factory=RLRewardConfig)
+    exploration: RLExplorationConfig = field(default_factory=RLExplorationConfig)
+    early_stop: RLEarlyStopConfig = field(default_factory=RLEarlyStopConfig)
+    constraint_local_search: RLConstraintLocalSearchConfig = field(
+        default_factory=RLConstraintLocalSearchConfig
+    )
+    checkpoint: RLCheckpointConfig = field(default_factory=RLCheckpointConfig)
+    # AMRO deprecated (ignored at runtime; kept for config backward compatibility)
+    amro_enabled: bool = False
+    amro_gradient_threshold: float = 0.5
+    amro_forbidden_zone_radius: float = 0.15
+    amro_history_window: int = 10
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "MatlabRLOptimizerConfig":
         return cls(
+            layer3_strategy=str(data.get("layer3_strategy", "auto")),
             max_episodes=data.get("max_episodes", 20),
             nmc_per_eval=data.get("nmc_per_eval", 10),
-            episodes_per_update=data.get("episodes_per_update", 5),
+            nmc_refine=int(data.get("nmc_refine", 25)),
+            episodes_per_update=data.get("episodes_per_update", 64),
             hidden_dim=data.get("hidden_dim", 64),
             lr_actor=float(data.get("lr_actor", 3e-4)),
             lr_critic=float(data.get("lr_critic", 1e-3)),
-            gamma=float(data.get("gamma", 0.99)),
+            gamma=float(data.get("gamma", 0.0)),
             clip_ratio=float(data.get("clip_ratio", 0.2)),
-            peak_n_max=float(data.get("peak_n_max", 20.0)),
+            entropy_coef=float(data.get("entropy_coef", 0.05)),
+            peak_n_max=float(data.get("peak_n_max", data.get("peak_ny_mean_max", 20.0))),
+            peak_ny_mean_max=float(
+                data.get("peak_ny_mean_max", data.get("peak_n_max", 20.0))
+            ),
             peak_n_penalty=float(data.get("peak_n_penalty", 1.0)),
             reward_weights=RLRewardConfig.from_dict(data.get("reward_weights", {})),
+            exploration=RLExplorationConfig.from_dict(data.get("exploration", {})),
+            early_stop=RLEarlyStopConfig.from_dict(data.get("early_stop", {})),
+            constraint_local_search=RLConstraintLocalSearchConfig.from_dict(
+                data.get("constraint_local_search", {})
+            ),
+            checkpoint=RLCheckpointConfig.from_dict(data.get("checkpoint", {})),
+            amro_enabled=data.get("amro_enabled", False),
+            amro_gradient_threshold=float(data.get("amro_gradient_threshold", 0.5)),
+            amro_forbidden_zone_radius=float(data.get("amro_forbidden_zone_radius", 0.15)),
+            amro_history_window=int(data.get("amro_history_window", 10)),
         )
 
 
@@ -337,23 +544,21 @@ class ModelOutputConfig:
 
 @dataclass
 class SimulationConfig:
-    """Simulation engine configuration.
-
-    The ``engine`` field accepts:
-
-    * ``"auto"``           — auto-detect (matlab_engine > matlab > octave > python)
-    * ``"matlab_engine"``  — in-process MATLAB Engine API for Python
-    * ``"matlab"``         — MATLAB CLI subprocess (``matlab -batch ...``)
-    * ``"octave"``         — GNU Octave subprocess
-    * ``"python"``         — pure-Python fallback simulator
-
-    Env vars ``SIMULATION_ENGINE`` / ``MATLAB_PATH`` / ``OCTAVE_PATH``
-    override these values at runtime — see
-    :func:`multi_agent.simulation.engine_resolver.resolve_engine_config`.
-    """
     engine: str = "auto"
     octave_path: str = "octave"
     matlab_path: str = "matlab"
+    prefer_kb_template: bool = False
+    seed_policy: str = "iterative"
+    layer2_script_gate: bool = True
+    layer2_smoke_nmc: int = 5
+    modify_gate_nmc: int = 10
+    physics_bounds_enabled: bool = True
+    physics_bounds_ny_limit_g: float = 20.0
+    physics_bounds_timeout_sec: float = 120.0
+    physics_bounds_skip_deterministic_t4_apn: bool = True
+    matlab_timeout_sec: int = 900
+    matlab_timeout_per_mc_sec: int = 22
+    matlab_timeout_floor_sec: int = 360
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SimulationConfig":
@@ -361,6 +566,91 @@ class SimulationConfig:
             engine=data.get("engine", "auto"),
             octave_path=data.get("octave_path", "octave"),
             matlab_path=data.get("matlab_path", "matlab"),
+            prefer_kb_template=bool(data.get("prefer_kb_template", False)),
+            seed_policy=str(data.get("seed_policy", "iterative")).strip().lower(),
+            layer2_script_gate=bool(data.get("layer2_script_gate", True)),
+            layer2_smoke_nmc=int(data.get("layer2_smoke_nmc", 5)),
+            modify_gate_nmc=int(data.get("modify_gate_nmc", 10)),
+            physics_bounds_enabled=bool(data.get("physics_bounds_enabled", True)),
+            physics_bounds_ny_limit_g=float(data.get("physics_bounds_ny_limit_g", 20.0)),
+            physics_bounds_timeout_sec=float(data.get("physics_bounds_timeout_sec", 120.0)),
+            physics_bounds_skip_deterministic_t4_apn=bool(
+                data.get("physics_bounds_skip_deterministic_t4_apn", True)
+            ),
+            matlab_timeout_sec=int(data.get("matlab_timeout_sec", 900)),
+            matlab_timeout_per_mc_sec=int(data.get("matlab_timeout_per_mc_sec", 22)),
+            matlab_timeout_floor_sec=int(data.get("matlab_timeout_floor_sec", 360)),
+        )
+
+
+@dataclass
+class T4LowRiskConfig:
+    enabled: bool = True
+    deterministic_apn: bool = True
+    deterministic_apn_kb_only: bool = True
+    ny_limit_g: float = 20.0
+    max_w: float = 45.0
+    max_n_pn: float = 4.5
+    modify_fail_peak_g: float = 50.0
+    modify_gate_peak_g: float = 30.0
+    modify_fail_hit_rate_min: float = 85.0
+    gate_near_miss_tune_enabled: bool = True
+    post_modify_first_tune_strategy: str = "expert"
+    post_modify_max_episodes: int = 50
+    post_modify_ppo_max_episodes: int = 40
+    post_modify_expert_rounds: int = 3
+    post_modify_ppo_peak_max_g: float = 40.0
+    post_modify_ppo_hit_min_pct: float = 80.0
+    skip_ppo_expert_sep_max_m: float = 15.0
+    skip_ppo_expert_hit_min_pct: float = 90.0
+    peak_near_miss_g: float = 8.0
+    near_miss_ppo_max_episodes: int = 60
+    first_iter_mode: str = "modify_law"
+    modify_gate_nmc: int = 10
+    pe_store_peak_max_g: float = 25.0
+    pe_store_hit_min_pct: float = 92.0
+    borderline_nmc_revalidate: int = 50
+    conservative_autopilot: Dict[str, float] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "T4LowRiskConfig":
+        cap = data.get("conservative_autopilot") or {}
+        modify_gate_peak = float(data.get("modify_gate_peak_g", 30.0))
+        modify_fail_peak = float(data.get("modify_fail_peak_g", 50.0))
+        modify_gate_hit = data.get(
+            "modify_gate_hit_min_pct", data.get("modify_fail_hit_rate_min", 85.0)
+        )
+        return cls(
+            enabled=bool(data.get("enabled", True)),
+            deterministic_apn=bool(data.get("deterministic_apn", True)),
+            deterministic_apn_kb_only=bool(data.get("deterministic_apn_kb_only", True)),
+            ny_limit_g=float(data.get("ny_limit_g", 20.0)),
+            max_w=float(data.get("max_w", 45.0)),
+            max_n_pn=float(data.get("max_n_pn", 4.5)),
+            modify_fail_peak_g=modify_fail_peak,
+            modify_gate_peak_g=modify_gate_peak,
+            modify_fail_hit_rate_min=float(modify_gate_hit),
+            gate_near_miss_tune_enabled=bool(
+                data.get("gate_near_miss_tune_enabled", True)
+            ),
+            post_modify_first_tune_strategy=str(
+                data.get("post_modify_first_tune_strategy", "expert")
+            ),
+            post_modify_max_episodes=int(data.get("post_modify_max_episodes", 50)),
+            post_modify_ppo_max_episodes=int(data.get("post_modify_ppo_max_episodes", 40)),
+            post_modify_expert_rounds=int(data.get("post_modify_expert_rounds", 3)),
+            post_modify_ppo_peak_max_g=float(data.get("post_modify_ppo_peak_max_g", 40.0)),
+            post_modify_ppo_hit_min_pct=float(data.get("post_modify_ppo_hit_min_pct", 80.0)),
+            skip_ppo_expert_sep_max_m=float(data.get("skip_ppo_expert_sep_max_m", 15.0)),
+            skip_ppo_expert_hit_min_pct=float(data.get("skip_ppo_expert_hit_min_pct", 90.0)),
+            peak_near_miss_g=float(data.get("peak_near_miss_g", 8.0)),
+            near_miss_ppo_max_episodes=int(data.get("near_miss_ppo_max_episodes", 60)),
+            first_iter_mode=str(data.get("first_iter_mode", "modify_law")),
+            modify_gate_nmc=int(data.get("modify_gate_nmc", 10)),
+            pe_store_peak_max_g=float(data.get("pe_store_peak_max_g", 25.0)),
+            pe_store_hit_min_pct=float(data.get("pe_store_hit_min_pct", 92.0)),
+            borderline_nmc_revalidate=int(data.get("borderline_nmc_revalidate", 50)),
+            conservative_autopilot=dict(cap) if isinstance(cap, dict) else {},
         )
 
 
@@ -376,8 +666,11 @@ class AppConfig:
     rag: RAGConfig = field(default_factory=RAGConfig)
     workflow: WorkflowConfig = field(default_factory=WorkflowConfig)
     matlab_rl_optimizer: MatlabRLOptimizerConfig = field(default_factory=MatlabRLOptimizerConfig)
+    fre: FREConfig = field(default_factory=FREConfig)
     model_output: ModelOutputConfig = field(default_factory=ModelOutputConfig)
     simulation: SimulationConfig = field(default_factory=SimulationConfig)
+    t4_low_risk: T4LowRiskConfig = field(default_factory=T4LowRiskConfig)
+    logging: LoggingConfig = field(default_factory=LoggingConfig)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AppConfig":
@@ -391,8 +684,11 @@ class AppConfig:
             rag=RAGConfig.from_dict(data.get("rag", {})),
             workflow=WorkflowConfig.from_dict(data.get("workflow", {})),
             matlab_rl_optimizer=MatlabRLOptimizerConfig.from_dict(data.get("matlab_rl_optimizer", {})),
+            fre=FREConfig.from_dict(data.get("fre", {})),
             model_output=ModelOutputConfig.from_dict(data.get("model_output", {})),
             simulation=SimulationConfig.from_dict(data.get("simulation", {})),
+            t4_low_risk=T4LowRiskConfig.from_dict(data.get("t4_low_risk", {})),
+            logging=LoggingConfig.from_dict(data.get("logging", {})),
         )
 
 

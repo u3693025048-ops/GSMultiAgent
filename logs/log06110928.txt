@@ -1,0 +1,2018 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-11 09:28:35
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06110928.txt
+================================================================================
+
+2026-06-11 09:28:35 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06110928.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06110928.txt
+C:\Users\Lenovo\anaconda3\Lib\site-packages\matlab\__init__.py:158: UserWarning: Python versions 3.9, 3.10, 3.11, and 3.12 are supported, but your version of Python is 3_13
+  warnings.warn('Python versions 3.9, 3.10, 3.11, and 3.12 are supported, but your version of Python is %s' % _version)
+2026-06-11 09:28:35 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-11 09:28:37 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-11 09:28:40 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:28:40 - multi_agent.rl.matlab_rl_optimizer - WARNING - [parse_sim_stdout] hit_rate/SEP at sentinel defaults (0%% / 50m) with no MC evidence in stdout — metrics unreliable for RL
+
+========================================================================
+  GSMultiAgent 启动前检查 (Preflight)
+========================================================================
+  [WARN] python_version: Python 3.13.5 — in-process matlab.engine 可能不可用，建议 simulation.engine=matlab
+         → config.yaml: engine: matlab
+  [OK] imports: 核心依赖 numpy / yaml / torch 可用
+  [OK] config_file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\config.yaml
+  [OK] llm_api_key: LLM 已配置 model=deepseek-v4-pro
+  [OK] ablation_workflow: optimization_workflow / rl_optimization 已启用
+  [OK] layer2_gate_config: layer2_script_gate=true
+  [OK] simulation_engine: engine=matlab  matlab_exe=True  matlab_engine=True  octave=True
+  [OK] knowledge_base: knowledge_base 存在 (4 md, 1 m)
+  [OK] kb_template: monte_carlo_single.m 可用 (338 行)
+  [OK] layer2_gate_code: Layer2 Gate 模块与 force_kb_template 可用
+  [OK] parser: parse_sim_stdout 自检通过（含占位值检测）
+  [OK] guidance_scripts: 已扫描 1 个历史脚本，RL 校验均通过
+  [OK] hermes: Hermes run_agent 可用
+  [OK] cli_agent_gate: cli_agent 已集成 Gate + Preflight
+------------------------------------------------------------------------
+  结论: 无阻断项，有 1 条警告，可继续运行。
+========================================================================
+
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-11 09:28:40
+Task: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+运行工况：RUN_CASE='T'; SUB_IDX=4;
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+命中率     >= 92%
+SEP脱靶量  <= 7 m
+PeakNy峰值法向过载 <= 20 g
+PM相位裕度 在 45°~ 70° 范围内
+BW带宽     在 20 ~ 85 rad/s 范围内
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+设计约束
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 模板要求: 以 monte_carlo_single.m 为基础模板
+   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）
+   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数
+   - rl_N_pn对应制导律参数
+   - base=struct(...) 中引用上述 rl_* 变量
+
+2. 不可大变动的部分（接口与变量可改）:
+   - 六自由度弹道模型（df/rk4f 函数）
+   - 驾驶仪设计函数（cg 函数）
+   - 气动力计算（af 函数）
+   - 控制律（cf 函数）
+
+3. 可选修改:
+   - 制导律（gf 函数）：可修改导引律结构，但接口不变
+   - 初始交战参数（base struct 中的目标/导弹参数）
+
+4.MATLAB代码要求：
+- 要符合matlab语法规范
+- 变量定义完整，且整体一致
+- 不出现未定义变量
+- 保持原有接口兼容
+- 对关键参数和新增项加注释
+
+4. 仿真输出格式要求（RL优化器解析依赖）:
+   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm
+   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg
+   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB
+
+注意：
+若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-11 09:29:02 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-11 09:29:02 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-11 09:29:02 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+C:\Users\Lenovo\anaconda3\Lib\site-packages\chromadb\api\types.py:2830: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-11 09:29:03 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-11 09:29:03 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-11 09:29:03 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_004552.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-11 09:29:03 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_010632.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-11 09:29:03 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_011648.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-11 09:29:03 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_013009.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-11 09:29:03 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-11 09:29:03 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-11 09:29:04 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 5/5 documents
+2026-06-11 09:29:04 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 5 docs from 'guidance_output'
+  Indexed 5 report file(s) from ./guidance_output (source_tag=reports)
+2026-06-11 09:29:04 - multi_agent.memory.rag_knowledge_base - INFO - purge_stale_pe_docs: removed 5 non-KB doc(s) from collection.
+  [RAG Purge] Removed 5 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.
+2026-06-11 09:29:04 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-11 09:29:04 - langchain_openai.chat_models._client_utils - INFO - langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+
+[Pre-Step] Parsing mission conditions from prompt…
+  [DEBUG] args.prompt = "制导系统设计任务（三层架构系统输入示例）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n运行工况：RUN_CASE='T'; SUB_IDX=4;\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n命中率     >= 92%\nSEP脱靶量  <= 7 m\nPeakNy峰值法向过载 <= 20 g\nPM相位裕度 在 45°~ 70° 范围内\nBW带宽     在 20 ~ 85 rad/s 范围内\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n设计约束\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n1. 模板要求: 以 monte_carlo_single.m 为基础模板\n   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）\n   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数\n   - rl_N_pn对应制导律参数\n   - base=struct(...) 中引用上述 rl_* 变量\n\n2. 不可大变动的部分（接口与变量可改）:\n   - 六自由度弹道模型（df/rk4f 函数）\n   - 驾驶仪设计函数（cg 函数）\n   - 气动力计算（af 函数）\n   - 控制律（cf 函数）\n\n3. 可选修改:\n   - 制导律（gf 函数）：可修改导引律结构，但接口不变\n   - 初始交战参数（base struct 中的目标/导弹参数）\n\n4.MATLAB代码要求：\n- 要符合matlab语法规范\n- 变量定义完整，且整体一致\n- 不出现未定义变量\n- 保持原有接口兼容\n- 对关键参数和新增项加注释\n\n4. 仿真输出格式要求（RL优化器解析依赖）:\n   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm\n   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg\n   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB\n\n注意：\n若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明"
+  [DEBUG] parse_mission_conditions → {'T': [4]}
+  Category T (目标机动 (Target Maneuver)): ['4']
+  Initializing Hermes persistent memory...
+2026-06-11 09:29:06 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 6 entries from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+  Loaded 6 long-term memories from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+2026-06-11 09:29:06 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:18120 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (14 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 14 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-11 09:29:09 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+2026-06-11 09:29:10 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'code_execution', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'rl', 'web']
+2026-06-11 09:29:17 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-11 09:29:18 - agent.auxiliary_client - INFO - Auxiliary auto-detect: using main provider custom (deepseek-v4-pro)
+2026-06-11 09:29:18 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] rag_agent → tools: ['rag_query', 'rag_retrieve', 'rag_expand']
+2026-06-11 09:29:18 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] matlab_agent → tools: ['generate_matlab', 'syntax_check_matlab', 'verify_guidance_compat']
+2026-06-11 09:29:18 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] sim_agent → tools: ['run_simulation', 'syntax_check_matlab']
+2026-06-11 09:29:18 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] analysis_agent → tools: ['judge_requirements', 'parameter_experience_best', 'parameter_experience_search']
+2026-06-11 09:29:18 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] memory_agent → tools: ['agent_memory_remember', 'agent_memory_recall', 'agent_memory_list', 'agent_memory_forget']
+2026-06-11 09:29:18 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] Specialized agents registered: ['rag_agent', 'matlab_agent', 'sim_agent', 'analysis_agent', 'memory_agent']
+2026-06-11 09:29:18 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:18120 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (15 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 15 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-11 09:29:19 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+2026-06-11 09:29:20 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'code_execution', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'rl', 'web']
+2026-06-11 09:29:20 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-11 09:29:21 - agent.auxiliary_client - INFO - Auxiliary auto-detect: using main provider custom (deepseek-v4-pro)
+  Hermes initialized with tools (task_prompt auto-injected).
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-11 09:29:21 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-11 09:29:21 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-11 09:29:21 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-11 09:29:21 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-11 09:29:21 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-11 09:29:21 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-11 09:29:21 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 100→7m | HitRate 50→92% | phases=3 x 20 ep
+2026-06-11 09:29:21 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+
+  [Miss Hint] Detected user requirement: miss distance ≤ 7.00 m
+  Note: only the reflection agent's evaluation of ALL stated
+        requirements (PM/GM/hit rate/miss/etc.) will trigger early exit.
+
+========================================
+Iteration 1/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+2026-06-11 09:29:21 - multi_agent.integration.task_planner - INFO - [Planner] Analyzing task with LLM: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━...
+2026-06-11 09:29:21 - multi_agent.integration.task_planner - INFO - [Planner] expert_design_path.md read directly from knowledge_base\expert design path.md (80 chars, full document)
+2026-06-11 09:29:21 - multi_agent.integration.task_planner - INFO - [Planner] monte_mean_2.md read directly from knowledge_base\monte mean results.md (1982 chars)
+2026-06-11 09:29:21 - multi_agent.integration.task_planner - INFO - [Planner] Extracted gf/cg source from monte_carlo_single.m (2391 chars) for structural analysis
+2026-06-11 09:29:21 - multi_agent.integration.task_planner - INFO - [Planner] Using Hermes agent with tools for planning analysis...
+2026-06-11 09:29:21 - run_agent - INFO - conversation turn: session=20260611_092920_e9dcac model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]  任务描述： 制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━...'
+💬 Starting conversation: '[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]
+
+任务描述：
+制导系统设计任务（三层架构系...'
+2026-06-11 09:29:22 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-1 (_call):37956 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+好的，我将严格按照步骤执行。先并行发起步骤1-4的所有检索。2026-06-11 09:29:28 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-1 (_call):37956 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:29:28 - run_agent - INFO - API call #1: model=deepseek-v4-pro provider=custom in=5870 out=482 total=6352 latency=6.9s
+  📞 Tool 1: rag_retrieve(['query', 'detail_level', 'top_k']) - {"query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "detail_level": "snippet", "top_k": 5}
+  [Tool →] call_00_VYjyQbLx84QsXQmaCMOr0067
+2026-06-11 09:29:29 - run_agent - INFO - tool rag_retrieve completed (0.15s, 4252 chars)
+  [Tool ✓] call_00_VYjyQbLx84QsXQmaCMOr0067
+  ✅ Tool 1 completed in 0.15s - {"status": "success", "query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "detail_level": "snippet...
+  📞 Tool 2: rag_retrieve(['query', 'detail_level', 'top_k']) - {"query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "detail_level": "snippet", "top_k"...
+  [Tool →] call_01_R7OwrwB5LTQPLVqJ9mNV2284
+2026-06-11 09:29:31 - run_agent - INFO - tool rag_retrieve completed (0.23s, 4154 chars)
+  [Tool ✓] call_01_R7OwrwB5LTQPLVqJ9mNV2284
+  ✅ Tool 2 completed in 0.23s - {"status": "success", "query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "detail_level...
+  📞 Tool 3: rag_retrieve(['query', 'detail_level', 'top_k']) - {"query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "detail_level": "snippet...
+  [Tool →] call_02_aYIzgXwrIfpYni0Ue8po7895
+2026-06-11 09:29:32 - run_agent - INFO - tool rag_retrieve completed (0.14s, 4301 chars)
+  [Tool ✓] call_02_aYIzgXwrIfpYni0Ue8po7895
+  ✅ Tool 3 completed in 0.14s - {"status": "success", "query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "de...
+  📞 Tool 4: parameter_experience_best(['top_k']) - {"top_k": 5}
+  [Tool →] call_03_bY1nB6SY92uK5Lxphico3476
+2026-06-11 09:29:33 - run_agent - INFO - tool parameter_experience_best completed (0.00s, 116 chars)
+  [Tool ✓] call_03_bY1nB6SY92uK5Lxphico3476
+  ✅ Tool 4 completed in 0.00s - {"status": "success", "task_context": {}, "results_count": 0, "param_ranges_applied": false, "best_e...
+2026-06-11 09:29:33 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-5 (_call):27884 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+步骤4返回空结果（无历史最优参数记录）。现在展开关键文档获取完整信息。2026-06-11 09:29:39 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-5 (_call):27884 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:29:39 - run_agent - INFO - API call #2: model=deepseek-v4-pro provider=custom in=11104 out=317 total=11421 latency=6.7s cache=5760/11104 (52%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\\\conditions.md", "max_chars": 6000}
+  [Tool →] call_00_8P1UYPMT4wyanPRzOLzi0056
+2026-06-11 09:29:39 - multi_agent.memory.rag_knowledge_base - INFO - get_document: fuzzy match 'file:knowledge_base\\conditions.md' → 'file:knowledge_base\conditions.md'
+2026-06-11 09:29:39 - run_agent - INFO - tool rag_expand completed (0.02s, 2313 chars)
+  [Tool ✓] call_00_8P1UYPMT4wyanPRzOLzi0056
+  ✅ Tool 1 completed in 0.02s - {"status": "success", "doc_id": "file:knowledge_base\\\\conditions.md", "metadata": {"source_tag": "...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\\\monte mean results.md", "max_chars": 8000}
+  [Tool →] call_01_fzsCsRzHZUM2qUZYbrHO0625
+2026-06-11 09:29:40 - multi_agent.memory.rag_knowledge_base - INFO - get_document: fuzzy match 'file:knowledge_base\\monte mean results.md' → 'file:knowledge_base\monte mean results.md'
+2026-06-11 09:29:40 - run_agent - INFO - tool rag_expand completed (0.01s, 2367 chars)
+  [Tool ✓] call_01_fzsCsRzHZUM2qUZYbrHO0625
+  ✅ Tool 2 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\\\monte mean results.md", "metadata": {"source...
+2026-06-11 09:29:41 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-6 (_call):39992 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+数据已全部获取，现在进行步骤5-7的分析。
+
+---
+
+## 步骤5 — 逐项比对分析
+
+### 数据源 A：RAG 历史指标（monte mean results.md，默认模板参数，T4子工况）
+
+| 指标 | 实际值 | 要求 | 判定 |
+|------|--------|------|------|
+| 命中率 | 94.0% | ≥92% | ✅ 达标 |
+| SEP | 4.22 m | ≤7 m | ✅ 达标 |
+| PeakNy | **51.53 g** | ≤20 g | ❌ **严重超标 (+157%)** |
+| PM | **77.1°** | [45°, 70°] | ❌ **超标 (+7.1°)** |
+| BW | **6.31 rad/s** | [20, 85] rad/s | ❌ **严重不足 (-68%)** |
+
+### 数据源 B：PE 历史最优参数
+→ **无记录（results_count=0）**，无法用于比对。
+
+### 综合结论
+- 仅有的有效数据源（A）存在 **3/5 指标未达标**，且 PeakNy 和 BW 偏离严重。
+- 无 PE 优化经验可复用。
+
+---
+
+## 步骤6 — mode 决策
+
+- PE(B) 为空 → 跳过前两条规则
+- RAG历史(A) 有 3 项未达标 → 不满足"RAG历史全部达标"
+- 专家路径明确：**"T4路径为修改制导律"**，且 T4 的 PeakNy(51.53g) 超标 157%、BW(6.31)严重不足，仅靠调参（调整 w/ζ/tao）难以同时解决过载过高与带宽过低的矛盾 → **需要修改制导律算法结构（gf函数）**
+
+→ **mode = "MODIFY_LAW"**
+
+---
+
+```json
+{
+  "should_split": false,
+  "strategy": "single",
+  "subagent_count": 1,
+  "subtasks": [
+    "MODIFY_LAW模式：针对T4高频大幅度机动工况修改制导律gf函数，目标为降低峰值过载至≤20g（当前51.53g）、提升带宽至≥20rad/s（当前6.31rad/s）、将相位裕度压入45°~70°范围（当前77.1°），同时维持命中率≥92%和SEP≤7m。基于monte_carlo_single.m模板，保持RL_PARAMS块结构不变，仅重写gf函数体。"
+  ],
+  "subtask_conditions": [
+    "RUN_CASE='T';SUB_IDX=4;"
+  ],
+  "reason": "【数据源A-RAG默认模板T4】命中率94.0%✅ | SEP 4.22m✅ | PeakNy 51.53g❌(超标157%) | PM 77.1°❌(超上限7.1°) | BW 6.31rad/s❌(低于下限68%)。三项未达标且PeakNy/BW偏离严重。【数据源B-PE】无历史最优记录，无可复用参数。【决策】专家路径明确'T4路径为修改制导律'，且PeakNy超标2.5倍以上、BW严重不足，单纯调参（调整w/ζ/tao）无法同时解决过载过高与带宽过低的结构性矛盾，必须修改制导律gf函数（如引入过载限幅、变增益调度等），故选MODIFY_LAW。",
+  "mode": "MODIFY_LAW",
+  "mission_analysis": "T4(高频大幅度机动)是目标机动类别中最剧烈的子工况：目标z向机动幅度120m/s、机动频率1.2rad/s、y向横移60m/s。目标高动态机动导致拦截弹需产生极大法向过载(51.53g)才能命中，远超20g物理/设计约束。同时默认驾驶仪参数(w1=40,zeta1=0.75,tao1=0.20)在T4工况下呈现PM偏高(77.1°)而BW偏低(6.31rad/s)的特征，表明驾驶仪响应迟缓、相位储备过剩但带宽不足以应对高频目标机动。修改方向应聚焦于：①制导律增加过载限幅/饱和处理；②提升驾驶仪响应带宽(增大w参数)；③平衡PM至目标区间。",
+  "mission_conditions": {
+    "T": [4]
+  }
+}
+```2026-06-11 09:30:28 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-6 (_call):39992 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:30:28 - run_agent - INFO - API call #3: model=deepseek-v4-pro provider=custom in=13736 out=2774 total=16510 latency=47.9s cache=11392/13736 (83%)
+🎉 Conversation completed after 3 OpenAI-compatible API call(s)
+2026-06-11 09:30:28 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=3/20 budget=3/20 tool_turns=2 last_msg_role=assistant response_len=1778 session=20260611_092920_e9dcac
+2026-06-11 09:30:28 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 analysis: T4(高频大幅度机动)是目标机动类别中最剧烈的子工况：目标z向机动幅度120m/s、机动频率1.2rad/s、y向横移60m/s。目标高动态机动导致拦截弹需产生极大法向过载(51.53g)才能命中，远超20g物理/设计约束。同时默认驾驶仪参数(w1=40,zeta1=0.75,tao1=0.20)在T4工况下呈现PM偏高(77.1°)而BW偏低(6.31rad/s)的特征，表明驾驶仪响应迟缓、相位
+2026-06-11 09:30:28 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 conditions: {'T': [4]}
+  工况分析 : T4(高频大幅度机动)是目标机动类别中最剧烈的子工况：目标z向机动幅度120m/s、机动频率1.2rad/s、y向横移60m/s。目标高动态机动导致拦截弹需产生极大法向过载(51.53g)才能命中，远超20g物理/设计约束。同时默认驾驶仪参数(w1=40,zeta1=0.75,tao1=0.20)在T4工况下呈现PM偏高(77.1°)而BW偏低(6.31rad/s)的特征，表明驾驶仪响应迟缓、相位储备过剩但带宽不足以应对高频目标机动。修改方向应聚焦于：①制导律增加过载限幅/饱和处理；②提升驾驶仪响应带宽(增大w参数)；③平衡PM至目标区间。
+  工况映射 : {'T': [4]}
+  Plan   : single | mode=MODIFY_LAW | subtasks=1
+  Reason : 【数据源A-RAG默认模板T4】命中率94.0%✅ | SEP 4.22m✅ | PeakNy 51.53g❌(超标157%) | PM 77.1°❌(超上限7.1°) | BW 6.31rad/s❌(低于下限68%)。三项未达标且PeakNy/BW偏离严重。【数据源B-PE】无历史最优记录，无可复用参数。【决策】专家路径明确'T4路径为修改制导律'，且PeakNy超标2.5倍以上、BW严重不足，单纯调参（调整w/ζ/tao）无法同时解决过载过高与带宽过低的结构性矛盾，必须修改制导律gf函数（如引入过载限幅、变增益调度等），故选MODIFY_LAW。
+  Context (3746 chars total, preview):
+[知识库检索结果]
+  [score=0.62, src=monte_carlo_single.m]
+function monte_carlo_single()
+% 单文件蒙特卡洛仿真 | 修改 RUN_CASE 选择工况
+% 'T'目标机动(T0-T3)  'G'交战几何(G0-G4)  'AP'驾驶仪(AP0-AP4)  'R'综合鲁棒(R0-R2)
+clc; close all; rng(42);
+RUN_CASE='ALL'; SUB_IDX=0; N_MC=100; KILL_R=10;
+% RUN_CASE: 'T'|'G'|'AP'|'R' 单类别, 'ALL' 全部类别
+% SUB_IDX:  0=全部子工况, 1=仅第1子工况, 2=仅第2子工况, ...
+
+%% ── RL_PARAMS_BEGIN (auto-patched by RL optimizer, do not edit manually) ──
+rl_w1          = 40;
+rl_zeta1       = 0.75;
+rl_tao1        = 0.20;
+rl_w2          = 35;
+rl_zeta2       = 0.75;
+rl_tao2        = 0.20;
+rl_w3          = 40;
+rl_zeta3       = 0.70;
+r
+2026-06-11 09:30:28 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-11 09:30:28 - run_agent - INFO - conversation turn: session=20260611_092920_e9dcac model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='从以下提示词中提取制导系统的初始参数，返回JSON格式。 任务：制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━━━━━━━━━━━━━━━...'
+💬 Starting conversation: '从以下提示词中提取制导系统的初始参数，返回JSON格式。
+任务：制导系统设计任务（三层架构系统输入示例）
+━━━━━━━...'
+2026-06-11 09:30:29 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-7 (_call):22780 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+让我先获取完整模板内容，提取所有RL_PARAMS默认参数。2026-06-11 09:30:40 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-7 (_call):22780 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:30:40 - run_agent - INFO - API call #4: model=deepseek-v4-pro provider=custom in=5412 out=639 total=6051 latency=11.2s
+  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "monte_carlo_single RL_PARAMS rl_w1 rl_zeta1 rl_tao1 rl_w2 rl_zeta2 rl_tao2 rl_w3 rl_zeta3...
+  [Tool →] call_00_sC0k9oI0aBFczQ9naTgK9324
+2026-06-11 09:30:40 - run_agent - INFO - tool rag_retrieve completed (0.25s, 6477 chars)
+  [Tool ✓] call_00_sC0k9oI0aBFczQ9naTgK9324
+  ✅ Tool 1 completed in 0.25s - {"status": "success", "query": "monte_carlo_single RL_PARAMS rl_w1 rl_zeta1 rl_tao1 rl_w2 rl_zeta2 r...
+2026-06-11 09:30:40 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-9 (_call):40752 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+已获取完整模板内容，提取所有参数如下：
+
+```json
+{
+  "mission_conditions": {
+    "RUN_CASE": "T",
+    "SUB_IDX": 4,
+    "description": "目标机动工况 T4（高频大幅度机动）"
+  },
+  "autopilot_params": {
+    "w1": 40,
+    "zeta1": 0.75,
+    "tao1": 0.20,
+    "w2": 35,
+    "zeta2": 0.75,
+    "tao2": 0.20,
+    "w3": 40,
+    "zeta3": 0.70,
+    "N_pn": 4,
+    "gama_max_deg": 45
+  },
+  "performance_requirements": {
+    "hit_rate_min_pct": 92,
+    "SEP_max_m": 7,
+    "peak_ny_max_g": 20,
+    "PM_range_deg": [45, 70],
+    "BW_range_rads": [20, 85]
+  },
+  "template": "monte_carlo_single.m",
+  "notes": {
+    "sim_config": "N_MC=100, KILL_R=10",
+    "missile_params": "m=231kg, V=4Ma@9km=1200m/s, 弹径d=0.203m, 弹长L=3.66m",
+    "rl_param_mapping": {
+      "w1/zeta1/tao1": "俯仰通道驾驶仪参数",
+      "w2/zeta2/tao2": "偏航通道驾驶仪参数",
+      "w3/zeta3": "滚转通道驾驶仪参数",
+      "N_pn": "比例导引系数",
+      "gama_max_deg": "最大滚转角限制"
+    }
+  }
+}
+```
+
+**参数说明：**
+
+| 参数 | 值 | 含义 |
+|------|-----|------|
+| `w1` | 40 | 俯仰通道自然频率 (rad/s) |
+| `zeta1` | 0.75 | 俯仰通道阻尼比 |
+| `tao1` | 0.20 | 俯仰通道时间常数 (s) |
+| `w2` | 35 | 偏航通道自然频率 (rad/s) |
+| `zeta2` | 0.75 | 偏航通道阻尼比 |
+| `tao2` | 0.20 | 偏航通道时间常数 (s) |
+| `w3` | 40 | 滚转通道自然频率 (rad/s) |
+| `zeta3` | 0.70 | 滚转通道阻尼比 |
+| `N_pn` | 4 | 比例导引系数 |
+| `gama_max_deg` | 45 | 最大滚转角限制 (°) |
+
+**工况 T4（SUB_IDX=4）**：高频大幅度机动 —— 目标z向机动幅度 120 m/s，y向横移 60 m/s，机动频率 1.2 rad/s，是该类别中最严苛的子工况。2026-06-11 09:30:55 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-9 (_call):40752 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:30:55 - run_agent - INFO - API call #5: model=deepseek-v4-pro provider=custom in=9258 out=1078 total=10336 latency=15.4s cache=5376/9258 (58%)
+🎉 Conversation completed after 2 OpenAI-compatible API call(s)
+2026-06-11 09:30:55 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=2/20 budget=2/20 tool_turns=1 last_msg_role=assistant response_len=1335 session=20260611_092920_e9dcac
+  LLM param extraction also failed: Expecting value: line 1 column 1 (char 0)
+  [DEBUG] mission_conditions before build = {'T': [4]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=4;
+
+[Step 2.5] Hermes Content Generation (mode=MODIFY_LAW)...
+  [generate_matlab] Injected 1 analysis context block(s)
+  Running Hermes agent [strategy=single, subtasks=1]...
+2026-06-11 09:30:55 - run_agent - INFO - conversation turn: session=20260611_092920_e9dcac model=deepseek-v4-pro provider=custom platform=unknown history=10 msg='System: You are a missile guidance system orchestrator. Your PRIMARY tool is:   ...'
+💬 Starting conversation: 'System: You are a missile guidance system orchestrator. Your...'
+2026-06-11 09:30:56 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-10 (_call):30812 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+## 分析当前状态
+
+从持久记忆中提取关键结论：
+
+| 版本 | 方案 | 命中率 | SEP | PeakNy | PM | BW | 结果 |
+|------|------|--------|-----|--------|-----|-----|------|
+| v1/v4 | APN+sat, N=4, w1=45 | 96%✅ | 4.09✅ | 19.60✅ | 69.2°✅ | **88.62❌** | BW超3.62 |
+| v3 | APN+sat+强滤波 | 72%❌ | 4.01✅ | 24.39❌ | 53.0°✅ | 30.12✅ | 命中崩 |
+| v5 | APN+sat+极轻滤波τ=0.04 | 96%✅ | 4.09✅ | 19.60✅ | 69.2°✅ | **88.62❌** | 滤波无效 |
+| v6 | 脚本损坏 | — | — | — | — | — | 不可信 |
+
+**核心洞见**：v1/v4 仅 BW=88.62 超标 4.3%，其他四项全部优秀。v5 已证明轻滤波无效。需要新思路。
+
+**新策略**：降低 APN 导航比 N_pn（4→3.5），压缩闭环回路增益，预期 BW 从 88.62 降至 ≤85，同时利用 96%→92% 的 4% 命中率余量。
+
+按 MODIFY_LAW 流程执行：generate_matlab → syntax_check → verify_compat → run_simulation → judge。2026-06-11 09:32:18 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-10 (_call):30812 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:32:18 - run_agent - INFO - API call #6: model=deepseek-v4-pro provider=custom in=24257 out=4247 total=28504 latency=82.5s cache=13696/24257 (56%)
+  📞 Tool 1: call_specialist(['agent_type', 'task', 'context']) - {"agent_type": "matlab_agent", "task": "MODIFY_LAW模式生成T4制导律脚本。\n\n任务描述：T4高频大幅度机动工况（目标z向机动120m/s，频率1....
+  [Tool →] call_00_oQomZmPkOdbpygm3fiF45871
+2026-06-11 09:32:18 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] → matlab_agent | task: MODIFY_LAW模式生成T4制导律脚本。
+
+任务描述：T4高频大幅度机动工况（目标z向机动120m/s，频率1.2rad/s）。基于APN+饱和限幅框架，降低导航比N_pn从4→3.5以压缩闭环带
+2026-06-11 09:32:18 - multi_agent.integration.sub_agent - INFO - [SubAgent:matlab_agent] run — tools: ['generate_matlab', 'verify_guidance_compat', 'syntax_check_matlab'] | task: MODIFY_LAW模式生成T4制导律脚本。
+
+任务描述：T4高频大幅度机动工况（目标z向机动120m/s，频率1.2rad/s）。基于APN+饱和限幅框架，降
+2026-06-11 09:32:18 - run_agent - INFO - conversation turn: session=20260611_092910_7becc4 model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='【子智能体角色：MATLAB制导律设计专家】 可用工具：generate_matlab、syntax_check_matlab、verify_guidance_...'
+💬 Starting conversation: '【子智能体角色：MATLAB制导律设计专家】
+可用工具：generate_matlab、syntax_check_mat...'
+2026-06-11 09:32:18 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-11 (_call):15568 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:32:28 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-11 (_call):15568 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:32:28 - run_agent - INFO - API call #1: model=deepseek-v4-pro provider=custom in=2170 out=706 total=2876 latency=10.2s
+  📞 Tool 1: generate_matlab(['script_name', 'task_description', 'mode', 'autopilot_params', 'mission_conditions', 'nmc']) - {"script_name": "guidance_T4_APN_sat_N35", "task_description": "T4高频大幅度机动工况（目标z向机动120m/s，频率1.2rad/s）...
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Using local KB template: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\knowledge_base\matlab\guidance\monte_carlo_single.m
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] MODIFY_LAW: prefer_kb_template — using KB template (src=local:monte_carlo_single.m)
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated 6108-char code analysis of retrieved model for LLM context.
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Injected 6738-char context into task_description (analysis=194, retrieved_code=6108).
+2026-06-11 09:32:28 - multi_agent.integration.t4_low_risk - INFO - [T4LowRisk] Applied deterministic minimal APN gf() for T4
+2026-06-11 09:32:28 - multi_agent.integration.model_generation_agent - INFO - [ModelGen] T4 low-risk: deterministic minimal APN gf() applied (LLM skipped)
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Skip physics bounds (deterministic T4 minimal APN)
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Renamed function declaration 'monte_carlo_single' → 'guidance_T4_APN_sat_N35_1781141548' to match filename
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Stripped 18 annotation line(s) from script → sidecar: guidance_T4_APN_sat_N35_1781141548_interface_check.txt
+2026-06-11 09:32:28 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated script → guidance_output\scripts\guidance_T4_APN_sat_N35_1781141548.m  (source: local:monte_carlo_single.m)
+2026-06-11 09:32:28 - run_agent - INFO - tool generate_matlab completed (0.08s, 398 chars)
+  ✅ Tool 1 completed in 0.08s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_APN_sat_N35_1781141548.m...
+2026-06-11 09:32:29 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-12 (_call):39484 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:32:34 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-12 (_call):39484 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:32:34 - run_agent - INFO - API call #2: model=deepseek-v4-pro provider=custom in=3025 out=306 total=3331 latency=5.7s cache=2048/3025 (68%)
+  📞 Tool 1: syntax_check_matlab(['auto_fix', 'max_fix_attempts', 'script_path']) - {"auto_fix": true, "max_fix_attempts": 3, "script_path": "guidance_output\\scripts\\guidance_T4_APN_...
+2026-06-11 09:32:34 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Sanitizer applied 16 fix(es) to 'guidance_T4_APN_sat_N35_1781141548.m'
+2026-06-11 09:32:34 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=1
+2026-06-11 09:35:03 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM returned identical content — stopping.
+2026-06-11 09:35:03 - run_agent - INFO - tool syntax_check_matlab completed (149.54s, 224 chars)
+  ✅ Tool 1 completed in 149.54s - {"status": "success", "valid": true, "issues": ["以下函数被调用但未在本文件中找到本地定义（若为外部文件请确认文件存在）: ['APN']"], "fi...
+2026-06-11 09:35:04 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-14 (_call):21952 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:35:09 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-14 (_call):21952 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:35:09 - run_agent - INFO - API call #3: model=deepseek-v4-pro provider=custom in=3431 out=323 total=3754 latency=5.2s cache=3328/3431 (97%)
+  📞 Tool 1: verify_guidance_compat(['script_path', 'task_description']) - {"script_path": "guidance_output\\scripts\\guidance_T4_APN_sat_N35_1781141548.m", "task_description"...
+2026-06-11 09:35:09 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Found guidance function 'gf' (1623 chars)
+2026-06-11 09:35:09 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Interface check: pass=True issues=0 warnings=0
+2026-06-11 09:35:09 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Math derivation: law=unknown overall_pass=True
+2026-06-11 09:36:00 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Result: overall=PASS confidence=40 law=unknown
+2026-06-11 09:36:00 - run_agent - INFO - tool verify_guidance_compat completed (50.48s, 2524 chars)
+  ✅ Tool 1 completed in 50.48s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_APN_sat_N35_1781141548.m...
+2026-06-11 09:36:00 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-16 (_call):14956 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:36:15 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-16 (_call):14956 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:36:15 - run_agent - INFO - API call #4: model=deepseek-v4-pro provider=custom in=4987 out=892 total=5879 latency=15.4s cache=3712/4987 (74%)
+🎉 Conversation completed after 4 OpenAI-compatible API call(s)
+2026-06-11 09:36:15 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=4/20 budget=4/20 tool_turns=3 last_msg_role=assistant response_len=715 session=20260611_092910_7becc4
+2026-06-11 09:36:15 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] matlab_agent done (715 chars)
+2026-06-11 09:36:15 - run_agent - INFO - tool call_specialist completed (237.19s, 715 chars)
+  [Tool ✓] call_00_oQomZmPkOdbpygm3fiF45871
+  ✅ Tool 1 completed in 237.19s - ---
+
+## ✅ 三层验证全部通过
+
+| 验证层 | 结果 | 关键指标 |
+|--------|------|----------|
+| ① 接口静态检验 | ✅ PASS | 5项全通过（N1/...
+2026-06-11 09:36:15 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-17 (_call):23104 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+三层验证全部PASS。现在按规则4（compat=PASS直接仿真），执行仿真。2026-06-11 09:36:23 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-17 (_call):23104 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:36:23 - run_agent - INFO - API call #7: model=deepseek-v4-pro provider=custom in=28908 out=408 total=29316 latency=8.3s cache=24192/28908 (84%)
+  📞 Tool 1: call_specialist(['agent_type', 'context', 'task']) - {"agent_type": "sim_agent", "context": "APN+饱和限幅,N_pn=3.5(从4降至3.5压缩BW),w1=45,zeta1=0.6,tao1=0.15,a_m...
+  [Tool →] call_00_h4mFQXlIVPjJyu3cUdYJ9682
+2026-06-11 09:36:23 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] → sim_agent | task: 运行仿真 script_path=guidance_output/scripts/guidance_T4_APN_sat_N35_1781141548.m mission_conditions="RU
+2026-06-11 09:36:23 - multi_agent.integration.sub_agent - INFO - [SubAgent:sim_agent] run — tools: ['syntax_check_matlab', 'run_simulation'] | task: 运行仿真 script_path=guidance_output/scripts/guidance_T4_APN_sat_N35_1781141548.m mi
+2026-06-11 09:36:23 - run_agent - INFO - conversation turn: session=20260611_092910_7becc4 model=deepseek-v4-pro provider=custom platform=unknown history=8 msg='【子智能体角色：仿真执行专家】 可用工具：run_simulation、syntax_check_matlab。 task 中必定包含 script_path ...'
+💬 Starting conversation: '【子智能体角色：仿真执行专家】
+可用工具：run_simulation、syntax_check_matlab。
+tas...'
+2026-06-11 09:36:24 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-18 (_call):38480 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:36:27 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-18 (_call):38480 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:36:27 - run_agent - INFO - API call #5: model=deepseek-v4-pro provider=custom in=6012 out=149 total=6161 latency=3.6s
+  📞 Tool 1: run_simulation(['mission_conditions', 'nmc', 'script_path']) - {"mission_conditions": "RUN_CASE='T';SUB_IDX=4;", "nmc": 25, "script_path": "guidance_output/scripts...
+2026-06-11 09:37:39 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=2609 chars
+2026-06-11 09:37:39 - run_agent - INFO - tool run_simulation completed (72.42s, 5791 chars)
+  ✅ Tool 1 completed in 72.42s - {"status": "success", "script_path": "guidance_output/scripts/guidance_T4_APN_sat_N35_1781141548.m",...
+2026-06-11 09:37:40 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-19 (_call):34724 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:38:08 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-19 (_call):34724 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:38:08 - run_agent - INFO - API call #6: model=deepseek-v4-pro provider=custom in=10441 out=1569 total=12010 latency=28.4s cache=6144/10441 (59%)
+🎉 Conversation completed after 2 OpenAI-compatible API call(s)
+2026-06-11 09:38:08 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=2/20 budget=2/20 tool_turns=4 last_msg_role=assistant response_len=1015 session=20260611_092910_7becc4
+2026-06-11 09:38:08 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] sim_agent done (1015 chars)
+2026-06-11 09:38:08 - run_agent - INFO - tool call_specialist completed (104.43s, 1015 chars)
+  [Tool ✓] call_00_h4mFQXlIVPjJyu3cUdYJ9682
+  ✅ Tool 1 completed in 104.43s - ## 📊 仿真完成 — 25次蒙特卡洛全部执行
+
+### 逐次结果摘要
+
+| Run | 结果 | Miss(m) | PeakNy(g) | PM(°) | BW(r/s) |
+|-----|---...
+2026-06-11 09:38:08 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-20 (_call):24348 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+关键发现：N_pn降至3.5对BW零影响（RL_PARAMS块覆盖了gf中的修改）。现在调用judge_requirements进行最终判定。2026-06-11 09:38:23 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-20 (_call):24348 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:38:23 - run_agent - INFO - API call #8: model=deepseek-v4-pro provider=custom in=29857 out=825 total=30682 latency=15.1s cache=29312/29857 (98%)
+  📞 Tool 1: judge_requirements(['task_prompt', 'metrics', 'script_path']) - {"task_prompt": "制导系统设计任务：RUN_CASE='T'; SUB_IDX=4; T4高频大幅度机动。命中率>=92%, SEP<=7m, PeakNy<=20g, PM∈[45°...
+  [Tool →] call_00_fH4S9N5VFJ2RNTZlbl9j0765
+2026-06-11 09:38:23 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+2026-06-11 09:38:38 - multi_agent.tools.judge_requirements_tool - INFO - [JudgeRequirements] satisfied=False | 命中率 96.0% >= 要求 92.0% [OK]; SEP 4.09m <= 要求 7.00m [OK]; PeakNy(最大值) 25.44g > 要求 20.00g [NG]; PM 69.2deg 在 [45.0, 70.0] [
+2026-06-11 09:38:38 - run_agent - INFO - tool judge_requirements completed (15.43s, 437 chars)
+  [Tool ✓] call_00_fH4S9N5VFJ2RNTZlbl9j0765
+  ✅ Tool 1 completed in 15.43s - {"satisfied": false, "reason": "命中率 96.0% >= 要求 92.0% [OK]; SEP 4.09m <= 要求 7.00m [OK]; PeakNy(最大值) ...
+2026-06-11 09:38:39 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-22 (_call):40388 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+## 最终摘要 — MODIFY_LAW 第7轮：APN(N=3.5)+饱和限幅
+
+---
+
+### ① 制导律设计思路
+
+| 项目 | 内容 |
+|------|------|
+| **律型** | APN（增强比例导引）+ 饱和限幅 |
+| **核心思路** | 基于v4已验证的APN+sat框架（PeakNy 51.53→19.60g, 命中94→96%），尝试降低N_pn从4→3.5以压缩闭环带宽BW从88.62→≤85 rad/s |
+| **gf修改** | `a_cmd = 3.5*Vc*λ̇ + 1.75*a_T_perp`，输出经 `max(min(a_cmd, 20g), -20g)` 限幅 |
+| **驾驶仪参数** | w1=45, ζ1=0.6, τ1=0.15; w2=45, ζ2=0.6, τ2=0.15; w3=45, ζ3=0.55（v4验证值） |
+
+### ② 适配性验证
+
+| 维度 | 结果 | 指标 |
+|------|------|------|
+| 接口静态检验 | ✅ PASS | N1/N2/G1/G2/gc已定义、λ̇存在、R奇点保护 |
+| 代码数学推导 | ✅ PASS | 带宽分离比60.0≥5、PM_worst=81.0°≥30°、τ_norm=0.1167≤0.20 |
+| LLM适配性 | ✅ PASS | STT驾驶仪可正确跟踪制导指令 |
+| **compat_overall** | **PASS** | score=85 |
+
+### ③ 仿真指标（nmc=25）
+
+| 指标 | 本轮结果 | 基线T4 PN | v4 APN(N=4) | 要求 | 判定 |
+|------|---------|----------|-------------|------|------|
+| 命中率 | **96.0%** (24/25) | 94.0% | 96.0% | ≥92% | ✅ |
+| SEP | **4.09 m** | 4.22 | 4.09 | ≤7 m | ✅ |
+| PeakNy(mean) | **19.60 g** | 51.53 | 19.60 | ≤20 g | ✅ |
+| PeakNy(max) | **25.44 g** | — | 25.44 | ≤20 g | ❌ |
+| PM | **69.2°** | 77.1° | 69.2° | [45°,70°] | ✅ |
+| BW | **88.62 rad/s** | 6.31 | 88.62 | [20,85] | ❌ |
+
+### ④ 判定与路径
+
+| 字段 | 值 |
+|------|-----|
+| **satisfied** | **False** |
+| **触因** | PeakNy(max)=25.44g > 20g；BW=88.62 > 85 rad/s |
+| **next_step** | `rl_optimize`（Layer3 RL参数优化） |
+| **关键发现** | N_pn从4→3.5对BW/PM/PeakNy **零影响**——RL_PARAMS块中的rl_N_pn覆盖了gf内的修改。BW在APN+sat框架下恒定88.62，与N_pn(3.5~4)和w1(45~50)均不敏感。MODIFY_LAW路径已穷尽6轮，建议RL优化环节另辟蹊径（如调整w1大幅偏离当前区间或探索非APN结构）。 |
+
+---
+
+```json
+{
+  "satisfied": false,
+  "next_step": "rl_optimize",
+  "mode": "MODIFY_LAW",
+  "round": 7,
+  "law_type": "APN+饱和限幅(N_pn=3.5)",
+  "key_finding": "N_pn降幅对BW零影响(RL_PARAMS块覆盖gf修改); APN+sat框架下BW恒为88.62, MODIFY_LAW路径已穷尽"
+}
+```2026-06-11 09:38:57 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-22 (_call):40388 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-11 09:38:57 - run_agent - INFO - API call #9: model=deepseek-v4-pro provider=custom in=30907 out=1138 total=32045 latency=18.1s cache=29824/30907 (96%)
+🎉 Conversation completed after 4 OpenAI-compatible API call(s)
+2026-06-11 09:38:57 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=4/20 budget=4/20 tool_turns=5 last_msg_role=assistant response_len=1697 session=20260611_092920_e9dcac
+  [Hermes generated script] guidance_T4_APN_sat_N35_1781141548.m
+  [Hermes sim metrics] hit=96.0%  SEP=11.320m  PM=69.2°  BW=88.6r/s
+2026-06-11 09:38:57 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  Hermes response length: 1697 chars
+  No MATLAB code block found in Hermes response.
+  [Layer2→3] Rule-check: 3 metric(s) not met → entering RL
+
+[Layer 2 Gate] Validating script before Layer 3 (smoke nmc=25)…
+2026-06-11 09:38:57 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=1
+2026-06-11 09:40:58 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Wrote LLM-fixed script (5813 chars).
+2026-06-11 09:40:58 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 2/3 — error='' issues=2
+2026-06-11 09:42:00 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Wrote LLM-fixed script (5861 chars).
+2026-06-11 09:42:00 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 3/3 — error='' issues=1
+2026-06-11 09:43:44 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Wrote LLM-fixed script (8051 chars).
+2026-06-11 09:43:44 - multi_agent.integration.layer2_script_gate - INFO - [Layer2Gate] T4 MODIFY closed-loop gate nmc=10
+2026-06-11 09:44:16 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=975 chars
+2026-06-11 09:44:22 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:44:26 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+  [Layer 2 Gate] ✓ Layer2 gate passed (syntax + smoke)
+
+[Layer 3] Optimization Workflow | script=guidance_T4_APN_sat_N35_1781141548.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\05222febc1c9496bb648cd0b983e23e4
+  [Layer 3] Using Hermes script params as warm-start: {'w1': 45.0, 'zeta1': 0.6, 'tao1': 0.15, 'w2': 45.0, 'zeta2': 0.6, 'tao2': 0.15, 'w3': 45.0, 'zeta3': 0.55, 'N_pn': 4.0}
+  [DEBUG Layer3] mission_conditions = {'T': [4]}
+2026-06-11 09:44:26 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Starting | directly_satisfied=False | script=guidance_T4_APN_sat_N35_1781141548.m
+2026-06-11 09:44:26 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Strategy from config: expert
+  [Layer 3] Strategy selected: EXPERT
+2026-06-11 09:44:26 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Optimization strategy: expert
+2026-06-11 09:44:44 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 1 params: w1=40.000 zeta1=0.800 tao1=0.100 w2=40.000 zeta2=0.800 tao2=0.100 w3=45.000 zeta3=0.800 N_pn=4.000 | 当前PM=30°<45°, BW=15<20 rad/s，俯仰通道需要同时提升相位裕度和带宽。按照安全区域选取w1=40以提升带宽至20以上，zeta1=0.8以增强阻尼提升PM，tao1=0.1避开高延迟导致的不稳定。偏航通道与俯仰类似以保证横向SEP，滚转通道选取w3=45、zeta3=0.8控制峰值过载。N_pn=4在推荐范围内，兼顾命中率与峰值过载。
+2026-06-11 09:44:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.0000', 'rl_zeta1=0.8000', 'rl_tao1=0.1000', 'rl_w2=40.0000', 'rl_zeta2=0.8000', 'rl_tao2=0.1000', 'rl_w3=45.0000', 'rl_zeta3=0.8000', 'rl_N_pn=4.0000']
+2026-06-11 09:44:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:44:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Engine diagnostic: engine=matlab  matlab_engine_backend=None  matlab_path='E:\\software\\MATLAB\\R2025a\\extern\\engines\\python\\..\\..\\..\\bin\\win64\\matlab.EXE'→E:\software\MATLAB\R2025a\extern\engines\python\..\..\..\bin\win64\matlab.EXE  octave_path='E:\\software\\Octave-11.1.0\\octave-launch.exe'→E:\software\Octave-11.1.0\octave-launch.exe
+2026-06-11 09:44:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:44:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:45:03 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:45:03 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.96    27.38     37.0     29.59     8.35
+  [  2] Hit     1.36    24.45     43.2     25.07     7.88
+  [  3] Hit     3.13    29.68     60.0     20.99     8.18
+  [  4] Hit     3.59    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.60    34.00     62.0     35.49     8.78
+  [  7] Hit     8.83    27.74     42.6     30.57     6.29
+  [  8] Hit     3.82    36.85     57.4     21.44     9.61
+  [  9] Miss   21.88    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.02    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.18    32.56     35.0     17
+2026-06-11 09:45:03 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 1 → hit=0.0% SEP=50.00m PM=30.0° BW=15.0
+  [Expert] Round 1/5: hit=0.0% SEP=50.00m PeakNy=0.00g PM=30.0° BW=15.0rad/s
+2026-06-11 09:45:08 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-11 09:45:34 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 2 params: w1=35.000 zeta1=0.800 tao1=0.100 w2=35.000 zeta2=0.800 tao2=0.100 w3=35.000 zeta3=0.800 N_pn=4.500 | 提高w1至35以提升BW，同时大幅降低tao1并提高zeta1来修复相位裕度(PM)。偏航通道采用对称设计减小SEP，滚转通道保持稳健防止峰值过载超标。N_pn取4.5以平衡命中率、SEP与过载。
+2026-06-11 09:45:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=35.0000', 'rl_zeta1=0.8000', 'rl_tao1=0.1000', 'rl_w2=35.0000', 'rl_zeta2=0.8000', 'rl_tao2=0.1000', 'rl_w3=35.0000', 'rl_zeta3=0.8000', 'rl_N_pn=4.5000']
+2026-06-11 09:45:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:45:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:45:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:45:53 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:45:53 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.88    27.38     37.0     29.59     8.35
+  [  2] Hit     1.35    24.45     43.2     25.07     7.88
+  [  3] Hit     3.11    29.68     60.0     20.99     8.18
+  [  4] Hit     3.56    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.44    34.00     62.0     35.49     8.78
+  [  7] Hit     8.77    27.74     42.6     30.57     6.29
+  [  8] Hit     3.80    36.85     57.4     21.44     9.61
+  [  9] Miss   21.73    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.92    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.15    32.56     35.0     17
+2026-06-11 09:45:53 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 2 → hit=0.0% SEP=50.00m PM=30.0° BW=15.0
+  [Expert] Round 2/5: hit=0.0% SEP=50.00m PeakNy=0.00g PM=30.0° BW=15.0rad/s
+2026-06-11 09:45:57 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-11 09:46:18 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 3 params: w1=40.000 zeta1=0.800 tao1=0.120 w2=35.000 zeta2=0.800 tao2=0.100 w3=40.000 zeta3=0.800 N_pn=4.000 | 当前PM=30°、BW=15rad/s，不满足要求，命中率为0。俯仰通道w1偏低、阻尼不足或tao1偏大导致稳定裕度差。选取w1=40适当提高带宽，zeta1=0.8增强相位裕度，tao1=0.12保持较小延迟。偏航/滚转取典型值，N_pn=4提升命中率并减小SEP，同时峰值过载远低于上限，风险可控。
+2026-06-11 09:46:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.0000', 'rl_zeta1=0.8000', 'rl_tao1=0.1200', 'rl_w2=35.0000', 'rl_zeta2=0.8000', 'rl_tao2=0.1000', 'rl_w3=40.0000', 'rl_zeta3=0.8000', 'rl_N_pn=4.0000']
+2026-06-11 09:46:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:46:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:46:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:46:35 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:46:35 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.96    27.38     37.0     29.59     8.35
+  [  2] Hit     1.36    24.45     43.2     25.07     7.88
+  [  3] Hit     3.13    29.68     60.0     20.99     8.18
+  [  4] Hit     3.59    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.60    34.00     62.0     35.49     8.78
+  [  7] Hit     8.83    27.74     42.6     30.57     6.29
+  [  8] Hit     3.82    36.85     57.4     21.44     9.61
+  [  9] Miss   21.88    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.02    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.18    32.56     35.0     17
+2026-06-11 09:46:35 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 3 → hit=0.0% SEP=50.00m PM=30.0° BW=15.0
+  [Expert] Round 3/5: hit=0.0% SEP=50.00m PeakNy=0.00g PM=30.0° BW=15.0rad/s
+2026-06-11 09:46:39 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-11 09:47:01 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 4 params: w1=40.000 zeta1=0.800 tao1=0.100 w2=40.000 zeta2=0.800 tao2=0.100 w3=40.000 zeta3=0.800 N_pn=4.000 | 前三轮未变，可能初始参数不在安全区且系统不稳定。本轮将俯仰通道置入安全区域：w1=40, zeta1=0.8, tao1=0.1，预计可同时提升BW到20rad/s以上并将PM拉入45-70°范围。偏航和滚转对称设置以控制SEP和峰值过载，N_pn=4以平衡命中率与过载。
+2026-06-11 09:47:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.0000', 'rl_zeta1=0.8000', 'rl_tao1=0.1000', 'rl_w2=40.0000', 'rl_zeta2=0.8000', 'rl_tao2=0.1000', 'rl_w3=40.0000', 'rl_zeta3=0.8000', 'rl_N_pn=4.0000']
+2026-06-11 09:47:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:47:15 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:47:15 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:47:20 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:47:20 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.96    27.38     37.0     29.59     8.35
+  [  2] Hit     1.36    24.45     43.2     25.07     7.88
+  [  3] Hit     3.13    29.68     60.0     20.99     8.18
+  [  4] Hit     3.59    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.60    34.00     62.0     35.49     8.78
+  [  7] Hit     8.83    27.74     42.6     30.57     6.29
+  [  8] Hit     3.82    36.85     57.4     21.44     9.61
+  [  9] Miss   21.88    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.02    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.18    32.56     35.0     17
+2026-06-11 09:47:20 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 4 → hit=0.0% SEP=50.00m PM=30.0° BW=15.0
+  [Expert] Round 4/5: hit=0.0% SEP=50.00m PeakNy=0.00g PM=30.0° BW=15.0rad/s
+2026-06-11 09:47:27 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-11 09:47:53 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 5 params: w1=40.000 zeta1=0.800 tao1=0.120 w2=40.000 zeta2=0.800 tao2=0.120 w3=40.000 zeta3=0.800 N_pn=4.000 | 提高俯仰带宽(w1)至40以增加BW，增加阻尼(zeta1)并减小时间常数(tao1)以显著改善PM至45°以上；偏航/滚转参数取安全区中间值确保横向SEP与过载受控；N_pn=4在推荐范围内，平衡命中率与峰值过载。
+2026-06-11 09:47:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.0000', 'rl_zeta1=0.8000', 'rl_tao1=0.1200', 'rl_w2=40.0000', 'rl_zeta2=0.8000', 'rl_tao2=0.1200', 'rl_w3=40.0000', 'rl_zeta3=0.8000', 'rl_N_pn=4.0000']
+2026-06-11 09:47:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:48:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:48:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:48:11 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:48:11 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.96    27.38     37.0     29.59     8.35
+  [  2] Hit     1.36    24.45     43.2     25.07     7.88
+  [  3] Hit     3.13    29.68     60.0     20.99     8.18
+  [  4] Hit     3.59    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.60    34.00     62.0     35.49     8.78
+  [  7] Hit     8.83    27.74     42.6     30.57     6.29
+  [  8] Hit     3.82    36.85     57.4     21.44     9.61
+  [  9] Miss   21.88    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.02    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.18    32.56     35.0     17
+2026-06-11 09:48:11 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 5 → hit=0.0% SEP=50.00m PM=30.0° BW=15.0
+  [Expert] Round 5/5: hit=0.0% SEP=50.00m PeakNy=0.00g PM=30.0° BW=15.0rad/s
+2026-06-11 09:48:16 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-11 09:48:16 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Finished 5 rounds without meeting requirements. Best: hit=0.0% SEP=50.00m
+  [Layer 3/Expert] Done 5 rounds | status=needs_iteration | hit=0.0% SEP=50.00m
+  [Layer 3] Expert tuning insufficient → falling back to PPO
+2026-06-11 09:48:16 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Expert insufficient → PPO fallback
+2026-06-11 09:48:16 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 500.0m → 7.0m | HitRate: 10.0% → 92.0%
+2026-06-11 09:48:16 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['500.0', '253.5', '7.0']
+2026-06-11 09:48:16 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['10.0', '51.0', '92.0']
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 500→7m | HitRate 10→92% | phases=3 x 15 ep
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 11 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\05222febc1c9496bb648cd0b983e23e4\guidance_T4_APN_sat_N35_1781141548.m
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Baseline uses PE-retrieved initial params (9 values)
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO - RL networks initialised: state_dim=16, action_dim=9, mode=contextual_bandit(gamma=0), batch=16, entropy_coef=0.02, pitch_std=0.50, other_std=0.20
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] JSONL episode log → logs\rl_episodes_20260611_094816.jsonl
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Contextual-bandit PPO | batch=16 | nmc=25 | gamma=0 | entropy_coef=0.02
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO - Evaluating baseline (PE-retrieved / script params)…
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.0000', 'rl_zeta1=0.6000', 'rl_tao1=0.1500', 'rl_w2=45.0000', 'rl_zeta2=0.6000', 'rl_tao2=0.1500', 'rl_w3=45.0000', 'rl_zeta3=0.5500', 'rl_N_pn=4.0000']
+2026-06-11 09:48:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:48:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:48:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:48:32 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:48:32 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.74    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.07    29.68     60.0     20.99     8.18
+  [  4] Hit     3.52    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   23.13    34.00     62.0     35.49     8.78
+  [  7] Hit     8.65    27.74     42.6     30.57     6.29
+  [  8] Hit     3.75    36.85     57.4     21.44     9.61
+  [  9] Miss   21.44    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.74    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.11    32.56     35.0     17
+2026-06-11 09:48:32 - multi_agent.rl.matlab_rl_optimizer - INFO - Baseline reward=-0.942  metrics={'hit_rate': 0.0, 'SEP': 50.0, 'peak_ny': 0.0, 'pitch_PM': 30.0, 'pitch_BW': 15.0, 'pitch_GM': 6.0, 'miss_distance': 50.0, 'peak_n': 0.0, 'peak_n_max': 0.0, '_parse_incomplete': False, '_sim_source': 'matlab'}
+2026-06-11 09:48:32 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Warm-start exploration shrink ×0.30 (pitch_std≈0.15)
+2026-06-11 09:48:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=36.7336', 'rl_zeta1=0.6110', 'rl_tao1=0.3500', 'rl_w2=45.3025', 'rl_zeta2=0.6113', 'rl_tao2=0.0646', 'rl_w3=20.0000', 'rl_zeta3=0.3500', 'rl_N_pn=3.7020']
+2026-06-11 09:48:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:48:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:48:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:48:50 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:48:50 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.39    27.38     37.0     29.59     8.35
+  [  2] Hit     1.42    24.45     43.2     25.07     7.88
+  [  3] Hit     3.26    29.68     60.0     20.99     8.18
+  [  4] Hit     3.73    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.53    34.00     62.0     35.49     8.78
+  [  7] Hit     9.18    27.74     42.6     30.57     6.29
+  [  8] Hit     3.97    36.85     57.4     21.44     9.61
+  [  9] Miss   22.74    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.57    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.31    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.30    32.56     35.0     17
+2026-06-11 09:48:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 1/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:48:50 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 1/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:48:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=60.0000', 'rl_zeta1=0.5388', 'rl_tao1=0.3500', 'rl_w2=47.5798', 'rl_zeta2=0.9984', 'rl_tao2=0.0912', 'rl_w3=20.0000', 'rl_zeta3=0.3500', 'rl_N_pn=3.2668']
+2026-06-11 09:48:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:49:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:49:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:49:06 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:49:06 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.98    27.38     37.0     29.59     8.35
+  [  2] Hit     1.36    24.45     43.2     25.07     7.88
+  [  3] Hit     3.14    29.68     60.0     20.99     8.18
+  [  4] Hit     3.60    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.65    34.00     62.0     35.49     8.78
+  [  7] Hit     8.85    27.74     42.6     30.57     6.29
+  [  8] Hit     3.83    36.85     57.4     21.44     9.61
+  [  9] Miss   21.93    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.04    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.27    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.18    32.56     35.0     17
+2026-06-11 09:49:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 2/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:49:06 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 2/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:49:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=46.0583', 'rl_zeta1=0.3653', 'rl_tao1=0.3500', 'rl_w2=60.0000', 'rl_zeta2=1.0207', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.4336', 'rl_N_pn=3.0000']
+2026-06-11 09:49:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:49:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:49:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:49:23 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:49:23 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.69    27.38     37.0     29.59     8.35
+  [  2] Hit     1.45    24.45     43.2     25.07     7.88
+  [  3] Hit     3.34    29.68     60.0     20.99     8.18
+  [  4] Hit     3.83    42.39     65.4     29.14     7.68
+  [  5] Hit     0.26    25.60     61.1     22.68     9.33
+  [  6] Miss   25.19    34.00     62.0     35.49     8.78
+  [  7] Hit     9.42    27.74     42.6     30.57     6.29
+  [  8] Hit     4.08    36.85     57.4     21.44     9.61
+  [  9] Miss   23.35    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.96    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.35    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.39    32.56     35.0     17
+2026-06-11 09:49:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 3/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:49:23 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 3/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:49:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=60.0000', 'rl_zeta1=0.4496', 'rl_tao1=0.2933', 'rl_w2=52.6621', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.5122', 'rl_N_pn=3.0000']
+2026-06-11 09:49:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:49:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:49:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:49:41 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:49:41 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.29    27.38     37.0     29.59     8.35
+  [  2] Hit     1.40    24.45     43.2     25.07     7.88
+  [  3] Hit     3.23    29.68     60.0     20.99     8.18
+  [  4] Hit     3.70    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.32    34.00     62.0     35.49     8.78
+  [  7] Hit     9.10    27.74     42.6     30.57     6.29
+  [  8] Hit     3.94    36.85     57.4     21.44     9.61
+  [  9] Miss   22.55    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.44    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.30    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.27    32.56     35.0     17
+2026-06-11 09:49:41 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 4] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:49:41 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 4/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:49:41 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 4/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:49:41 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=37.9490', 'rl_zeta1=0.6567', 'rl_tao1=0.3478', 'rl_w2=60.0000', 'rl_zeta2=1.1448', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.5065', 'rl_N_pn=3.0000']
+2026-06-11 09:49:41 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:49:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:49:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:49:55 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:49:55 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   12.06    27.38     37.0     29.59     8.35
+  [  2] Hit     1.50    24.45     43.2     25.07     7.88
+  [  3] Hit     3.45    29.68     60.0     20.99     8.18
+  [  4] Hit     3.95    42.39     65.4     29.14     7.68
+  [  5] Hit     0.26    25.60     61.1     22.68     9.33
+  [  6] Miss   25.98    34.00     62.0     35.49     8.78
+  [  7] Hit     9.72    27.74     42.6     30.57     6.29
+  [  8] Hit     4.21    36.85     57.4     21.44     9.61
+  [  9] Miss   24.09    38.39     53.6     23.73     5.71
+  [ 10] Miss   15.43    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.39    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.50    32.56     35.0     17
+2026-06-11 09:49:55 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 5/15 | Feasible: 0 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-11 09:49:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 5/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:49:55 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 5/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:49:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=60.0000', 'rl_zeta1=0.5438', 'rl_tao1=0.3500', 'rl_w2=60.0000', 'rl_zeta2=1.0628', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.6554', 'rl_N_pn=3.0000']
+2026-06-11 09:49:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:50:07 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:50:07 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:50:12 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:50:12 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.29    27.38     37.0     29.59     8.35
+  [  2] Hit     1.40    24.45     43.2     25.07     7.88
+  [  3] Hit     3.23    29.68     60.0     20.99     8.18
+  [  4] Hit     3.70    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.32    34.00     62.0     35.49     8.78
+  [  7] Hit     9.10    27.74     42.6     30.57     6.29
+  [  8] Hit     3.94    36.85     57.4     21.44     9.61
+  [  9] Miss   22.55    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.44    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.30    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.27    32.56     35.0     17
+2026-06-11 09:50:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 6/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:50:12 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 6/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:50:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.2674', 'rl_zeta1=0.3500', 'rl_tao1=0.3231', 'rl_w2=48.7558', 'rl_zeta2=1.2000', 'rl_tao2=0.0683', 'rl_w3=20.0000', 'rl_zeta3=0.5907', 'rl_N_pn=3.0000']
+2026-06-11 09:50:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:50:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:50:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:50:31 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:50:31 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.65    27.38     37.0     29.59     8.35
+  [  2] Hit     1.45    24.45     43.2     25.07     7.88
+  [  3] Hit     3.33    29.68     60.0     20.99     8.18
+  [  4] Hit     3.82    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   25.09    34.00     62.0     35.49     8.78
+  [  7] Hit     9.39    27.74     42.6     30.57     6.29
+  [  8] Hit     4.06    36.85     57.4     21.44     9.61
+  [  9] Miss   23.26    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.90    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.34    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.38    32.56     35.0     17
+2026-06-11 09:50:31 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 7] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:50:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 7/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:50:31 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 7/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:50:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.6982', 'rl_zeta1=0.4264', 'rl_tao1=0.3002', 'rl_w2=58.7420', 'rl_zeta2=1.0710', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.5840', 'rl_N_pn=3.0000']
+2026-06-11 09:50:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:50:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:50:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:50:48 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:50:48 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.78    27.38     37.0     29.59     8.35
+  [  2] Hit     1.47    24.45     43.2     25.07     7.88
+  [  3] Hit     3.37    29.68     60.0     20.99     8.18
+  [  4] Hit     3.86    42.39     65.4     29.14     7.68
+  [  5] Hit     0.26    25.60     61.1     22.68     9.33
+  [  6] Miss   25.39    34.00     62.0     35.49     8.78
+  [  7] Hit     9.50    27.74     42.6     30.57     6.29
+  [  8] Hit     4.11    36.85     57.4     21.44     9.61
+  [  9] Miss   23.54    38.39     53.6     23.73     5.71
+  [ 10] Miss   15.08    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.36    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.42    32.56     35.0     17
+2026-06-11 09:50:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 8/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:50:48 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 8/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:50:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=52.0900', 'rl_zeta1=0.6687', 'rl_tao1=0.3047', 'rl_w2=55.1550', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.4613', 'rl_N_pn=3.0000']
+2026-06-11 09:50:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:51:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:51:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:51:06 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:51:06 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.49    27.38     37.0     29.59     8.35
+  [  2] Hit     1.43    24.45     43.2     25.07     7.88
+  [  3] Hit     3.29    29.68     60.0     20.99     8.18
+  [  4] Hit     3.76    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.75    34.00     62.0     35.49     8.78
+  [  7] Hit     9.26    27.74     42.6     30.57     6.29
+  [  8] Hit     4.01    36.85     57.4     21.44     9.61
+  [  9] Miss   22.95    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.70    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.33    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.33    32.56     35.0     17
+2026-06-11 09:51:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 9/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:51:06 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 9/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:51:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=53.6945', 'rl_zeta1=0.5561', 'rl_tao1=0.3500', 'rl_w2=54.2997', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.4400', 'rl_N_pn=3.0000']
+2026-06-11 09:51:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:51:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:51:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:51:24 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:51:24 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.45    27.38     37.0     29.59     8.35
+  [  2] Hit     1.42    24.45     43.2     25.07     7.88
+  [  3] Hit     3.27    29.68     60.0     20.99     8.18
+  [  4] Hit     3.75    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.66    34.00     62.0     35.49     8.78
+  [  7] Hit     9.22    27.74     42.6     30.57     6.29
+  [  8] Hit     3.99    36.85     57.4     21.44     9.61
+  [  9] Miss   22.86    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.64    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.32    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.32    32.56     35.0     17
+2026-06-11 09:51:24 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 10] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:51:24 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 10/15 | Feasible: 0 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-11 09:51:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 10/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:51:24 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 10/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:51:24 - multi_agent.rl.ppo_checkpoint - INFO - [Checkpoint] Saved ep 10 → ./parameter_experience_base/checkpoints/ppo\ppo_20260611_094816_ep00010.json (best_SEP_ever=50.00m, best_reward=-0.942)
+2026-06-11 09:51:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=54.1207', 'rl_zeta1=0.3500', 'rl_tao1=0.3500', 'rl_w2=59.3643', 'rl_zeta2=1.0759', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.6149', 'rl_N_pn=3.0000']
+2026-06-11 09:51:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:51:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:51:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:51:40 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:51:40 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.43    27.38     37.0     29.59     8.35
+  [  2] Hit     1.42    24.45     43.2     25.07     7.88
+  [  3] Hit     3.27    29.68     60.0     20.99     8.18
+  [  4] Hit     3.75    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.63    34.00     62.0     35.49     8.78
+  [  7] Hit     9.21    27.74     42.6     30.57     6.29
+  [  8] Hit     3.99    36.85     57.4     21.44     9.61
+  [  9] Miss   22.84    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.63    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.32    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.31    32.56     35.0     17
+2026-06-11 09:51:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 11/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:51:40 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 11/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:51:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=57.6471', 'rl_zeta1=0.6056', 'rl_tao1=0.3500', 'rl_w2=49.3382', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.4761', 'rl_N_pn=3.0000']
+2026-06-11 09:51:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:51:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:51:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:51:57 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:51:57 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.34    27.38     37.0     29.59     8.35
+  [  2] Hit     1.41    24.45     43.2     25.07     7.88
+  [  3] Hit     3.24    29.68     60.0     20.99     8.18
+  [  4] Hit     3.72    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.44    34.00     62.0     35.49     8.78
+  [  7] Hit     9.14    27.74     42.6     30.57     6.29
+  [  8] Hit     3.96    36.85     57.4     21.44     9.61
+  [  9] Miss   22.66    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.51    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.31    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.29    32.56     35.0     17
+2026-06-11 09:51:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 12/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:51:57 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 12/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:51:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=56.0337', 'rl_zeta1=0.4014', 'rl_tao1=0.3500', 'rl_w2=60.0000', 'rl_zeta2=1.1176', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.5717', 'rl_N_pn=3.0000']
+2026-06-11 09:51:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:52:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:52:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:52:14 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:52:14 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.38    27.38     37.0     29.59     8.35
+  [  2] Hit     1.42    24.45     43.2     25.07     7.88
+  [  3] Hit     3.26    29.68     60.0     20.99     8.18
+  [  4] Hit     3.73    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.52    34.00     62.0     35.49     8.78
+  [  7] Hit     9.17    27.74     42.6     30.57     6.29
+  [  8] Hit     3.97    36.85     57.4     21.44     9.61
+  [  9] Miss   22.74    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.56    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.31    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.30    32.56     35.0     17
+2026-06-11 09:52:14 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 13] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:52:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 13/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:52:14 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 13/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:52:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=58.1926', 'rl_zeta1=0.4590', 'rl_tao1=0.3500', 'rl_w2=59.1120', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.5662', 'rl_N_pn=3.0000']
+2026-06-11 09:52:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:52:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:52:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:52:31 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:52:31 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.33    27.38     37.0     29.59     8.35
+  [  2] Hit     1.41    24.45     43.2     25.07     7.88
+  [  3] Hit     3.24    29.68     60.0     20.99     8.18
+  [  4] Hit     3.71    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.41    34.00     62.0     35.49     8.78
+  [  7] Hit     9.13    27.74     42.6     30.57     6.29
+  [  8] Hit     3.95    36.85     57.4     21.44     9.61
+  [  9] Miss   22.63    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.50    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.31    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.28    32.56     35.0     17
+2026-06-11 09:52:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 14/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:52:31 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 14/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:52:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=48.3309', 'rl_zeta1=0.7391', 'rl_tao1=0.3500', 'rl_w2=56.5545', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.6840', 'rl_N_pn=3.0000']
+2026-06-11 09:52:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:52:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:52:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:52:48 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:52:48 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.61    27.38     37.0     29.59     8.35
+  [  2] Hit     1.44    24.45     43.2     25.07     7.88
+  [  3] Hit     3.32    29.68     60.0     20.99     8.18
+  [  4] Hit     3.80    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   25.01    34.00     62.0     35.49     8.78
+  [  7] Hit     9.36    27.74     42.6     30.57     6.29
+  [  8] Hit     4.05    36.85     57.4     21.44     9.61
+  [  9] Miss   23.19    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.85    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.34    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.36    32.56     35.0     17
+2026-06-11 09:52:48 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 15/15 | Feasible: 0 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-11 09:52:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 15/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:52:48 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 15/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:52:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=60.0000', 'rl_zeta1=0.6429', 'rl_tao1=0.2986', 'rl_w2=59.5103', 'rl_zeta2=1.0458', 'rl_tao2=0.0621', 'rl_w3=20.0000', 'rl_zeta3=0.5910', 'rl_N_pn=3.0000']
+2026-06-11 09:52:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:53:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:53:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:53:05 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:53:05 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.29    27.38     37.0     29.59     8.35
+  [  2] Hit     1.40    24.45     43.2     25.07     7.88
+  [  3] Hit     3.23    29.68     60.0     20.99     8.18
+  [  4] Hit     3.70    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.32    34.00     62.0     35.49     8.78
+  [  7] Hit     9.10    27.74     42.6     30.57     6.29
+  [  8] Hit     3.94    36.85     57.4     21.44     9.61
+  [  9] Miss   22.55    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.44    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.30    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.27    32.56     35.0     17
+2026-06-11 09:53:05 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 16] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:53:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 16/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:53:05 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 16/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:53:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Update] batch=16 actor_loss=0.3297  critic_loss=3.3173  entropy=-2.1396
+2026-06-11 09:53:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.4820', 'rl_zeta1=0.3943', 'rl_tao1=0.3145', 'rl_w2=54.8041', 'rl_zeta2=1.1790', 'rl_tao2=0.0715', 'rl_w3=20.0000', 'rl_zeta3=0.5143', 'rl_N_pn=3.0000']
+2026-06-11 09:53:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:53:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:53:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:53:23 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:53:23 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.71    27.38     37.0     29.59     8.35
+  [  2] Hit     1.46    24.45     43.2     25.07     7.88
+  [  3] Hit     3.35    29.68     60.0     20.99     8.18
+  [  4] Hit     3.84    42.39     65.4     29.14     7.68
+  [  5] Hit     0.26    25.60     61.1     22.68     9.33
+  [  6] Miss   25.23    34.00     62.0     35.49     8.78
+  [  7] Hit     9.44    27.74     42.6     30.57     6.29
+  [  8] Hit     4.09    36.85     57.4     21.44     9.61
+  [  9] Miss   23.39    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.99    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.35    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.39    32.56     35.0     17
+2026-06-11 09:53:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 17/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:53:23 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 17/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:53:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=60.0000', 'rl_zeta1=0.6256', 'rl_tao1=0.3500', 'rl_w2=58.7631', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.5379', 'rl_N_pn=3.0000']
+2026-06-11 09:53:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:53:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:53:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:53:39 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:53:39 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.29    27.38     37.0     29.59     8.35
+  [  2] Hit     1.40    24.45     43.2     25.07     7.88
+  [  3] Hit     3.23    29.68     60.0     20.99     8.18
+  [  4] Hit     3.70    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.32    34.00     62.0     35.49     8.78
+  [  7] Hit     9.10    27.74     42.6     30.57     6.29
+  [  8] Hit     3.94    36.85     57.4     21.44     9.61
+  [  9] Miss   22.55    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.44    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.30    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.27    32.56     35.0     17
+2026-06-11 09:53:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 18/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:53:39 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 18/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:53:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=46.3286', 'rl_zeta1=0.4865', 'rl_tao1=0.3500', 'rl_w2=57.4434', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.6763', 'rl_N_pn=3.0000']
+2026-06-11 09:53:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:53:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:53:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:54:00 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:54:00 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.68    27.38     37.0     29.59     8.35
+  [  2] Hit     1.45    24.45     43.2     25.07     7.88
+  [  3] Hit     3.34    29.68     60.0     20.99     8.18
+  [  4] Hit     3.83    42.39     65.4     29.14     7.68
+  [  5] Hit     0.26    25.60     61.1     22.68     9.33
+  [  6] Miss   25.16    34.00     62.0     35.49     8.78
+  [  7] Hit     9.41    27.74     42.6     30.57     6.29
+  [  8] Hit     4.08    36.85     57.4     21.44     9.61
+  [  9] Miss   23.33    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.94    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.35    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.39    32.56     35.0     17
+2026-06-11 09:54:00 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 19] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:54:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 19/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:54:00 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 19/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:54:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=58.1955', 'rl_zeta1=0.6336', 'rl_tao1=0.3500', 'rl_w2=60.0000', 'rl_zeta2=1.1771', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.6877', 'rl_N_pn=3.0000']
+2026-06-11 09:54:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:54:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:54:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:54:17 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:54:17 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.33    27.38     37.0     29.59     8.35
+  [  2] Hit     1.41    24.45     43.2     25.07     7.88
+  [  3] Hit     3.24    29.68     60.0     20.99     8.18
+  [  4] Hit     3.71    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.41    34.00     62.0     35.49     8.78
+  [  7] Hit     9.13    27.74     42.6     30.57     6.29
+  [  8] Hit     3.95    36.85     57.4     21.44     9.61
+  [  9] Miss   22.63    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.50    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.31    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.28    32.56     35.0     17
+2026-06-11 09:54:17 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 20/15 | Feasible: 0 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-11 09:54:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 20/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:54:17 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 20/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:54:17 - multi_agent.rl.ppo_checkpoint - INFO - [Checkpoint] Saved ep 20 → ./parameter_experience_base/checkpoints/ppo\ppo_20260611_094816_ep00020.json (best_SEP_ever=50.00m, best_reward=-0.942)
+2026-06-11 09:54:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=58.6812', 'rl_zeta1=0.8189', 'rl_tao1=0.2526', 'rl_w2=54.4202', 'rl_zeta2=1.2000', 'rl_tao2=0.0795', 'rl_w3=20.0000', 'rl_zeta3=0.7233', 'rl_N_pn=3.0000']
+2026-06-11 09:54:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:54:29 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:54:29 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:54:34 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:54:34 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.32    27.38     37.0     29.59     8.35
+  [  2] Hit     1.41    24.45     43.2     25.07     7.88
+  [  3] Hit     3.24    29.68     60.0     20.99     8.18
+  [  4] Hit     3.71    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.38    34.00     62.0     35.49     8.78
+  [  7] Hit     9.12    27.74     42.6     30.57     6.29
+  [  8] Hit     3.95    36.85     57.4     21.44     9.61
+  [  9] Miss   22.61    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.48    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.31    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.28    32.56     35.0     17
+2026-06-11 09:54:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 21/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:54:34 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 21/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:54:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.6499', 'rl_zeta1=0.3500', 'rl_tao1=0.3452', 'rl_w2=52.9914', 'rl_zeta2=1.0246', 'rl_tao2=0.0811', 'rl_w3=20.0000', 'rl_zeta3=0.6477', 'rl_N_pn=3.0000']
+2026-06-11 09:54:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:54:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:54:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:54:52 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:54:52 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.75    27.38     37.0     29.59     8.35
+  [  2] Hit     1.46    24.45     43.2     25.07     7.88
+  [  3] Hit     3.36    29.68     60.0     20.99     8.18
+  [  4] Hit     3.85    42.39     65.4     29.14     7.68
+  [  5] Hit     0.26    25.60     61.1     22.68     9.33
+  [  6] Miss   25.30    34.00     62.0     35.49     8.78
+  [  7] Hit     9.47    27.74     42.6     30.57     6.29
+  [  8] Hit     4.10    36.85     57.4     21.44     9.61
+  [  9] Miss   23.46    38.39     53.6     23.73     5.71
+  [ 10] Miss   15.03    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.36    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.40    32.56     35.0     17
+2026-06-11 09:54:52 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 22] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:54:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 22/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:54:52 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 22/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:54:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=59.0489', 'rl_zeta1=0.8199', 'rl_tao1=0.3500', 'rl_w2=55.7629', 'rl_zeta2=1.1318', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.4521', 'rl_N_pn=3.0000']
+2026-06-11 09:54:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:55:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:55:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:55:11 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:55:11 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.31    27.38     37.0     29.59     8.35
+  [  2] Hit     1.41    24.45     43.2     25.07     7.88
+  [  3] Hit     3.24    29.68     60.0     20.99     8.18
+  [  4] Hit     3.71    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.37    34.00     62.0     35.49     8.78
+  [  7] Hit     9.11    27.74     42.6     30.57     6.29
+  [  8] Hit     3.95    36.85     57.4     21.44     9.61
+  [  9] Miss   22.59    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.47    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.31    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.28    32.56     35.0     17
+2026-06-11 09:55:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 23/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:55:11 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 23/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:55:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=60.0000', 'rl_zeta1=0.4599', 'rl_tao1=0.3500', 'rl_w2=57.1451', 'rl_zeta2=1.0993', 'rl_tao2=0.0953', 'rl_w3=20.0000', 'rl_zeta3=0.6370', 'rl_N_pn=3.0000']
+2026-06-11 09:55:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:55:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:55:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:55:28 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:55:28 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.29    27.38     37.0     29.59     8.35
+  [  2] Hit     1.40    24.45     43.2     25.07     7.88
+  [  3] Hit     3.23    29.68     60.0     20.99     8.18
+  [  4] Hit     3.70    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.32    34.00     62.0     35.49     8.78
+  [  7] Hit     9.10    27.74     42.6     30.57     6.29
+  [  8] Hit     3.94    36.85     57.4     21.44     9.61
+  [  9] Miss   22.55    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.44    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.30    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.27    32.56     35.0     17
+2026-06-11 09:55:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 24/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:55:28 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 24/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:55:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=51.8474', 'rl_zeta1=0.7278', 'rl_tao1=0.2898', 'rl_w2=53.5781', 'rl_zeta2=1.2000', 'rl_tao2=0.0500', 'rl_w3=20.0000', 'rl_zeta3=0.5193', 'rl_N_pn=3.0000']
+2026-06-11 09:55:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:55:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:55:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.50    27.38     37.0     29.59     8.35
+  [  2] Hit     1.43    24.45     43.2     25.07     7.88
+  [  3] Hit     3.29    29.68     60.0     20.99     8.18
+  [  4] Hit     3.77    42.39     65.4     29.14     7.68
+  [  5] Hit     0.25    25.60     61.1     22.68     9.33
+  [  6] Miss   24.77    34.00     62.0     35.49     8.78
+  [  7] Hit     9.27    27.74     42.6     30.57     6.29
+  [  8] Hit     4.01    36.85     57.4     21.44     9.61
+  [  9] Miss   22.96    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.71    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.33    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.33    32.56     35.0     17
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 25] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-11 09:55:45 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 25/15 | Feasible: 0 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 25/50] reward=-0.942  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A(max=N/A)  PM=30.0°(best=30.0°)  BW=15.0r/s(best=15.0r/s)
+2026-06-11 09:55:45 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 25/50] window=20 | mean_reward=-0.942 | mean_SEP=50.00m | mean_PeakN_max=nang | mean_hit=0.0% | diverge=0%
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Patience early stop at episode 25 (no constrained improvement for 25 ep)
+2026-06-11 09:55:45 - multi_agent.rl.ppo_checkpoint - INFO - [Checkpoint] Saved ep 25 → ./parameter_experience_base/checkpoints/ppo\ppo_20260611_094816_ep00025.json (best_SEP_ever=50.00m, best_reward=-0.942)
+2026-06-11 09:55:45 - multi_agent.memory.parameter_experience - INFO - Stored memory bb94ae5d3f47c458 with fitness 0.13951734539969834
+2026-06-11 09:55:45 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - INFO - Best params stored → memory_id=bb94ae5d3f47c458, fitness=0.1395, layer=SHORT_TERM | guidance={'N_pn': 4.0} | autopilot_w1=45.0
+2026-06-11 09:55:45 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] PPO fallback done: status=success episodes=25
+  [Layer 3/CLS] Starting local search (50 steps, nmc=25)…
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 11 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\05222febc1c9496bb648cd0b983e23e4\guidance_T4_APN_sat_N35_1781141548.m
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.0000', 'rl_zeta1=0.6000', 'rl_tao1=0.1500', 'rl_w2=45.0000', 'rl_zeta2=0.6000', 'rl_tao2=0.1500', 'rl_w3=45.0000', 'rl_zeta3=0.5500', 'rl_N_pn=4.0000']
+2026-06-11 09:55:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:55:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:55:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:56:02 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:56:02 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.74    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.07    29.68     60.0     20.99     8.18
+  [  4] Hit     3.52    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   23.13    34.00     62.0     35.49     8.78
+  [  7] Hit     8.65    27.74     42.6     30.57     6.29
+  [  8] Hit     3.75    36.85     57.4     21.44     9.61
+  [  9] Miss   21.44    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.74    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.11    32.56     35.0     17
+2026-06-11 09:56:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.3116', 'rl_zeta1=0.5752', 'rl_tao1=0.1464', 'rl_w2=44.4822', 'rl_zeta2=0.6231', 'rl_tao2=0.1531', 'rl_w3=46.5061', 'rl_zeta3=0.5365', 'rl_N_pn=3.8499']
+2026-06-11 09:56:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:56:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:56:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:56:18 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:56:18 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.89    27.38     37.0     29.59     8.35
+  [  2] Hit     1.35    24.45     43.2     25.07     7.88
+  [  3] Hit     3.11    29.68     60.0     20.99     8.18
+  [  4] Hit     3.57    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.45    34.00     62.0     35.49     8.78
+  [  7] Hit     8.77    27.74     42.6     30.57     6.29
+  [  8] Hit     3.80    36.85     57.4     21.44     9.61
+  [  9] Miss   21.74    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.93    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.16    32.56     35.0     17
+2026-06-11 09:56:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.8018', 'rl_zeta1=0.6318', 'rl_tao1=0.1627', 'rl_w2=42.0955', 'rl_zeta2=0.6064', 'rl_tao2=0.1649', 'rl_w3=42.2869', 'rl_zeta3=0.4866', 'rl_N_pn=3.8677']
+2026-06-11 09:56:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:56:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:56:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:56:35 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:56:35 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.89    27.38     37.0     29.59     8.35
+  [  2] Hit     1.35    24.45     43.2     25.07     7.88
+  [  3] Hit     3.12    29.68     60.0     20.99     8.18
+  [  4] Hit     3.57    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.46    34.00     62.0     35.49     8.78
+  [  7] Hit     8.78    27.74     42.6     30.57     6.29
+  [  8] Hit     3.80    36.85     57.4     21.44     9.61
+  [  9] Miss   21.76    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.94    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.16    32.56     35.0     17
+2026-06-11 09:56:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.0276', 'rl_zeta1=0.6149', 'rl_tao1=0.1564', 'rl_w2=43.2964', 'rl_zeta2=0.6054', 'rl_tao2=0.1316', 'rl_w3=44.8941', 'rl_zeta3=0.4956', 'rl_N_pn=3.9542']
+2026-06-11 09:56:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:56:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:56:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:56:52 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:56:52 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.70    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.06    29.68     60.0     20.99     8.18
+  [  4] Hit     3.50    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   23.04    34.00     62.0     35.49     8.78
+  [  7] Hit     8.62    27.74     42.6     30.57     6.29
+  [  8] Hit     3.73    36.85     57.4     21.44     9.61
+  [  9] Miss   21.36    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.68    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.23    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.10    32.56     35.0     17
+2026-06-11 09:56:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.5869', 'rl_zeta1=0.6260', 'rl_tao1=0.1422', 'rl_w2=46.9133', 'rl_zeta2=0.5733', 'rl_tao2=0.1444', 'rl_w3=45.5165', 'rl_zeta3=0.5848', 'rl_N_pn=4.0988']
+2026-06-11 09:56:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:57:04 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:57:04 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:57:10 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:57:10 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.56    27.38     37.0     29.59     8.35
+  [  2] Hit     1.31    24.45     43.2     25.07     7.88
+  [  3] Hit     3.02    29.68     60.0     20.99     8.18
+  [  4] Hit     3.46    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.75    34.00     62.0     35.49     8.78
+  [  7] Hit     8.51    27.74     42.6     30.57     6.29
+  [  8] Hit     3.68    36.85     57.4     21.44     9.61
+  [  9] Miss   21.10    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.51    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.22    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.06    32.56     35.0     17
+2026-06-11 09:57:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=48.1802', 'rl_zeta1=0.6262', 'rl_tao1=0.1549', 'rl_w2=45.0079', 'rl_zeta2=0.5828', 'rl_tao2=0.1477', 'rl_w3=48.0337', 'rl_zeta3=0.5833', 'rl_N_pn=3.7685']
+2026-06-11 09:57:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:57:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:57:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:57:26 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:57:26 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.81    27.38     37.0     29.59     8.35
+  [  2] Hit     1.34    24.45     43.2     25.07     7.88
+  [  3] Hit     3.09    29.68     60.0     20.99     8.18
+  [  4] Hit     3.54    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.29    34.00     62.0     35.49     8.78
+  [  7] Hit     8.71    27.74     42.6     30.57     6.29
+  [  8] Hit     3.77    36.85     57.4     21.44     9.61
+  [  9] Miss   21.60    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.83    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.25    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.13    32.56     35.0     17
+2026-06-11 09:57:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.0963', 'rl_zeta1=0.6071', 'rl_tao1=0.1456', 'rl_w2=44.5283', 'rl_zeta2=0.5744', 'rl_tao2=0.1691', 'rl_w3=47.5896', 'rl_zeta3=0.5361', 'rl_N_pn=3.8305']
+2026-06-11 09:57:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:57:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:57:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:57:44 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:57:44 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   11.00    27.38     37.0     29.59     8.35
+  [  2] Hit     1.37    24.45     43.2     25.07     7.88
+  [  3] Hit     3.15    29.68     60.0     20.99     8.18
+  [  4] Hit     3.60    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.69    34.00     62.0     35.49     8.78
+  [  7] Hit     8.86    27.74     42.6     30.57     6.29
+  [  8] Hit     3.84    36.85     57.4     21.44     9.61
+  [  9] Miss   21.97    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.07    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.27    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.19    32.56     35.0     17
+2026-06-11 09:57:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.3712', 'rl_zeta1=0.5790', 'rl_tao1=0.1353', 'rl_w2=42.4352', 'rl_zeta2=0.5456', 'rl_tao2=0.1532', 'rl_w3=41.9707', 'rl_zeta3=0.5712', 'rl_N_pn=4.0450']
+2026-06-11 09:57:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:57:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:57:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:58:01 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:58:01 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.77    27.38     37.0     29.59     8.35
+  [  2] Hit     1.34    24.45     43.2     25.07     7.88
+  [  3] Hit     3.08    29.68     60.0     20.99     8.18
+  [  4] Hit     3.53    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.19    34.00     62.0     35.49     8.78
+  [  7] Hit     8.68    27.74     42.6     30.57     6.29
+  [  8] Hit     3.76    36.85     57.4     21.44     9.61
+  [  9] Miss   21.50    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.77    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.12    32.56     35.0     17
+2026-06-11 09:58:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.0031', 'rl_zeta1=0.6478', 'rl_tao1=0.1341', 'rl_w2=43.0277', 'rl_zeta2=0.6474', 'rl_tao2=0.1479', 'rl_w3=46.2952', 'rl_zeta3=0.5280', 'rl_N_pn=4.1762']
+2026-06-11 09:58:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:58:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:58:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:58:18 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:58:18 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.60    27.38     37.0     29.59     8.35
+  [  2] Hit     1.32    24.45     43.2     25.07     7.88
+  [  3] Hit     3.03    29.68     60.0     20.99     8.18
+  [  4] Hit     3.47    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.83    34.00     62.0     35.49     8.78
+  [  7] Hit     8.54    27.74     42.6     30.57     6.29
+  [  8] Hit     3.70    36.85     57.4     21.44     9.61
+  [  9] Miss   21.17    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.56    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.22    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.07    32.56     35.0     17
+2026-06-11 09:58:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.5584', 'rl_zeta1=0.5739', 'rl_tao1=0.1531', 'rl_w2=46.6587', 'rl_zeta2=0.5665', 'rl_tao2=0.1282', 'rl_w3=43.1307', 'rl_zeta3=0.5202', 'rl_N_pn=4.2138']
+2026-06-11 09:58:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:58:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:58:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:58:35 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:58:35 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.59    27.38     37.0     29.59     8.35
+  [  2] Hit     1.32    24.45     43.2     25.07     7.88
+  [  3] Hit     3.03    29.68     60.0     20.99     8.18
+  [  4] Hit     3.47    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.81    34.00     62.0     35.49     8.78
+  [  7] Hit     8.53    27.74     42.6     30.57     6.29
+  [  8] Hit     3.69    36.85     57.4     21.44     9.61
+  [  9] Miss   21.15    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.55    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.22    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.07    32.56     35.0     17
+2026-06-11 09:58:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.2017', 'rl_zeta1=0.5925', 'rl_tao1=0.1485', 'rl_w2=47.1126', 'rl_zeta2=0.5627', 'rl_tao2=0.1299', 'rl_w3=44.9470', 'rl_zeta3=0.5762', 'rl_N_pn=4.1731']
+2026-06-11 09:58:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:58:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:58:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:58:50 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:58:50 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.52    27.38     37.0     29.59     8.35
+  [  2] Hit     1.31    24.45     43.2     25.07     7.88
+  [  3] Hit     3.01    29.68     60.0     20.99     8.18
+  [  4] Hit     3.45    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.66    34.00     62.0     35.49     8.78
+  [  7] Hit     8.48    27.74     42.6     30.57     6.29
+  [  8] Hit     3.67    36.85     57.4     21.44     9.61
+  [  9] Miss   21.01    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.46    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.21    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.05    32.56     35.0     17
+2026-06-11 09:58:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.3465', 'rl_zeta1=0.6385', 'rl_tao1=0.1382', 'rl_w2=41.9538', 'rl_zeta2=0.5579', 'rl_tao2=0.1612', 'rl_w3=42.8141', 'rl_zeta3=0.5671', 'rl_N_pn=3.9188']
+2026-06-11 09:58:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:59:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:59:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:59:05 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:59:05 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.71    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.06    29.68     60.0     20.99     8.18
+  [  4] Hit     3.51    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   23.08    34.00     62.0     35.49     8.78
+  [  7] Hit     8.63    27.74     42.6     30.57     6.29
+  [  8] Hit     3.74    36.85     57.4     21.44     9.61
+  [  9] Miss   21.40    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.71    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.11    32.56     35.0     17
+2026-06-11 09:59:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.9404', 'rl_zeta1=0.5718', 'rl_tao1=0.1651', 'rl_w2=47.1646', 'rl_zeta2=0.6653', 'rl_tao2=0.1676', 'rl_w3=47.8738', 'rl_zeta3=0.5618', 'rl_N_pn=3.9525']
+2026-06-11 09:59:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:59:15 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:59:15 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:59:19 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:59:19 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.82    27.38     37.0     29.59     8.35
+  [  2] Hit     1.34    24.45     43.2     25.07     7.88
+  [  3] Hit     3.09    29.68     60.0     20.99     8.18
+  [  4] Hit     3.54    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.30    34.00     62.0     35.49     8.78
+  [  7] Hit     8.72    27.74     42.6     30.57     6.29
+  [  8] Hit     3.77    36.85     57.4     21.44     9.61
+  [  9] Miss   21.60    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.84    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.25    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.13    32.56     35.0     17
+2026-06-11 09:59:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.9281', 'rl_zeta1=0.6001', 'rl_tao1=0.1473', 'rl_w2=44.4279', 'rl_zeta2=0.6460', 'rl_tao2=0.1557', 'rl_w3=46.2824', 'rl_zeta3=0.5599', 'rl_N_pn=4.1133']
+2026-06-11 09:59:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:59:29 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:59:29 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:59:34 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:59:34 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.54    27.38     37.0     29.59     8.35
+  [  2] Hit     1.31    24.45     43.2     25.07     7.88
+  [  3] Hit     3.01    29.68     60.0     20.99     8.18
+  [  4] Hit     3.45    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.70    34.00     62.0     35.49     8.78
+  [  7] Hit     8.49    27.74     42.6     30.57     6.29
+  [  8] Hit     3.68    36.85     57.4     21.44     9.61
+  [  9] Miss   21.05    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.48    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.22    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.05    32.56     35.0     17
+2026-06-11 09:59:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.3173', 'rl_zeta1=0.5700', 'rl_tao1=0.1619', 'rl_w2=42.6747', 'rl_zeta2=0.5707', 'rl_tao2=0.1391', 'rl_w3=43.4219', 'rl_zeta3=0.4908', 'rl_N_pn=4.1688']
+2026-06-11 09:59:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:59:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:59:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 09:59:49 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 09:59:49 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.63    27.38     37.0     29.59     8.35
+  [  2] Hit     1.32    24.45     43.2     25.07     7.88
+  [  3] Hit     3.04    29.68     60.0     20.99     8.18
+  [  4] Hit     3.48    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.91    34.00     62.0     35.49     8.78
+  [  7] Hit     8.57    27.74     42.6     30.57     6.29
+  [  8] Hit     3.71    36.85     57.4     21.44     9.61
+  [  9] Miss   21.24    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.60    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.23    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.08    32.56     35.0     17
+2026-06-11 09:59:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.9128', 'rl_zeta1=0.5486', 'rl_tao1=0.1621', 'rl_w2=42.2806', 'rl_zeta2=0.5360', 'rl_tao2=0.1299', 'rl_w3=46.0670', 'rl_zeta3=0.5629', 'rl_N_pn=3.8281']
+2026-06-11 09:59:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 09:59:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 09:59:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:00:01 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:00:01 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.92    27.38     37.0     29.59     8.35
+  [  2] Hit     1.36    24.45     43.2     25.07     7.88
+  [  3] Hit     3.12    29.68     60.0     20.99     8.18
+  [  4] Hit     3.58    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.53    34.00     62.0     35.49     8.78
+  [  7] Hit     8.80    27.74     42.6     30.57     6.29
+  [  8] Hit     3.81    36.85     57.4     21.44     9.61
+  [  9] Miss   21.81    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.97    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.17    32.56     35.0     17
+2026-06-11 10:00:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.3050', 'rl_zeta1=0.6036', 'rl_tao1=0.1650', 'rl_w2=43.8726', 'rl_zeta2=0.6592', 'rl_tao2=0.1702', 'rl_w3=45.4674', 'rl_zeta3=0.5978', 'rl_N_pn=4.1241']
+2026-06-11 10:00:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:00:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:00:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:00:13 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:00:13 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.55    27.38     37.0     29.59     8.35
+  [  2] Hit     1.31    24.45     43.2     25.07     7.88
+  [  3] Hit     3.02    29.68     60.0     20.99     8.18
+  [  4] Hit     3.46    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.73    34.00     62.0     35.49     8.78
+  [  7] Hit     8.50    27.74     42.6     30.57     6.29
+  [  8] Hit     3.68    36.85     57.4     21.44     9.61
+  [  9] Miss   21.08    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.50    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.22    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.06    32.56     35.0     17
+2026-06-11 10:00:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.5073', 'rl_zeta1=0.6317', 'rl_tao1=0.1509', 'rl_w2=42.6876', 'rl_zeta2=0.5745', 'rl_tao2=0.1408', 'rl_w3=43.1734', 'rl_zeta3=0.5799', 'rl_N_pn=3.9579']
+2026-06-11 10:00:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:00:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:00:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:00:26 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:00:26 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.87    27.38     37.0     29.59     8.35
+  [  2] Hit     1.35    24.45     43.2     25.07     7.88
+  [  3] Hit     3.11    29.68     60.0     20.99     8.18
+  [  4] Hit     3.56    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.42    34.00     62.0     35.49     8.78
+  [  7] Hit     8.76    27.74     42.6     30.57     6.29
+  [  8] Hit     3.79    36.85     57.4     21.44     9.61
+  [  9] Miss   21.72    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.91    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.26    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.15    32.56     35.0     17
+2026-06-11 10:00:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.5592', 'rl_zeta1=0.6348', 'rl_tao1=0.1279', 'rl_w2=45.8632', 'rl_zeta2=0.6651', 'rl_tao2=0.1691', 'rl_w3=46.3673', 'rl_zeta3=0.6022', 'rl_N_pn=4.0705']
+2026-06-11 10:00:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:00:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:00:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:00:38 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:00:38 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.78    27.38     37.0     29.59     8.35
+  [  2] Hit     1.34    24.45     43.2     25.07     7.88
+  [  3] Hit     3.08    29.68     60.0     20.99     8.18
+  [  4] Hit     3.53    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.23    34.00     62.0     35.49     8.78
+  [  7] Hit     8.69    27.74     42.6     30.57     6.29
+  [  8] Hit     3.76    36.85     57.4     21.44     9.61
+  [  9] Miss   21.53    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.79    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.12    32.56     35.0     17
+2026-06-11 10:00:38 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=46.8889', 'rl_zeta1=0.5517', 'rl_tao1=0.1687', 'rl_w2=45.6519', 'rl_zeta2=0.6597', 'rl_tao2=0.1606', 'rl_w3=48.1662', 'rl_zeta3=0.5007', 'rl_N_pn=4.1434']
+2026-06-11 10:00:38 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:00:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:00:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:00:51 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:00:51 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.55    27.38     37.0     29.59     8.35
+  [  2] Hit     1.31    24.45     43.2     25.07     7.88
+  [  3] Hit     3.02    29.68     60.0     20.99     8.18
+  [  4] Hit     3.46    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.73    34.00     62.0     35.49     8.78
+  [  7] Hit     8.50    27.74     42.6     30.57     6.29
+  [  8] Hit     3.68    36.85     57.4     21.44     9.61
+  [  9] Miss   21.08    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.50    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.22    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.06    32.56     35.0     17
+2026-06-11 10:00:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.5192', 'rl_zeta1=0.5389', 'rl_tao1=0.1358', 'rl_w2=43.4788', 'rl_zeta2=0.6272', 'rl_tao2=0.1297', 'rl_w3=46.0942', 'rl_zeta3=0.5695', 'rl_N_pn=4.0632']
+2026-06-11 10:00:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:00:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:00:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:01:03 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:01:03 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.67    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.05    29.68     60.0     20.99     8.18
+  [  4] Hit     3.49    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   22.98    34.00     62.0     35.49     8.78
+  [  7] Hit     8.59    27.74     42.6     30.57     6.29
+  [  8] Hit     3.72    36.85     57.4     21.44     9.61
+  [  9] Miss   21.30    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.65    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.23    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.09    32.56     35.0     17
+2026-06-11 10:01:03 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.1197', 'rl_zeta1=0.6104', 'rl_tao1=0.1435', 'rl_w2=47.4471', 'rl_zeta2=0.6111', 'rl_tao2=0.1500', 'rl_w3=43.0916', 'rl_zeta3=0.5368', 'rl_N_pn=4.2350']
+2026-06-11 10:01:03 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:01:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:01:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:01:18 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:01:18 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.68    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.05    29.68     60.0     20.99     8.18
+  [  4] Hit     3.50    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   23.00    34.00     62.0     35.49     8.78
+  [  7] Hit     8.60    27.74     42.6     30.57     6.29
+  [  8] Hit     3.73    36.85     57.4     21.44     9.61
+  [  9] Miss   21.33    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.66    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.23    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.09    32.56     35.0     17
+2026-06-11 10:01:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.0837', 'rl_zeta1=0.5411', 'rl_tao1=0.1518', 'rl_w2=47.8152', 'rl_zeta2=0.5455', 'rl_tao2=0.1481', 'rl_w3=46.1444', 'rl_zeta3=0.5356', 'rl_N_pn=3.8907']
+2026-06-11 10:01:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:01:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:01:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:01:31 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:01:31 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.75    27.38     37.0     29.59     8.35
+  [  2] Hit     1.34    24.45     43.2     25.07     7.88
+  [  3] Hit     3.07    29.68     60.0     20.99     8.18
+  [  4] Hit     3.52    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.15    34.00     62.0     35.49     8.78
+  [  7] Hit     8.66    27.74     42.6     30.57     6.29
+  [  8] Hit     3.75    36.85     57.4     21.44     9.61
+  [  9] Miss   21.46    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.75    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.11    32.56     35.0     17
+2026-06-11 10:01:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.5230', 'rl_zeta1=0.6147', 'rl_tao1=0.1318', 'rl_w2=42.5873', 'rl_zeta2=0.6527', 'rl_tao2=0.1604', 'rl_w3=47.3275', 'rl_zeta3=0.5069', 'rl_N_pn=3.8329']
+2026-06-11 10:01:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:01:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:01:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:01:43 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:01:43 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.85    27.38     37.0     29.59     8.35
+  [  2] Hit     1.35    24.45     43.2     25.07     7.88
+  [  3] Hit     3.10    29.68     60.0     20.99     8.18
+  [  4] Hit     3.56    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.38    34.00     62.0     35.49     8.78
+  [  7] Hit     8.75    27.74     42.6     30.57     6.29
+  [  8] Hit     3.79    36.85     57.4     21.44     9.61
+  [  9] Miss   21.68    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.89    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.25    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.15    32.56     35.0     17
+2026-06-11 10:01:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.9085', 'rl_zeta1=0.6063', 'rl_tao1=0.1497', 'rl_w2=47.9429', 'rl_zeta2=0.5863', 'rl_tao2=0.1571', 'rl_w3=47.2647', 'rl_zeta3=0.5006', 'rl_N_pn=3.9272']
+2026-06-11 10:01:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:01:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:01:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:01:56 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:01:56 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.76    27.38     37.0     29.59     8.35
+  [  2] Hit     1.34    24.45     43.2     25.07     7.88
+  [  3] Hit     3.08    29.68     60.0     20.99     8.18
+  [  4] Hit     3.52    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.18    34.00     62.0     35.49     8.78
+  [  7] Hit     8.67    27.74     42.6     30.57     6.29
+  [  8] Hit     3.75    36.85     57.4     21.44     9.61
+  [  9] Miss   21.49    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.77    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.12    32.56     35.0     17
+2026-06-11 10:01:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.6763', 'rl_zeta1=0.6450', 'rl_tao1=0.1337', 'rl_w2=43.1020', 'rl_zeta2=0.5908', 'rl_tao2=0.1377', 'rl_w3=47.1004', 'rl_zeta3=0.6033', 'rl_N_pn=4.0991']
+2026-06-11 10:01:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:02:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:02:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:02:10 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:02:10 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.71    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.06    29.68     60.0     20.99     8.18
+  [  4] Hit     3.51    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   23.08    34.00     62.0     35.49     8.78
+  [  7] Hit     8.63    27.74     42.6     30.57     6.29
+  [  8] Hit     3.74    36.85     57.4     21.44     9.61
+  [  9] Miss   21.39    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.71    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.24    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.10    32.56     35.0     17
+2026-06-11 10:02:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.0809', 'rl_zeta1=0.5591', 'rl_tao1=0.1664', 'rl_w2=44.9318', 'rl_zeta2=0.6002', 'rl_tao2=0.1536', 'rl_w3=44.7308', 'rl_zeta3=0.5280', 'rl_N_pn=4.1077']
+2026-06-11 10:02:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:02:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:02:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:02:25 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:02:25 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.69    27.38     37.0     29.59     8.35
+  [  2] Hit     1.33    24.45     43.2     25.07     7.88
+  [  3] Hit     3.06    29.68     60.0     20.99     8.18
+  [  4] Hit     3.50    42.39     65.4     29.14     7.68
+  [  5] Hit     0.23    25.60     61.1     22.68     9.33
+  [  6] Miss   23.03    34.00     62.0     35.49     8.78
+  [  7] Hit     8.61    27.74     42.6     30.57     6.29
+  [  8] Hit     3.73    36.85     57.4     21.44     9.61
+  [  9] Miss   21.35    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.68    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.23    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.10    32.56     35.0     17
+2026-06-11 10:02:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.8556', 'rl_zeta1=0.5979', 'rl_tao1=0.1680', 'rl_w2=44.0199', 'rl_zeta2=0.6052', 'rl_tao2=0.1345', 'rl_w3=47.9942', 'rl_zeta3=0.5099', 'rl_N_pn=3.8680']
+2026-06-11 10:02:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:02:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:02:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:02:39 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:02:39 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.98    27.38     37.0     29.59     8.35
+  [  2] Hit     1.36    24.45     43.2     25.07     7.88
+  [  3] Hit     3.14    29.68     60.0     20.99     8.18
+  [  4] Hit     3.60    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.65    34.00     62.0     35.49     8.78
+  [  7] Hit     8.85    27.74     42.6     30.57     6.29
+  [  8] Hit     3.83    36.85     57.4     21.44     9.61
+  [  9] Miss   21.92    38.39     53.6     23.73     5.71
+  [ 10] Miss   14.04    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.27    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.18    32.56     35.0     17
+2026-06-11 10:02:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=47.0108', 'rl_zeta1=0.6072', 'rl_tao1=0.1271', 'rl_w2=46.0200', 'rl_zeta2=0.6660', 'rl_tao2=0.1629', 'rl_w3=42.0491', 'rl_zeta3=0.5567', 'rl_N_pn=3.8104']
+2026-06-11 10:02:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-11 10:02:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1820chars
+2026-06-11 10:02:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1820 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)']
+2026-06-11 10:02:54 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-11 10:02:54 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL DIAG] Parse produced ALL defaults from 1820 chars. Raw stdout (first 800 chars):
+
+鈺愨晲鈺愨晲鈺愨晲 瀛愬伐鍐� T4:楂橀�戣緝澶у箙搴︽満鍔� 鈺愨晲鈺愨晲鈺愨晲
+  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)
+  [  1] Miss   10.82    27.38     37.0     29.59     8.35
+  [  2] Hit     1.34    24.45     43.2     25.07     7.88
+  [  3] Hit     3.09    29.68     60.0     20.99     8.18
+  [  4] Hit     3.54    42.39     65.4     29.14     7.68
+  [  5] Hit     0.24    25.60     61.1     22.68     9.33
+  [  6] Miss   23.30    34.00     62.0     35.49     8.78
+  [  7] Hit     8.72    27.74     42.6     30.57     6.29
+  [  8] Hit     3.77    36.85     57.4     21.44     9.61
+  [  9] Miss   21.60    38.39     53.6     23.73     5.71
+  [ 10] Miss   13.84    29.63     27.0     29.93    10.05
+  [ 11] Hit     1.25    23.19     42.1     13.32     8.82
+  [ 12] Hit     3.14    32.56     35.0     17
+2026-06-11 10:02:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.6959', 'rl_zeta1=0.5724', 'rl_tao1=0.1295', 'rl_w2=45.6998', 'rl_zeta2=0.5658', 'rl_tao2=0.1524', 'rl_w3=46.8459', 'rl_zeta3=0.5923', 'rl_N_pn=4.0382']
+2026-06-11 10:02:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+
+
+────────────────────────────────────────────────────────────────
+  [人机中断] Ctrl+C — 当前执行已中止
+────────────────────────────────────────────────────────────────
+  原始任务: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━...
+  ────────────────────────────────────────────────────────────────
+  继续执行（保持当前指令）               → 输入 c 或 continue
+  手动晋升短期记忆到长期记忆             → 输入 p 或 promote
+  输入修改指令（追加到原始任务上）        → 直接输入修改内容
+  完全替换原始任务                       → 以 !! 开头输入新任务
+  恢复原始任务重启                       → 直接回车
+  退出程序                               → 再次 Ctrl+C
+  ────────────────────────────────────────────────────────────────
+  >>> 
+  [退出] 程序已终止。
+[0m
+================================================================================
+Finished    : 2026-06-11 10:03:00
+Exit code   : 0
+================================================================================

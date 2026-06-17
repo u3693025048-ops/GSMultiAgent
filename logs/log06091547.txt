@@ -1,0 +1,16 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-09 15:47:56
+Command     : cli_agent.py --preflight-only
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06091547.txt
+================================================================================
+
+2026-06-09 15:47:56 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06091547.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06091547.txt
+Error: 需要 --prompt 或 --file。
+
+================================================================================
+Finished    : 2026-06-09 15:47:56
+Exit code   : 0
+================================================================================

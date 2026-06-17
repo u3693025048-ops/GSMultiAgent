@@ -1,0 +1,197 @@
+ablation:
+  guidance_compat_verification:
+    enabled: true
+  syntax_check:
+    enabled: true
+  rl_optimization:
+    enabled: true
+  parameter_experience_reuse:
+    enabled: true
+  reflection_agent:
+    enabled: true
+  memory_search:
+    enabled: true
+logging:
+  verbosity: normal
+  rl_episode_interval: 10
+workflow:
+  max_iterations: 1
+  hermes_execution: true
+  hermes_tool_timeout: 0
+llm:
+  provider: custom
+  base_url: https://api.deepseek.com
+  model: deepseek-v4-pro
+  api_key: sk-4ac3052962934920b3934de9565a52c8
+rag:
+  persist_dir: ./chroma_db
+  collection: guidance_knowledge
+  embedding_provider: custom
+  embedding_model: text-embedding-v3
+  embedding_dim: 1024
+  embedding_base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  embedding_api_key: sk-a2143420f46b4794b817f437af61aa0c
+parameter_experience:
+  enabled: true
+  max_short_term: 100
+  max_long_term: 1000
+  similarity_threshold: 0.7
+matlab_rl_optimizer:
+  layer3_strategy: expert
+  max_episodes: 10
+  nmc_per_eval: 5
+  nmc_refine: 25
+  episodes_per_update: 16
+  hidden_dim: 128
+  lr_actor: 0.00015
+  lr_critic: 0.0005
+  gamma: 0.0
+  entropy_coef: 0.02
+  clip_ratio: 0.1
+  exploration:
+    pitch_log_std: -0.7
+    other_log_std: -1.6
+    warm_start_std_scale: 0.3
+    baseline_reward_threshold: 0.5
+    diverge_penalty_episodes: 3
+    diverge_log_std_delta: -0.5
+    diverge_reward_threshold: -9.5
+    adaptive_enabled: true
+    adaptive_steepness_threshold: 2.0
+    adaptive_log_std_min_scale: 0.35
+    adaptive_log_std_max_scale: 1.0
+    adaptive_ema_alpha: 0.3
+  early_stop:
+    enabled: true
+    min_episodes: 25
+    patience: 25
+    peak_only_patience: 25
+    reward_plateau_delta: 0.05
+    reflect_every: 5
+    use_rule_first: true
+    use_multi_criteria_best: true
+  constraint_local_search:
+    enabled: false
+    max_steps: 50
+    nmc_per_eval: 25
+    step_scale: 0.08
+    borderline_select: true
+    borderline_hit_min_pct: 92.0
+    borderline_sep_max_m: 7.0
+    prefer_ppo_best_peak: true
+  checkpoint:
+    enabled: true
+    dir: ./parameter_experience_base/checkpoints/ppo
+    save_every_episodes: 10
+    keep_last_n: 5
+    rolling_window: 20
+    stats_log_every: 1
+    jsonl_log_dir: logs
+  amro_enabled: false
+  peak_n_max: 20.0
+  peak_ny_mean_max: 20.0
+  peak_ny_hard_max: 21.0
+  peak_n_penalty: 4.0
+  reward_weights:
+    hit_rate: 4.0
+    sep_low_bonus: 3.0
+    sep_low_threshold: 2.0
+    sep_mid_weight: 1.0
+    sep_mid_threshold: 5.0
+    peak_ny_max: 20.0
+    peak_ny_mean_max: 20.0
+    peak_ny_hard_max: 21.0
+    peak_ny_penalty: 4.0
+    peak_ny_progressive_low: 18.0
+    hard_truncation_peak_g: 35.0
+    baseline_reset_peak_g: 40.0
+    sep_survival_threshold: 300.0
+    pm_bonus: 0.8
+    pm_min: 45.0
+    pm_max: 70.0
+    pm_penalty: 3.0
+    bw_bonus: 0.4
+    bw_min: 20.0
+    bw_max: 85.0
+    bw_penalty: 1.2
+fre:
+  default:
+    initial_sep: 100.0
+    initial_hit_rate: 50.0
+    target_sep: 7.0
+    target_hit_rate: 92.0
+    phase_episodes: 20
+    num_phases: 3
+  t4:
+    initial_sep: 500.0
+    initial_hit_rate: 10.0
+    target_sep: 7.0
+    target_hit_rate: 92.0
+    phase_episodes: 15
+    num_phases: 3
+model_output:
+  generated_dir: ./guidance_output/scripts
+  matlab_scripts_dir: ./guidance_output/scripts
+  sysml_output_dir: ./guidance_output/sysml
+  success_dir: ./parameter_experience_base/models
+  experience_base_dir: ./parameter_experience_base
+knowledge_base:
+  matlab_dir: ./knowledge_base/matlab
+simulation:
+  engine: matlab
+  matlab_path: matlab
+  octave_path: octave
+  prefer_kb_template: false
+  seed_policy: iterative
+  layer2_script_gate: true
+  layer2_smoke_nmc: 25
+  modify_gate_nmc: 10
+  physics_bounds_enabled: false
+  physics_bounds_ny_limit_g: 20.0
+  physics_bounds_timeout_sec: 120
+  physics_bounds_skip_deterministic_t4_apn: true
+  matlab_timeout_sec: 900
+  matlab_timeout_floor_sec: 360
+  matlab_timeout_per_mc_sec: 22
+t4_low_risk:
+  enabled: true
+  deterministic_apn: true
+  deterministic_apn_kb_only: true
+  ny_limit_g: 20.0
+  max_w: 45.0
+  max_n_pn: 4.5
+  modify_gate_peak_g: 30.0
+  modify_gate_hit_min_pct: 85.0
+  modify_fail_peak_g: 50.0
+  gate_near_miss_tune_enabled: true
+  modify_fail_hit_rate_min: 85.0
+  post_modify_first_tune_strategy: expert
+  post_modify_max_episodes: 50
+  post_modify_ppo_max_episodes: 40
+  post_modify_expert_rounds: 3
+  post_modify_ppo_peak_max_g: 40.0
+  post_modify_ppo_hit_min_pct: 80.0
+  peak_near_miss_g: 8.0
+  near_miss_ppo_max_episodes: 60
+  first_iter_mode: modify_law
+  modify_gate_nmc: 10
+  pe_store_peak_max_g: 25.0
+  pe_store_hit_min_pct: 92.0
+  borderline_nmc_revalidate: 30
+  conservative_autopilot:
+    w1: 35.0
+    zeta1: 0.65
+    tao1: 0.12
+    w2: 32.0
+    zeta2: 0.65
+    tao2: 0.12
+    w3: 35.0
+    zeta3: 0.65
+    N_pn: 3.5
+optimizer:
+  enabled: false
+  type: rl
+rl:
+  algorithm: ppo
+  learning_rate: 0.0003
+  discount_factor: 0.99

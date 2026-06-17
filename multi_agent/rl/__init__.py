@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Reinforcement Learning Module"""
 
-from .reinforcement_learner import ReinforcementLearner
-from .experience_buffer import ExperienceBuffer
 from .matlab_rl_optimizer import (
     MatlabRLOptimizer,
     parse_mission_conditions,
@@ -17,8 +15,6 @@ from .matlab_rl_optimizer import (
 )
 
 __all__ = [
-    "ReinforcementLearner",
-    "ExperienceBuffer",
     "MatlabRLOptimizer",
     "parse_mission_conditions",
     "build_matlab_conditions_str",

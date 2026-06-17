@@ -13,12 +13,14 @@ import os
 import asyncio
 import copy
 import json
+import locale
 import logging
 import subprocess
 import time
 import math
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 import numpy as np
 
@@ -27,8 +29,94 @@ from multi_agent.simulation.guidance_simulator import (
     DEFAULT_SUBPROCESS_TIMEOUT_SEC,
     build_octave_eval_string,
 )
+from multi_agent.rl.feasible_region_explorer import (
+    FeasibleRegionExplorer,
+    FeasibleRegionRewardModifier,
+)
+from multi_agent.rl.adaptive_exploration import AdaptiveExplorationController
+from multi_agent.rl.metric_constraints import (
+    constraints_satisfied,
+    is_better_borderline_peak,
+    is_better_constrained,
+    is_borderline_hit_sep_ok,
+    resolve_requirements,
+)
+from multi_agent.rl.episode_log import EpisodeJsonlLogger
+from multi_agent.rl.ppo_checkpoint import PPOCheckpointManager
+from multi_agent.rl.rolling_stats import RollingEpisodeStats
+from multi_agent.config_loader import FREConfig, FREPresetConfig
+from multi_agent.logging.log_verbosity import is_verbose, should_log_rl_episode
+# AMRO (AdaptiveActionModifier) removed: action tampering broke PPO importance sampling.
 
 logger = logging.getLogger(__name__)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Steep Gradient Detector (for T4 narrow feasible region)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SteepGradientDetector:
+    """检测参数空间中的梯度陡峭区域"""
+    
+    def __init__(self, window_size=5, threshold=2.0):
+        """
+        Args:
+            window_size: 用于计算梯度的历史窗口大小
+            threshold: 梯度阈值（奖励变化/参数变化）
+        """
+        self.window_size = window_size
+        self.threshold = threshold
+        self.reward_history = []
+        self.param_history = []
+    
+    def is_steep_gradient(self):
+        """检测是否在梯度陡峭区域"""
+        if len(self.reward_history) < self.window_size:
+            return False
+        
+        recent_rewards = self.reward_history[-self.window_size:]
+        recent_params = self.param_history[-self.window_size:]
+        
+        # 计算奖励变化率
+        reward_changes = []
+        for i in range(1, len(recent_rewards)):
+            change = abs(recent_rewards[i] - recent_rewards[i-1])
+            reward_changes.append(change)
+        
+        if not reward_changes:
+            return False
+        
+        avg_reward_change = sum(reward_changes) / len(reward_changes)
+        
+        # 计算参数变化率
+        param_changes = []
+        for i in range(1, len(recent_params)):
+            change = 0.0
+            for k in recent_params[i]:
+                change += abs(recent_params[i][k] - recent_params[i-1][k])
+            param_changes.append(change)
+        
+        if not param_changes:
+            return False
+        
+        avg_param_change = sum(param_changes) / len(param_changes)
+        
+        # 梯度 = 奖励变化 / 参数变化
+        if avg_param_change > 1e-6:
+            gradient = avg_reward_change / avg_param_change
+            return gradient > self.threshold
+        
+        return False
+    
+    def update(self, reward, params):
+        """更新历史记录"""
+        self.reward_history.append(reward)
+        self.param_history.append(dict(params))
+        
+        # 保持窗口大小
+        if len(self.reward_history) > 2 * self.window_size:
+            self.reward_history.pop(0)
+            self.param_history.pop(0)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -36,25 +124,29 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Autopilot params: match base=struct(...,'w1',...) in monte_carlo_single.m
-# RL_PARAMS block variables: rl_w1, rl_zeta1, rl_tao1, rl_w2, rl_zeta2, rl_tao2, rl_w3, rl_zeta3
+# RL tunes all 8 autopilot params across pitch/yaw/roll channels.
 AUTOPILOT_PARAM_SPECS: Dict[str, Dict[str, float]] = {
+    # Pitch channel — w* bandwidth capped at 60 to avoid matrix singularity / divergence
     "w1":    {"nominal": 40.0,  "min": 20.0,  "max": 60.0,  "scale": 40.0},
-    "zeta1": {"nominal": 0.75,  "min": 0.30,  "max": 1.20,  "scale": 0.75},
-    "tao1":  {"nominal": 0.20,  "min": 0.10,  "max": 0.40,  "scale": 0.20},
-    "w2":    {"nominal": 35.0,  "min": 15.0,  "max": 55.0,  "scale": 35.0},
-    "zeta2": {"nominal": 0.75,  "min": 0.30,  "max": 1.20,  "scale": 0.75},
-    "tao2":  {"nominal": 0.20,  "min": 0.10,  "max": 0.40,  "scale": 0.20},
+    "zeta1": {"nominal": 0.75,  "min": 0.35,  "max": 1.20,  "scale": 0.75},
+    "tao1":  {"nominal": 0.15,  "min": 0.05,  "max": 0.35,  "scale": 0.15},
+    # Yaw channel
+    "w2":    {"nominal": 35.0,  "min": 20.0,  "max": 60.0,  "scale": 35.0},
+    "zeta2": {"nominal": 0.75,  "min": 0.35,  "max": 1.20,  "scale": 0.75},
+    "tao2":  {"nominal": 0.15,  "min": 0.05,  "max": 0.35,  "scale": 0.15},
+    # Roll channel
     "w3":    {"nominal": 40.0,  "min": 20.0,  "max": 60.0,  "scale": 40.0},
-    "zeta3": {"nominal": 0.70,  "min": 0.30,  "max": 1.20,  "scale": 0.70},
+    "zeta3": {"nominal": 0.70,  "min": 0.35,  "max": 1.20,  "scale": 0.70},
 }
 
 # Guidance law params: rl_N_pn (navigation ratio)  [sw_dist removed — unused in gf()]
+# ny_lim: tanh saturation limit in gf() (g); autopilot overshoot needs headroom below 20g task limit
 GUIDANCE_PARAM_SPECS: Dict[str, Dict[str, float]] = {
-    "N_pn":  {"nominal": 4.0,  "min": 2.0,  "max": 6.0,  "scale": 4.0},
+    "N_pn":   {"nominal": 4.0,  "min": 3.0,  "max": 6.0,  "scale": 4.0},
+    "ny_lim": {"nominal": 20.0, "min": 16.0, "max": 20.0, "scale": 20.0},
 }
 
-# Merged: RL tunes all 9 params
-# (w1/zeta1/tao1 pitch  +  w2/zeta2/tao2 yaw  +  w3/zeta3 roll  +  N_pn)
+# Merged: RL tunes 10 params (8 autopilot + N_pn + ny_lim)
 ALL_TUNABLE_PARAM_SPECS: Dict[str, Dict[str, float]] = {
     **AUTOPILOT_PARAM_SPECS,
     **GUIDANCE_PARAM_SPECS,
@@ -70,8 +162,26 @@ RL_PARAM_TO_MATLAB: Dict[str, str] = {
     "tao2":  "rl_tao2",
     "w3":    "rl_w3",
     "zeta3": "rl_zeta3",
-    "N_pn":  "rl_N_pn",
+    "N_pn":   "rl_N_pn",
+    "ny_lim": "rl_ny_lim",
 }
+
+
+def patch_ny_lim_in_script(content: str, ny_lim: float) -> str:
+    """Patch gf() ny_lim assignment and hard-coded ±20g clips to match RL value."""
+    val = float(ny_lim)
+    val_str = f"{val:.4f}".rstrip("0").rstrip(".")
+    out = re.sub(
+        r"(\bny_lim\s*=\s*)[-+]?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?",
+        rf"\g<1>{val_str}",
+        content,
+    )
+    out = re.sub(
+        r"max\s*\(\s*-20\s*,\s*min\s*\(\s*20\s*,\s*(N[12])\s*\)",
+        r"max(-ny_lim,min(ny_lim,\1)",
+        out,
+    )
+    return out
 
 PHYSICAL_PARAM_SPECS: Dict[str, Dict[str, float]] = {
     "m":  {"nominal": 231.0,  "scale": 231.0},
@@ -94,6 +204,60 @@ BCKCOMPAT_METRIC_ALIASES: Dict[str, str] = {
     "peak_n":        "peak_ny",
 }
 
+# Reward returned on hard truncation (dynamics divergence / invalid SEP).
+HARD_REWARD_PENALTY: float = -10.0
+
+
+def get_peak_ny(metrics: Dict[str, float]) -> float:
+    """Unified peak overload read — accepts ``peak_ny`` or legacy ``peak_n``."""
+    raw = metrics.get("peak_ny", metrics.get("peak_n", 0.0))
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+    if math.isnan(v) or math.isinf(v):
+        return 0.0
+    return v
+
+
+def get_peak_ny_max(metrics: Dict[str, float]) -> float:
+    """Safety PeakNy — prefers MC max=XXg over per-run mean."""
+    for key in ("peak_ny_max", "peak_n_max"):
+        raw = metrics.get(key)
+        if raw is None:
+            continue
+        try:
+            v = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if not math.isnan(v) and not math.isinf(v) and v > 0.0:
+            return v
+    return get_peak_ny(metrics)
+
+
+def get_sep(metrics: Dict[str, float], default: float = float("nan")) -> float:
+    """Unified SEP read — accepts ``SEP`` or legacy ``miss_distance``."""
+    raw = metrics.get("SEP", metrics.get("miss_distance", default))
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return default
+    return v
+
+
+def _tag_sim_metrics(metrics: Dict[str, float], source: str) -> Dict[str, float]:
+    """Attach simulation provenance and keep peak_n / peak_ny aliases in sync."""
+    out = dict(metrics)
+    out["_sim_source"] = source
+    pny = get_peak_ny(out)
+    pny_max = get_peak_ny_max(out)
+    out["peak_ny"] = pny
+    out["peak_n"] = pny
+    if pny_max > 0:
+        out["peak_ny_max"] = pny_max
+        out["peak_n_max"] = pny_max
+    return out
+
 # ── Patterns for monte_carlo_single.m print_summary / print_table output ────
 # print_summary format:
 #   命中率(miss<10m): 85.0%  SEP: 7.23m
@@ -103,14 +267,14 @@ BCKCOMPAT_METRIC_ALIASES: Dict[str, str] = {
 #   子工况名称   95.0%  2.34   8.12   45.2   22.5   18.3
 _SIM_PARSE_PATTERNS_MC = [
     # 命中率行
-    (r"命中率\(miss<[\d.]+m\):\s*([\d.]+)%",                  "hit_rate"),
-    (r"SEP:\s*([\d.]+)m",                                       "SEP"),
-    # 峰值法向过载行 — 取均值（第一个数字）
-    (r"峰值法向过载:\s*([\d.]+)\u00b1",                          "peak_ny"),
+    (r"命中率\(miss<\d+(?:\.\d+)?m\):\s*(\d+(?:\.\d+)?)%",      "hit_rate"),
+    (r"SEP:\s*(\d+(?:\.\d+)?)m",                                  "SEP"),
+    # 峰值法向过载行 — 取均值（第一个数字）; ± NOT used (GBK encoding issue on Windows)
+    (r"峰值法向过载:\s*(\d+(?:\.\d+)?)",                           "peak_ny"),
     # 俯仰PM行
-    (r"俯仰PM:\s*([\d.]+)\u00b1",                               "pitch_PM"),
-    (r"BW:\s*([\d.]+)\u00b1",                                    "pitch_BW"),
-    (r"GM:\s*([\d.]+)\u00b1",                                    "pitch_GM"),
+    (r"俯仰PM:\s*(\d+(?:\.\d+)?)",                                "pitch_PM"),
+    (r"BW:\s*(\d+(?:\.\d+)?)",                                    "pitch_BW"),
+    (r"GM:\s*(\d+(?:\.\d+)?)",                                    "pitch_GM"),
     # 汇总表格行：名称  命中率%  SEP  PeakNy  PM  BW  GM
     # 匹配形如 "某工况名  88.0%  3.45  10.2  42.1  18.5  11.3"
     (r"(?:T|G|AP|R)\d[\u4e00-\u9fffA-Za-z\u00b7:：×\d]*\s+([\d.]+)%\s+([\d.]+)",
@@ -130,9 +294,107 @@ _SIM_PARSE_PATTERNS_LEGACY = [
     (r"peak[_\s]*n\s*[:=]\s*([-+]?\d+\.?\d*)",               "peak_ny"),
 ]
 
+# Sentinel defaults used when regex finds no MC evidence (see log06050926).
+_PARSE_SENTINEL_HIT = 0.0
+_PARSE_SENTINEL_SEP = 50.0
+_PARSE_SENTINEL_PM = 30.0
+_PARSE_SENTINEL_PEAK_NY = 0.0
 
-def parse_sim_stdout(raw: Any) -> Dict[str, float]:
-    """Parse monte_carlo_single.m stdout into a metrics dict.
+_CASE_TABLE_SKIP_PREFIXES = (
+    "Case ", "Hit %", "MeanMiss", "[Run]", "════", "──", "╔", "╠", "╚", "【",
+    "子工况", "Mean pitch", "命中率", "峰值法向", "俯仰PM",
+)
+
+
+def stdout_has_mc_evidence(raw: str) -> bool:
+    """True when stdout contains parseable Monte-Carlo result lines."""
+    if not raw or not str(raw).strip():
+        return False
+    text = str(raw)
+    if re.search(r"\[\s*\d+\]\s*(?:HIT|MISS)\b", text, re.I):
+        return True
+    if re.search(r"命中率\s*\(\s*miss\s*<", text, re.I):
+        return True
+    if re.search(r"SEP:\s*\d+(?:\.\d+)?m", text, re.I):
+        return True
+    if re.search(r"Hit\s+rate\s*\(\s*miss\s*<", text, re.I):
+        return True
+    if re.search(r"Mean\s+miss(?:\s+distance|\s*\(SEP\))?\s*:\s*\d", text, re.I):
+        return True
+    for line in text.splitlines():
+        s = line.strip()
+        if not s or any(s.startswith(p) for p in _CASE_TABLE_SKIP_PREFIXES):
+            continue
+        if re.match(
+            r"^.+\s+\d+(?:\.\d+)?\s*%\s+\d+(?:\.\d+)?\s+-?\d",
+            s,
+        ):
+            return True
+    return False
+
+
+def metrics_look_like_parse_defaults(
+    metrics: Dict[str, Any],
+    raw: str = "",
+) -> bool:
+    """True when hit/SEP are still parser sentinels and stdout lacks MC evidence."""
+    if not metrics:
+        return not stdout_has_mc_evidence(raw) if raw else True
+    try:
+        hr = float(metrics.get("hit_rate", _PARSE_SENTINEL_HIT))
+        sep = float(metrics.get("SEP", metrics.get("miss_distance", _PARSE_SENTINEL_SEP)))
+    except (TypeError, ValueError):
+        return True
+    at_sentinel = (
+        abs(hr - _PARSE_SENTINEL_HIT) < 0.01
+        and abs(sep - _PARSE_SENTINEL_SEP) < 0.01
+    )
+    if not at_sentinel:
+        return False
+    return not stdout_has_mc_evidence(raw)
+
+
+def _parse_generic_case_table_lines(
+    raw: str,
+    hr_vals: List[float],
+    sep_vals: List[float],
+    ny_vals: List[float],
+    pm_vals: List[float],
+    bw_vals: List[float],
+    gm_vals: List[float],
+) -> None:
+    """Parse English/Hermes case summary rows (Hit % / MeanMiss columns)."""
+    for line in raw.splitlines():
+        s = line.strip()
+        if not s or any(s.startswith(p) for p in _CASE_TABLE_SKIP_PREFIXES):
+            continue
+        m = re.match(
+            r"^(?P<name>.+?)\s+"
+            r"(?P<hr>\d+(?:\.\d+)?)\s*%\s+"
+            r"(?P<sep>\d+(?:\.\d+)?)\s+"
+            r"(?P<ny>-?\d+(?:\.\d+)?)\s+"
+            r"(?P<pm>-?\d+(?:\.\d+)?)\s+"
+            r"(?P<bw>-?\d+(?:\.\d+)?)\s+"
+            r"(?P<gm>-?\d+(?:\.\d+)?|Inf)\s*$",
+            s,
+        )
+        if not m:
+            continue
+        try:
+            hr_vals.append(float(m.group("hr")))
+            sep_vals.append(float(m.group("sep")))
+            ny_vals.append(float(m.group("ny")))
+            pm_vals.append(float(m.group("pm")))
+            bw_vals.append(float(m.group("bw")))
+            gm_s = m.group("gm")
+            if gm_s != "Inf":
+                gm_vals.append(float(gm_s))
+        except ValueError:
+            pass
+
+
+def _aggregate_parsed_metrics(raw: Any) -> Dict[str, float]:
+    """Parse monte_carlo_single.m stdout into a metrics dict (regex only).
 
     Aggregation across multiple subcases/categories:
       - hit_rate : min  (worst-case hit rate)
@@ -181,52 +443,208 @@ def parse_sim_stdout(raw: Any) -> Dict[str, float]:
     bw_vals: List[float] = []
     gm_vals: List[float] = []
 
+    # ── Parse per-run lines (encoding-immune, pure ASCII) ────────────
+    # Format: [  N] HIT/MISS  miss_val  peakny_val  pm_val  bw_val  gm_val
+    # These lines are always present even if the simulation crashes before
+    # producing the summary section, making this the most robust parser.
+    _hit_count = 0
+    _run_count = 0
+    _run_miss_vals: List[float] = []
+    _run_ny_vals: List[float] = []
+    _run_pm_vals: List[float] = []
+    _run_bw_vals: List[float] = []
+    _run_gm_vals: List[float] = []
+    for m in re.finditer(
+        r"\[\s*\d+\]\s*(HIT|MISS)\s+"
+        r"([\d.]+)\s+"          # miss distance (always >= 0)
+        r"(-?[\d.]+)\s+"        # peak Ny (can be negative in edge cases)
+        r"(-?[\d.]+)\s+"        # PM (can be negative for unstable systems)
+        r"(-?[\d.]+)\s+"        # BW (can be negative in edge cases)
+        r"(-?[\d.]+|Inf|NaN)",   # GM
+        raw,
+    ):
+        _run_count += 1
+        if m.group(1) == "HIT":
+            _hit_count += 1
+        try:
+            _run_miss_vals.append(float(m.group(2)))
+            _run_ny_vals.append(float(m.group(3)))
+            _v_pm = float(m.group(4))
+            if not (math.isnan(_v_pm) or math.isinf(_v_pm)):
+                _run_pm_vals.append(_v_pm)
+            _v_bw = float(m.group(5))
+            if not (math.isnan(_v_bw) or math.isinf(_v_bw)):
+                _run_bw_vals.append(_v_bw)
+            _v_gm = m.group(6)
+            if _v_gm not in ("Inf", "NaN"):
+                _run_gm_vals.append(float(_v_gm))
+        except ValueError:
+            pass
+    # Also count ERR lines — if all runs produce ERR, hit_rate = 0%
+    _err_count = len(re.findall(r"\[\s*\d+\]\s*ERR:", raw))
+    if _run_count > 0:
+        # Compute aggregated metrics from per-run data
+        _run_hr = _hit_count / _run_count * 100.0
+        hr_vals.append(_run_hr)
+        if _run_miss_vals:
+            sep_vals.append(max(_run_miss_vals))
+        if _run_ny_vals:
+            ny_vals.append(max(_run_ny_vals))
+        if _run_pm_vals:
+            pm_vals.append(min(_run_pm_vals))
+        if _run_bw_vals:
+            bw_vals.append(sum(_run_bw_vals) / len(_run_bw_vals))
+        if _run_gm_vals:
+            gm_vals.append(min(_run_gm_vals))
+        logger.debug(
+            f"[parse] per-run lines: {_run_count} runs (+{_err_count} ERR), "
+            f"hit={_run_hr:.0f}%, SEP={max(_run_miss_vals) if _run_miss_vals else '?'}, "
+            f"PM={min(_run_pm_vals) if _run_pm_vals else '?'}, "
+            f"BW={sum(_run_bw_vals)/len(_run_bw_vals) if _run_bw_vals else '?'}"
+        )
+    elif _err_count > 0:
+        # All runs crashed — signal 0% hit rate so RL knows params are bad
+        hr_vals.append(0.0)
+        logger.info(
+            f"[parse] ALL {_err_count} runs produced ERR (no HIT/MISS). "
+            f"Parameters likely caused sim crash."
+        )
+
     # Parse 【汇总】block lines
-    for m in re.finditer(r"命中率\(miss<[\d.]+m\):\s*([\d.]+)%", raw):
+    for m in re.finditer(r"命中率\(miss<\d+(?:\.\d+)?m\):\s*(\d+(?:\.\d+)?)%", raw):
         hr_vals.append(float(m.group(1)))
-    for m in re.finditer(r"SEP:\s*([\d.]+)m", raw):
+    for m in re.finditer(r"SEP:\s*(\d+(?:\.\d+)?)m", raw):
         sep_vals.append(float(m.group(1)))
-    for m in re.finditer(r"峰值法向过载:\s*([\d.]+)\u00b1", raw):
+    # NOTE: \u00b1 (±) is NOT used below.
+    # MATLAB on Windows outputs ± as GBK single-byte \xb1; when the subprocess
+    # stdout is decoded as UTF-8 (or with errors='replace') the character becomes
+    # a replacement/garbage byte, so patterns anchored on \u00b1 never match.
+    # Instead we match the number immediately after the label and stop greedily.
+    for m in re.finditer(r"峰值法向过载:\s*(\d+(?:\.\d+)?)", raw):
         ny_vals.append(float(m.group(1)))
-    for m in re.finditer(r"俯仰PM:\s*([\d.]+)\u00b1", raw):
+    ny_max_vals: List[float] = []
+    for m in re.finditer(r"max=(\d+(?:\.\d+)?)\s*g", raw, re.IGNORECASE):
+        ny_max_vals.append(float(m.group(1)))
+    for m in re.finditer(r"俯仰PM:\s*(\d+(?:\.\d+)?)", raw):
         pm_vals.append(float(m.group(1)))
-    for m in re.finditer(r"BW:\s*([\d.]+)\u00b1", raw):
+    for m in re.finditer(r"BW:\s*(\d+(?:\.\d+)?)", raw):
         bw_vals.append(float(m.group(1)))
-    for m in re.finditer(r"GM:\s*([\d.]+)\u00b1", raw):
+    for m in re.finditer(r"GM:\s*(\d+(?:\.\d+)?)", raw):
         gm_vals.append(float(m.group(1)))
 
-    # Parse summary table rows if 【汇总】blocks absent
-    if not hr_vals:
-        for m in re.finditer(
-            r"(?:T|G|AP|R)\d[\u4e00-\u9fffA-Za-z:\u00b7×\d]*\s+([\d.]+)%\s+([\d.]+)",
-            raw,
-        ):
+    # Parse summary table rows — always run (not just as fallback).
+    # Row format: <名称>  <命中率>%  <SEP>  <PeakNy>  <PM>  <BW>  <GM>
+    # Table is the canonical source for PeakNy/PM/BW/GM because it has no ±
+    # character, so it is immune to the GBK/UTF-8 encoding issue that causes
+    # those metrics to be missing from print_summary parsing.
+    # Guards: only append to a list if it is still empty, to avoid double-counting
+    # when print_summary already provided the value.
+    #
+    # NOTE: The name portion may contain \ufffd replacement characters when
+    # GBK bytes are partially invalid, so we use \S+ (any non-whitespace)
+    # instead of the restrictive [\u4e00-\u9fff] character class.  The %
+    # after hit_rate is optional because some print_table variants omit it.
+    for m in re.finditer(
+        r"(?:T|G|AP|R)\d\S*"
+        r"\s+(\d+(?:\.\d+)?)%?\s+"   # group 1: hit_rate (% optional)
+        r"(\d+(?:\.\d+)?)\s+"        # group 2: SEP (always >= 0)
+        r"(-?\d+(?:\.\d+)?)\s+"      # group 3: PeakNy
+        r"(-?\d+(?:\.\d+)?)\s+"      # group 4: PM (can be negative)
+        r"(-?\d+(?:\.\d+)?)\s+"      # group 5: BW
+        r"(-?\d+(?:\.\d+)?|Inf)",    # group 6: GM
+        raw,
+    ):
+        try:
+            _hr = float(m.group(1))
+            _sep = float(m.group(2))
+            _ny = float(m.group(3))
+            _pm = float(m.group(4))
+            _bw = float(m.group(5))
+            _gm_s = m.group(6)
+            # Append to lists (aggregation handles multiple subcases)
+            hr_vals.append(_hr)
+            sep_vals.append(_sep)
+            ny_vals.append(_ny)
+            pm_vals.append(_pm)
+            bw_vals.append(_bw)
+            if _gm_s != "Inf":
+                gm_vals.append(float(_gm_s))
+        except ValueError:
+            pass
+
+    # English Hermes / legacy stdout: "Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB"
+    for m in re.finditer(
+        r"Mean\s+pitch\s+PM:\s*(-?[\d.]+)\s*deg,\s*BW:\s*([\d.]+)\s*rad/s,\s*GM:\s*([\d.]+)\s*dB",
+        raw,
+        re.I,
+    ):
+        try:
+            pm_vals.append(float(m.group(1)))
+            bw_vals.append(float(m.group(2)))
+            gm_vals.append(float(m.group(3)))
+        except ValueError:
+            pass
+
+    # English summary lines
+    for m in re.finditer(
+        r"Hit\s+rate\s*\(\s*miss\s*<\s*\d+(?:\.\d+)?m\s*\):\s*(\d+(?:\.\d+)?)\s*%",
+        raw,
+        re.I,
+    ):
+        hr_vals.append(float(m.group(1)))
+    for m in re.finditer(
+        r"Mean\s+miss(?:\s+distance|\s*\(SEP\))?\s*:\s*(\d+(?:\.\d+)?)\s*m",
+        raw,
+        re.I,
+    ):
+        sep_vals.append(float(m.group(1)))
+
+    # Generic case table (English "Case Hit % MeanMiss ..." data rows)
+    if not hr_vals or not sep_vals:
+        _parse_generic_case_table_lines(
+            raw, hr_vals, sep_vals, ny_vals, pm_vals, bw_vals, gm_vals,
+        )
+
+    # Legacy patterns: always run for metrics not yet found.
+    # hit_rate/SEP use the primary guard; PM/BW/PeakNy/GM run unconditionally
+    # so that mixed-format output (standard hit_rate + legacy PM=75.9) is handled.
+    _legacy_need_hr  = not hr_vals
+    _legacy_need_sep = not sep_vals
+    for pat, key in _SIM_PARSE_PATTERNS_LEGACY:
+        # Skip hit_rate / SEP if already found to avoid double-counting
+        if key == "hit_rate"  and not _legacy_need_hr:  continue
+        if key == "SEP"       and not _legacy_need_sep: continue
+        # For PM/BW/PeakNy always try (override only when list is still empty)
+        if key == "pitch_PM"  and pm_vals: continue
+        if key == "pitch_BW"  and bw_vals: continue
+        if key == "pitch_GM"  and gm_vals: continue
+        if key == "peak_ny"   and ny_vals: continue
+        if key == "peak_n"    and ny_vals: continue
+        matches = re.findall(pat, raw, re.IGNORECASE)
+        if matches:
             try:
-                hr_vals.append(float(m.group(1)))
-                sep_vals.append(float(m.group(2)))
+                val = float(matches[-1])
+                if key == "hit_rate":   hr_vals.append(val)
+                elif key == "SEP":      sep_vals.append(val)
+                elif key in ("peak_ny", "peak_n"): ny_vals.append(val)
+                elif key == "pitch_PM": pm_vals.append(val)
+                elif key == "pitch_BW": bw_vals.append(val)
+                elif key == "pitch_GM": gm_vals.append(val)
             except ValueError:
                 pass
-
-    # Legacy patterns for old template output
-    if not hr_vals:
-        for pat, key in _SIM_PARSE_PATTERNS_LEGACY:
-            matches = re.findall(pat, raw, re.IGNORECASE)
-            if matches:
-                try:
-                    val = float(matches[-1])
-                    if key == "hit_rate":  hr_vals.append(val)
-                    elif key == "SEP":     sep_vals.append(val)
-                    elif key == "peak_ny": ny_vals.append(val)
-                    elif key == "pitch_PM":pm_vals.append(val)
-                    elif key == "pitch_BW":bw_vals.append(val)
-                    elif key == "pitch_GM":gm_vals.append(val)
-                except ValueError:
-                    pass
 
     # Aggregate: worst-case where applicable
     if hr_vals:  defaults["hit_rate"] = min(hr_vals)
     if sep_vals: defaults["SEP"]      = max(sep_vals)
-    if ny_vals:  defaults["peak_ny"]  = max(ny_vals)
+    if ny_vals:
+        defaults["peak_ny"] = float(sum(ny_vals) / len(ny_vals))
+        defaults["peak_ny_mean"] = defaults["peak_ny"]
+    if ny_max_vals:
+        defaults["peak_ny_max"] = max(ny_max_vals)
+        defaults["peak_n_max"] = defaults["peak_ny_max"]
+    elif ny_vals:
+        defaults["peak_ny_max"] = max(ny_vals)
+        defaults["peak_n_max"] = defaults["peak_ny_max"]
     if pm_vals:  defaults["pitch_PM"] = min(pm_vals)
     if bw_vals:  defaults["pitch_BW"] = float(sum(bw_vals) / len(bw_vals))
     if gm_vals:  defaults["pitch_GM"] = min(gm_vals)
@@ -234,6 +652,134 @@ def parse_sim_stdout(raw: Any) -> Dict[str, float]:
     defaults["miss_distance"] = defaults["SEP"]
     defaults["peak_n"]        = defaults["peak_ny"]
     return defaults
+
+
+def _parse_metrics_with_llm(raw: str) -> Dict[str, float]:
+    """Use LLM to extract simulation metrics from raw MATLAB stdout.
+
+    Called when regex parsing leaves key metrics at their default values.
+    Uses the same LLM config as the rest of the system (sync openai client).
+    Returns a partial dict — only keys with successfully parsed values.
+    """
+    try:
+        from multi_agent.config_loader import get_config
+        import openai as _openai
+
+        cfg = get_config().llm
+        client = _openai.OpenAI(
+            api_key=cfg.api_key or "sk-dummy",
+            base_url=cfg.base_url or "https://api.openai.com/v1",
+            timeout=30,
+            max_retries=3,
+        )
+
+        # Trim stdout to last 3000 chars (summary section is always near the end)
+        snippet = raw[-3000:] if len(raw) > 3000 else raw
+
+        prompt = (
+            "Below is the stdout of a MATLAB Monte-Carlo simulation for a missile "
+            "guidance system. Extract ONLY these numeric metrics and return them as "
+            "a single-line JSON object with these exact keys: "
+            "hit_rate (percentage 0-100), SEP (metres), peak_ny (mean g), "
+            "peak_ny_max (worst-case max g), "
+            "pitch_PM (degrees), pitch_BW (rad/s), pitch_GM (dB). "
+            "If a value is Inf or cannot be determined, omit that key. "
+            "Return ONLY the JSON object, no other text.\n\n"
+            f"STDOUT:\n{snippet}"
+        )
+
+        resp = client.chat.completions.create(
+            model=cfg.model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+            max_tokens=128,
+        )
+        content = resp.choices[0].message.content
+        if not content:
+            logger.warning("[LLM metric parse] LLM returned None content")
+            return {}
+        
+        content = content.strip()
+        logger.debug(f"[LLM metric parse] Raw response (first 200 chars): {content[:200]}")
+        
+        # Strip markdown fences if present
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        content = content.strip()
+        if not content:
+            logger.warning("[LLM metric parse] LLM returned empty content after stripping")
+            return {}
+        
+        parsed = json.loads(content)
+        result: Dict[str, float] = {}
+        for k, v in parsed.items():
+            try:
+                result[k] = float(v)
+            except (TypeError, ValueError):
+                pass
+        logger.info(f"[LLM metric parse] extracted: {result}")
+        return result
+    except json.JSONDecodeError as exc:
+        logger.warning(f"[LLM metric parse] JSON decode failed: {exc}")
+        return {}
+    except Exception as exc:
+        logger.warning(f"[LLM metric parse] failed: {exc}")
+        return {}
+
+
+def parse_sim_stdout(raw: Any) -> Dict[str, float]:
+    """Parse MATLAB stdout with regex; fall back to LLM for missing metrics."""
+    result = _aggregate_parsed_metrics(raw if isinstance(raw, str) else str(raw))
+
+    # Identify which key metrics are still at their hard-coded defaults
+    _pm_default = 30.0
+    _bw_default = 15.0
+    _ny_default = 0.0
+    _raw_str = str(raw)
+    # If MATLAB explicitly printed NaN for PM/BW (cg() failed), record as nan
+    # and do NOT trigger the LLM fallback for those metrics.
+    _pm_nan = bool(re.search(r'俯仰PM[^\n]{0,40}NaN|NaN[^\n]{0,40}俯仰PM', _raw_str))
+    _bw_nan = bool(re.search(r'\bBW[^\n]{0,30}NaN|NaN[^\n]{0,30}BW\b', _raw_str))
+    if _pm_nan and abs(result.get("pitch_PM", _pm_default) - _pm_default) < 0.01:
+        result["pitch_PM"] = float("nan")
+    if _bw_nan and abs(result.get("pitch_BW", _bw_default) - _bw_default) < 0.01:
+        result["pitch_BW"] = float("nan")
+    _needs_llm = (
+        (abs(result.get("pitch_PM", _pm_default) - _pm_default) < 0.01 and not _pm_nan) or
+        (abs(result.get("pitch_BW", _bw_default) - _bw_default) < 0.01 and not _bw_nan) or
+        result.get("peak_ny", _ny_default) == _ny_default
+    )
+    if _needs_llm and raw and len(_raw_str) > 50:
+        logger.debug("[parse_sim_stdout] Regex incomplete — calling LLM fallback")
+        llm_vals = _parse_metrics_with_llm(str(raw))
+        for k, v in llm_vals.items():
+            _key_map = {
+                "hit_rate": "hit_rate", "SEP": "SEP", "peak_ny": "peak_ny",
+                "peak_ny_max": "peak_ny_max",
+                "pitch_PM": "pitch_PM", "pitch_BW": "pitch_BW", "pitch_GM": "pitch_GM",
+            }
+            if k in _key_map:
+                result[_key_map[k]] = v
+        # Sync aliases
+        result["miss_distance"] = result.get("SEP", result.get("miss_distance", 0.0))
+        result["peak_n"] = result.get("peak_ny", result.get("peak_n", 0.0))
+        if result.get("peak_ny_max", 0.0) <= 0 and result.get("peak_ny", 0.0) > 0:
+            result["peak_ny_max"] = result["peak_ny"]
+        if result.get("peak_ny", 0.0) <= 0 and result.get("peak_ny_max", 0.0) > 0:
+            result["peak_ny"] = result["peak_ny_max"]
+        result["peak_n_max"] = result.get("peak_ny_max", result.get("peak_n_max", 0.0))
+
+    _incomplete = metrics_look_like_parse_defaults(result, _raw_str)
+    result["_parse_incomplete"] = _incomplete
+    if _incomplete:
+        logger.warning(
+            "[parse_sim_stdout] hit_rate/SEP at sentinel defaults (0%% / 50m) "
+            "with no MC evidence in stdout — metrics unreliable for RL"
+        )
+
+    return result
 
 # Mission categories as defined in monte_carlo_single.m
 # RUN_CASE: 'T'|'G'|'AP'|'R'|'ALL'; SUB_IDX: 0=全部, 1..N=指定子工况
@@ -328,6 +874,17 @@ def extract_autopilot_params(script_content: str) -> Dict[str, float]:
             result[key] = float(all_params[key])
         else:
             result[key] = float(spec["nominal"])
+
+    if "ny_lim" not in result:
+        m_ny = re.search(
+            r"\bny_lim\s*=\s*([-+]?\d+(?:\.\d*)?(?:[eE][-+]?\d+)?)",
+            script_content,
+        )
+        if m_ny:
+            try:
+                result["ny_lim"] = float(m_ny.group(1))
+            except ValueError:
+                pass
     return result
 
 
@@ -400,8 +957,9 @@ def parse_mission_conditions(prompt: str) -> Dict[str, List[int]]:
         ("AP", ["驾驶仪", "autopilot", r"\bAP\b"]),
         ("R",  ["综合鲁棒", "鲁棒性", "robustness", r"\bR\b"]),
     ]
-    all_kws = ["全工况", "所有工况", "all cases", "ALL"]
-    if any(kw.lower() in prompt.lower() for kw in all_kws):
+    all_kws = ["全工况", "所有工况", "all cases", r"\ball\b"]
+    if any(re.search(kw if kw.startswith(r"\b") else re.escape(kw), prompt, re.IGNORECASE)
+           for kw in all_kws):
         return {}  # ALL
     for cat, kws in kw_map:
         if any(re.search(kw, prompt, re.IGNORECASE) for kw in kws):
@@ -446,14 +1004,17 @@ def build_matlab_conditions_str(conditions: Dict[str, List[int]]) -> str:
     - Specific sub→ ``RUN_CASE='T';SUB_IDX=1;``  (first listed subcase)
     - Multi cat   → ``RUN_CASE='ALL';SUB_IDX=0;`` (run all, filter by category)
     """
-    if not conditions or len(conditions) >= len(CATEGORY_DEFS):
+    # Only categories with at least one subcase entry are "active".
+    # Entries like 'G': [] mean "not requested" and must be ignored.
+    active = {k: v for k, v in (conditions or {}).items() if v}
+    if not active or len(active) >= len(CATEGORY_DEFS):
         return "RUN_CASE='ALL';SUB_IDX=0;"
-    if len(conditions) == 1:
-        cat = list(conditions.keys())[0]
-        subs = conditions[cat]
+    if len(active) == 1:
+        cat = list(active.keys())[0]
+        subs = active[cat]
         sub_idx = subs[0] if subs else 0
         return f"RUN_CASE='{cat}';SUB_IDX={sub_idx};"
-    # Multiple specific categories → 'ALL' (can't express selective cats in RUN_CASE natively)
+    # Multiple active categories → 'ALL' (RUN_CASE can't express selective cats natively)
     return "RUN_CASE='ALL';SUB_IDX=0;"
 
 
@@ -621,10 +1182,62 @@ def _looks_like_matlab_script(content: str) -> Tuple[bool, str]:
             f"({n_nat_lang}/{len(lines)})"
         )
 
+    # Minimum line count: a real monte_carlo_single-style script is hundreds of
+    # lines.  Fewer than 80 almost certainly means LLM output was truncated or
+    # only the header / RL_PARAMS block was emitted.
+    if len(lines) < 80:
+        return False, (
+            f"script too short ({len(lines)} lines < 80 minimum) "
+            f"— likely LLM-truncated or incomplete template"
+        )
+
+    # Key body functions: at least one of these must be present for the script
+    # to be capable of running a meaningful MC simulation.
+    _body_markers = [
+        "run_category_mc", "run_case_mc", "for.*N_MC", "parfor.*N_MC",
+        r"function\s+gf\b", r"function\s+guidance_local\b",
+        r"function\s+cg\b", "mont.*carlo",
+    ]
+    _body_re = re.compile("|".join(_body_markers), re.IGNORECASE | re.MULTILINE)
+    if not _body_re.search(content):
+        return False, (
+            "missing MC-body markers (run_category_mc / gf / guidance_local / cg) "
+            "— script appears to be header-only"
+        )
+
     return True, (
         f"valid (structural tokens present, {n_assignments} assignments, "
-        f"natural-language ratio {nat_ratio:.0%})"
+        f"natural-language ratio {nat_ratio:.0%}, {len(lines)} lines)"
     )
+
+
+def validate_rl_script_content(content: str) -> Tuple[bool, str]:
+    """Return (ok, reason).  When ok is False, RL must not use MATLAB on this script."""
+    if re.search(r"\bendfunction\b", content, re.IGNORECASE):
+        return False, "含 Octave 语法 endfunction（MATLAB 应使用 end）"
+    if (
+        "Placeholder simulation function" in content
+        or "sim_s(p) %#ok<INUSD>" in content
+    ):
+        return False, (
+            "sim_s 为 PLACEHOLDER 占位实现，RL 参数无法改变仿真结果"
+        )
+    if not re.search(r"RL_PARAMS_BEGIN", content):
+        if len(re.findall(r"\bdp\.\w+\s*=", content)) < 3:
+            return False, "缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch"
+    _has_parseable_output = (
+        "print_summary" in content
+        or re.search(r"命中率\s*\(\s*miss\s*<", content, re.I)
+        or re.search(r"fprintf\s*\(\s*['\"]\s*\[\s*%3d\]", content)
+        or re.search(r"\[\s*%3d\].*(?:HIT|MISS)", content, re.I)
+        or re.search(r"Mean\s+pitch\s+PM:", content, re.I)
+    )
+    if not _has_parseable_output:
+        return False, (
+            "脚本缺少 RL 解析器可识别的仿真输出"
+            "（print_summary / [N] HIT-MISS / Mean pitch PM）"
+        )
+    return True, "ok"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -648,16 +1261,19 @@ class EpisodeResult:
 
 class MatlabRLOptimizer:
     """
-    RL-based optimizer for guidance system parameters (autopilot + guidance law).
+    Contextual-bandit optimizer for guidance/autopilot parameters (PPO-style updates).
+
+    Each episode is an independent pull: sample action → absolute params → single MC
+    evaluation → reward.  There is **no** inter-episode state transition, so training
+    uses gamma=0 (G_t = R_t) and Advantage = R_t − V(s_t).
 
     Workflow
     --------
-    1. Dynamically extract dp.* parameters from a generated MATLAB script.
-    2. Build normalized state vector (tunable params + physical params + metrics).
-    3. Action space = continuous adjustments to autopilot AND guidance law params.
-    4. For each episode: sample action → update dp params → run MC simulation → compute reward.
-    5. PPO-style policy gradient update every ``episodes_per_update`` steps.
-    6. Write best params to ParameterExperience (long-term memory).
+    1. Extract tunable params from the MATLAB script RL_PARAMS block.
+    2. Build state from **last-executed** params + physical constants + last metrics.
+    3. Sample action → map to bounded absolute params → run MC simulation → reward.
+    4. PPO clipped policy update every ``episodes_per_update`` independent episodes.
+    5. Persist best params to ParameterExperience.
     """
 
     def __init__(
@@ -666,17 +1282,50 @@ class MatlabRLOptimizer:
         parameter_experience=None,
         reflection_agent=None,
         hidden_dim: int = 64,
-        lr_actor: float = 3e-4,
-        lr_critic: float = 1e-3,
-        gamma: float = 0.99,
-        clip_ratio: float = 0.2,
+        lr_actor: float = 1e-4,
+        lr_critic: float = 5e-4,
+        gamma: float = 0.0,
+        clip_ratio: float = 0.15,
         max_episodes: int = 50,
-        episodes_per_update: int = 5,
-        nmc_per_eval: int = 20,
-        reflect_every: int = 1,
+        episodes_per_update: int = 64,
+        nmc_per_eval: int = 10,
+        reflect_every: int = 5,
         peak_n_max: float = 20.0,
         peak_n_penalty: float = 1.0,
         reward_weights: Optional[Dict[str, float]] = None,
+        entropy_coef: float = 0.05,
+        pitch_log_std: float = -0.7,
+        other_log_std: float = -1.6,
+        warm_start_std_scale: float = 0.3,
+        baseline_reward_threshold: float = 0.5,
+        diverge_penalty_episodes: int = 3,
+        diverge_log_std_delta: float = -0.5,
+        diverge_reward_threshold: float = -9.5,
+        early_stop_enabled: bool = True,
+        early_stop_min_episodes: int = 25,
+        early_stop_patience: int = 15,
+        early_stop_plateau_delta: float = 0.05,
+        early_stop_use_rule_first: bool = True,
+        early_stop_use_multi_criteria_best: bool = True,
+        early_stop_peak_only_patience: int = 25,
+        fre_config: Optional[FREConfig] = None,
+        checkpoint_enabled: bool = True,
+        checkpoint_dir: str = "./parameter_experience_base/checkpoints/ppo",
+        checkpoint_save_every: int = 10,
+        checkpoint_keep_last_n: int = 5,
+        rolling_window: int = 20,
+        stats_log_every: int = 1,
+        jsonl_log_dir: str = "logs",
+        amro_enabled: bool = False,
+        amro_gradient_threshold: float = 0.5,
+        amro_forbidden_zone_radius: float = 0.15,
+        amro_history_window: int = 10,
+        adaptive_explore_enabled: bool = True,
+        adaptive_steepness_threshold: float = 2.0,
+        adaptive_log_std_min_scale: float = 0.35,
+        adaptive_log_std_max_scale: float = 1.0,
+        adaptive_ema_alpha: float = 0.3,
+        progress_callback: Optional[Callable[[int, int, Dict[str, Any]], None]] = None,
     ):
         self.simulator = simulator
         self.parameter_experience = parameter_experience
@@ -684,48 +1333,108 @@ class MatlabRLOptimizer:
         self.hidden_dim = hidden_dim
         self.lr_actor = lr_actor
         self.lr_critic = lr_critic
-        self.gamma = gamma
+        # Contextual bandit: episodes are independent; gamma must stay 0.
+        self.gamma = 0.0
+        if gamma != 0.0:
+            logger.warning(
+                f"[RL] gamma={gamma} ignored — contextual bandit mode forces gamma=0.0"
+            )
         self.clip_ratio = clip_ratio
         self.max_episodes = max_episodes
-        self.episodes_per_update = episodes_per_update
+        self.episodes_per_update = max(1, int(episodes_per_update))
         self.nmc_per_eval = nmc_per_eval
+        self.entropy_coef = float(entropy_coef)
         # Cadence at which the reflection agent is consulted during RL.
         # 1 = every episode (default); 2 = every other; etc. Only invoked when
         # there is a NEW best on that episode, so cost stays bounded.
         self.reflect_every = max(1, int(reflect_every))
-        self._peak_n_max: float = float(peak_n_max)
-        self._peak_n_penalty: float = float(peak_n_penalty)
+        self._pitch_log_std = float(pitch_log_std)
+        self._other_log_std = float(other_log_std)
+        self._warm_start_std_scale = float(warm_start_std_scale)
+        self._baseline_reward_threshold = float(baseline_reward_threshold)
+        self._diverge_penalty_episodes = max(1, int(diverge_penalty_episodes))
+        self._diverge_log_std_delta = float(diverge_log_std_delta)
+        self._diverge_reward_threshold = float(diverge_reward_threshold)
+        self._early_stop_enabled = bool(early_stop_enabled)
+        self._early_stop_min_episodes = max(1, int(early_stop_min_episodes))
+        self._early_stop_patience = max(1, int(early_stop_patience))
+        self._early_stop_plateau_delta = float(early_stop_plateau_delta)
+        self._early_stop_use_rule_first = bool(early_stop_use_rule_first)
+        self._early_stop_use_multi_criteria_best = bool(early_stop_use_multi_criteria_best)
+        self._early_stop_peak_only_patience = max(1, int(early_stop_peak_only_patience))
+        self._fre_config = fre_config or FREConfig()
+        self._consecutive_diverge = 0
+        self._last_constrained_improve_ep = 0
+        self._last_peak_improve_ep = 0
+        self._checkpoint_enabled = bool(checkpoint_enabled)
+        self._checkpoint_dir = str(checkpoint_dir)
+        self._checkpoint_save_every = max(1, int(checkpoint_save_every))
+        self._checkpoint_keep_last_n = max(1, int(checkpoint_keep_last_n))
+        self._rolling_window = max(1, int(rolling_window))
+        self._stats_log_every = max(1, int(stats_log_every))
+        self._jsonl_log_dir = str(jsonl_log_dir)
+        self._checkpoint_mgr: Optional[PPOCheckpointManager] = None
+        self._episode_logger: Optional[EpisodeJsonlLogger] = None
+        self._rolling_stats: Optional[RollingEpisodeStats] = None
+        self._adaptive_explore_enabled = bool(adaptive_explore_enabled)
+        self._adaptive_steepness_threshold = float(adaptive_steepness_threshold)
+        self._adaptive_log_std_min = float(adaptive_log_std_min_scale)
+        self._adaptive_log_std_max = float(adaptive_log_std_max_scale)
+        self._adaptive_ema_alpha = float(adaptive_ema_alpha)
+        self.progress_callback = progress_callback
+        self._adaptive_ctrl: Optional[AdaptiveExplorationController] = None
+        self._ep_prev_params: Dict[str, float] = {}
+        self._ep_prev_reward: float = 0.0
+        # peak_n_penalty applied via _rw["peak_ny_penalty"] after merge below
         # Reward weights: merged from defaults + caller-supplied overrides
         _rw_defaults: Dict[str, float] = {
             # hit_rate: maximize (0~100%)
-            "hit_rate": 3.0,
+            "hit_rate": 5.0,
             # SEP: minimize (m)
-            "sep_low_bonus": 2.0,   "sep_low_threshold": 2.0,
+            "sep_low_bonus": 3.0,   "sep_low_threshold": 2.0,
             "sep_mid_weight": 1.0,  "sep_mid_threshold": 5.0,
-            # PeakNy: soft constraint (g)
-            "peak_ny_max": 20.0,    "peak_ny_penalty": 1.0,
+            # PeakNy: soft constraint on MC mean only
+            "peak_ny_max": 20.0,    "peak_ny_mean_max": 20.0,
+            "peak_ny_penalty": 1.0,
             # PM: target range [pm_min, pm_max] degrees
-            "pm_bonus": 0.5,        "pm_min": 45.0,  "pm_max": 65.0,
-            "pm_penalty": 0.3,
+            "pm_bonus": 0.8,        "pm_min": 45.0,  "pm_max": 65.0,
+            "pm_penalty": 3.0,
             # BW: target range [bw_min, bw_max] rad/s
-            "bw_bonus": 0.2,        "bw_min": 12.0,  "bw_max": 22.0,
-            "bw_penalty": 0.1,
+            "bw_bonus": 0.4,        "bw_min": 20.0,  "bw_max": 85.0,
+            "bw_penalty": 1.2,
+            # Phase A threshold (SEP > this → no PM/BW terms)
+            "sep_survival_threshold": 500.0,
+            "peak_ny_progressive_low": 15.0,
+            "hard_truncation_peak_g": 35.0,
+            "baseline_reset_peak_g": 40.0,
         }
         if reward_weights:
             _rw_defaults.update(reward_weights)
+        # Top-level peak_n_max / peak_n_penalty (config.yaml) override reward_weights
+        # so there is a single authoritative PeakNy soft-constraint source.
+        _rw_defaults["peak_ny_max"] = float(peak_n_max)
+        _rw_defaults["peak_ny_mean_max"] = float(_rw_defaults.get("peak_ny_mean_max", peak_n_max))
+        _rw_defaults["peak_ny_penalty"] = float(peak_n_penalty)
         self._rw: Dict[str, float] = _rw_defaults
+        self._peak_n_max = float(self._rw["peak_ny_mean_max"])
+        self._peak_n_penalty = float(self._rw["peak_ny_penalty"])
 
         self._actor: Optional[ActorNet] = None
         self._critic: Optional[CriticNet] = None
         self._action_keys: List[str] = list(ALL_TUNABLE_PARAM_SPECS.keys())
         self._state_dim: int = 0
-        self._action_dim: int = len(self._action_keys)  # 8 params
+        self._action_dim: int = len(self._action_keys)
 
         self._best_reward: float = -float("inf")
         self._best_params: Dict[str, float] = {}
         self._best_metrics: Dict[str, float] = {}
         self._best_miss_ever: float = float("inf")    # min miss across ALL episodes
         self._best_peak_n_ever: float = float("inf")  # min PeakN across ALL episodes
+        self._best_constrained_params: Dict[str, float] = {}
+        self._best_constrained_metrics: Dict[str, float] = {}
+        self._best_constrained_fitness: float = -1.0
+        self._best_borderline_params: Dict[str, float] = {}
+        self._best_borderline_metrics: Dict[str, float] = {}
         self._history: List[Dict] = []
 
         # Stores the stderr of the last Octave/MATLAB subprocess call so that
@@ -739,6 +1448,259 @@ class MatlabRLOptimizer:
         self._base_auto: Dict[str, float] = {k: float(v["nominal"]) for k, v in ALL_TUNABLE_PARAM_SPECS.items()}
         self._base_phys: Dict[str, float] = {k: float(v["nominal"]) for k, v in PHYSICAL_PARAM_SPECS.items()}
         self._last_metrics: Dict[str, float] = {k: 0.0 for k in METRIC_SPECS}
+        # Last-executed tunable params (feeds s_auto in _build_state).
+        self._current_params: Dict[str, float] = copy.deepcopy(self._base_auto)
+
+        if amro_enabled:
+            logger.warning(
+                "[RL] amro_enabled=True is deprecated and ignored — AMRO action "
+                "tampering breaks PPO importance sampling."
+            )
+        self._amro_enabled = False
+        self._adaptive_explorer = None
+        self._action_modifier = None
+        self._fre = FeasibleRegionExplorer()
+        self._fre_reward_modifier = FeasibleRegionRewardModifier(self._fre)
+        self._apply_fre_preset(self._fre_config.default)
+
+    def _apply_fre_preset(self, preset: FREPresetConfig) -> None:
+        self._fre = FeasibleRegionExplorer(
+            initial_sep_threshold=preset.initial_sep,
+            initial_hit_rate_threshold=preset.initial_hit_rate,
+            target_sep_threshold=preset.target_sep,
+            target_hit_rate_threshold=preset.target_hit_rate,
+            phase_episodes=preset.phase_episodes,
+            num_phases=preset.num_phases,
+        )
+        self._fre_reward_modifier = FeasibleRegionRewardModifier(self._fre)
+        logger.info(
+            f"[FRE] preset SEP {preset.initial_sep:.0f}→{preset.target_sep:.0f}m | "
+            f"HitRate {preset.initial_hit_rate:.0f}→{preset.target_hit_rate:.0f}% | "
+            f"phases={preset.num_phases} x {preset.phase_episodes} ep"
+        )
+
+    @staticmethod
+    def _resolve_sub_idx(
+        mission_conditions: Optional[Dict[str, Any]],
+        task_prompt: Optional[str] = None,
+    ) -> int:
+        if mission_conditions:
+            for subs in mission_conditions.values():
+                if isinstance(subs, (list, tuple)) and subs:
+                    try:
+                        return int(subs[0])
+                    except (TypeError, ValueError):
+                        pass
+                if isinstance(subs, int):
+                    return int(subs)
+        if task_prompt:
+            m = re.search(r"SUB_IDX\s*=\s*(\d+)", task_prompt, re.I)
+            if m:
+                return int(m.group(1))
+            m = re.search(r"T\s*4|T4", task_prompt, re.I)
+            if m and "T4" in task_prompt.upper().replace(" ", ""):
+                return 4
+        return 0
+
+    def _configure_fre(
+        self,
+        mission_conditions: Optional[Dict[str, Any]],
+        task_prompt: Optional[str],
+        metric_requirements: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        sub_idx = self._resolve_sub_idx(mission_conditions, task_prompt)
+        preset = self._fre_config.preset_for_sub_idx(sub_idx)
+        reqs = resolve_requirements(metric_requirements, task_prompt, None)
+        if reqs.get("sep_max") is not None:
+            preset = FREPresetConfig(
+                initial_sep=preset.initial_sep,
+                initial_hit_rate=preset.initial_hit_rate,
+                target_sep=float(reqs["sep_max"]),
+                target_hit_rate=float(reqs.get("hit_rate_min", preset.target_hit_rate)),
+                phase_episodes=preset.phase_episodes,
+                num_phases=preset.num_phases,
+            )
+        self._apply_fre_preset(preset)
+
+    def _shrink_log_std_for_warmstart(self) -> None:
+        if self._actor is None or self._warm_start_std_scale >= 1.0:
+            return
+        delta = math.log(max(self._warm_start_std_scale, 0.05))
+        for i in range(self._action_dim):
+            self._actor.log_std[i] = float(
+                np.clip(self._actor.log_std[i] + delta, -4.0, 2.0)
+            )
+        logger.info(
+            f"[RL] Warm-start exploration shrink ×{self._warm_start_std_scale:.2f} "
+            f"(pitch_std≈{np.exp(self._actor.log_std[0]):.2f})"
+        )
+
+    def _apply_diverge_exploration_penalty(self) -> None:
+        if self._actor is None:
+            return
+        for i in range(self._action_dim):
+            self._actor.log_std[i] = float(
+                np.clip(
+                    self._actor.log_std[i] + self._diverge_log_std_delta,
+                    -4.0,
+                    2.0,
+                )
+            )
+        logger.info(
+            f"[RL] {self._consecutive_diverge} consecutive divergent episodes — "
+            f"reducing log_std by {self._diverge_log_std_delta:.2f}"
+        )
+
+    def _update_constrained_best(
+        self,
+        params: Dict[str, float],
+        metrics: Dict[str, float],
+        ep: int,
+    ) -> bool:
+        fitness = self._compute_pe_fitness(metrics)
+        improved = is_better_constrained(
+            metrics,
+            fitness,
+            self._best_constrained_metrics or None,
+            self._best_constrained_fitness,
+        )
+        if improved:
+            self._best_constrained_params = copy.deepcopy(params)
+            self._best_constrained_metrics = copy.deepcopy(metrics)
+            self._best_constrained_fitness = fitness
+            self._last_constrained_improve_ep = ep + 1
+        return improved
+
+    def _select_return_best(self) -> Tuple[Dict[str, float], Dict[str, float], str]:
+        if (
+            self._early_stop_use_multi_criteria_best
+            and self._best_constrained_metrics
+        ):
+            return (
+                copy.deepcopy(self._best_constrained_params),
+                copy.deepcopy(self._best_constrained_metrics),
+                "constrained",
+            )
+        if (
+            self._early_stop_use_multi_criteria_best
+            and self._best_borderline_metrics
+            and is_borderline_hit_sep_ok(self._best_borderline_metrics)
+            and is_better_borderline_peak(
+                self._best_borderline_metrics,
+                self._best_metrics or None,
+            )
+        ):
+            return (
+                copy.deepcopy(self._best_borderline_params),
+                copy.deepcopy(self._best_borderline_metrics),
+                "borderline",
+            )
+        return (
+            copy.deepcopy(self._best_params),
+            copy.deepcopy(self._best_metrics),
+            "reward",
+        )
+
+    def _update_borderline_best(
+        self,
+        params: Dict[str, float],
+        metrics: Dict[str, float],
+    ) -> None:
+        if not is_borderline_hit_sep_ok(metrics):
+            return
+        if is_better_borderline_peak(metrics, self._best_borderline_metrics or None):
+            self._best_borderline_params = copy.deepcopy(params)
+            self._best_borderline_metrics = copy.deepcopy(metrics)
+
+    def _init_training_loggers(self, resume_run_id: Optional[str] = None, append_only: bool = False) -> None:
+        run_id = resume_run_id or datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._episode_logger = EpisodeJsonlLogger(
+            log_dir=self._jsonl_log_dir,
+            run_id=run_id,
+        )
+        path = self._episode_logger.open(append_only=append_only)
+        logger.info(f"[RL] JSONL episode log → {path}")
+        self._checkpoint_mgr = PPOCheckpointManager(
+            checkpoint_dir=self._checkpoint_dir,
+            save_every_episodes=self._checkpoint_save_every,
+            keep_last_n=self._checkpoint_keep_last_n,
+            enabled=self._checkpoint_enabled,
+        )
+        self._checkpoint_mgr.set_run_id(run_id)
+        self._rolling_stats = RollingEpisodeStats(window=self._rolling_window)
+
+    def _log_episode_training(
+        self,
+        *,
+        ep: int,
+        max_ep: int,
+        new_params: Dict[str, float],
+        metrics: Dict[str, float],
+        reward: float,
+        constrained: bool,
+    ) -> None:
+        if self._rolling_stats is not None:
+            snap = self._rolling_stats.update(
+                reward=reward,
+                metrics=metrics,
+                diverge_reward_threshold=self._diverge_reward_threshold,
+            )
+            if self._episode_logger is not None:
+                self._episode_logger.write_episode(
+                    optimizer="PPO",
+                    episode=ep + 1,
+                    params=new_params,
+                    metrics=metrics,
+                    reward=reward,
+                    fitness=self._compute_pe_fitness(metrics),
+                    constrained=constrained,
+                    extra={
+                        "peak_ny_max": get_peak_ny_max(metrics),
+                        "SEP": get_sep(metrics, float("nan")),
+                    },
+                )
+            if (ep + 1) % self._stats_log_every == 0:
+                self._rolling_stats.log_summary(ep + 1, max_ep)
+                if self._episode_logger is not None:
+                    self._episode_logger.write_rolling_stats(ep + 1, snap)
+            if self.progress_callback is not None:
+                try:
+                    self.progress_callback(
+                        ep + 1,
+                        max_ep,
+                        {
+                            "mean_reward_last10": snap.get("mean_reward", reward),
+                            "mean_peak_ny_max_g": snap.get("mean_peak_ny_max_g", 0.0),
+                            "reward": reward,
+                            "constrained": constrained,
+                        },
+                    )
+                except Exception as _pcb_exc:
+                    logger.debug("[RL] progress_callback failed: %s", _pcb_exc)
+
+    def _maybe_save_checkpoint(
+        self,
+        *,
+        ep: int,
+        max_ep: int,
+        script_path: Optional[str],
+        nmc: int,
+        force: bool = False,
+    ) -> None:
+        if self._checkpoint_mgr is None or not self._checkpoint_enabled:
+            return
+        ep_num = ep + 1
+        if not force and (ep_num % self._checkpoint_save_every != 0):
+            return
+        jsonl_path = self._episode_logger.path if self._episode_logger else ""
+        self._checkpoint_mgr.save(
+            self,
+            episode=ep_num,
+            max_episodes=max_ep,
+            script_path=script_path,
+            nmc=nmc,
+            extra={"jsonl_path": jsonl_path},
+        )
 
     # ── state / action helpers ────────────────────────────────────────────────
 
@@ -748,19 +1710,27 @@ class MatlabRLOptimizer:
         phys: Dict[str, float],
         metrics: Dict[str, float],
     ) -> np.ndarray:
+        import math as _math
         parts: List[float] = []
         for k in self._action_keys:
             spec = ALL_TUNABLE_PARAM_SPECS[k]
             mid = (spec["min"] + spec["max"]) / 2.0
             half = (spec["max"] - spec["min"]) / 2.0
-            parts.append(float((auto.get(k, spec["nominal"]) - mid) / half))
+            raw = float(auto.get(k, spec["nominal"]))
+            val = spec["nominal"] if (_math.isnan(raw) or _math.isinf(raw)) else raw
+            parts.append((val - mid) / half)
         for k, spec in PHYSICAL_PARAM_SPECS.items():
-            parts.append(float(phys.get(k, spec["nominal"]) / spec["scale"]))
+            raw = float(phys.get(k, spec["nominal"]))
+            val = spec["nominal"] if (_math.isnan(raw) or _math.isinf(raw)) else raw
+            parts.append(val / spec["scale"])
         for k, spec in METRIC_SPECS.items():
-            parts.append(float(metrics.get(k, 0.0) / max(spec["scale"], 1e-6)))
+            raw = float(metrics.get(k, 0.0))
+            val = 0.0 if (_math.isnan(raw) or _math.isinf(raw)) else raw
+            parts.append(val / max(spec["scale"], 1e-6))
         return np.array(parts, dtype=np.float32)
 
     def _action_to_params(self, action: np.ndarray) -> Dict[str, float]:
+        """Map raw Actor action to bounded absolute parameter values (no AMRO)."""
         result: Dict[str, float] = {}
         for i, k in enumerate(self._action_keys):
             spec = ALL_TUNABLE_PARAM_SPECS[k]
@@ -780,76 +1750,199 @@ class MatlabRLOptimizer:
         ``pm`` (>=).
         """
         if reqs.get("hitrate")  is not None and metrics.get("hit_rate",      0.0)           < reqs["hitrate"]:  return False
-        if reqs.get("missmean") is not None and metrics.get("miss_distance", float("inf"))   > reqs["missmean"]: return False
+        if reqs.get("missmean") is not None:
+            miss = get_sep(metrics, float("inf"))
+            if math.isnan(miss) or math.isinf(miss) or miss > reqs["missmean"]:
+                return False
         if reqs.get("peak_n")  is not None:
-            v = metrics.get("peak_n", 0.0)
+            v = get_peak_ny_max(metrics)
             if v > 0.0 and v > reqs["peak_n"]: return False
         if reqs.get("pm")      is not None and metrics.get("pitch_PM",      0.0)            < reqs["pm"]:       return False
         return True
 
     # ── reward ───────────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _is_anomalous(metrics: Dict[str, float]) -> bool:
+        """Return True when metrics contain NaN/inf SEP (simulation diverged)."""
+        sep = metrics.get("SEP", metrics.get("miss_distance", 0.0))
+        try:
+            sep_f = float(sep)
+        except (TypeError, ValueError):
+            return True
+        return math.isnan(sep_f) or math.isinf(sep_f)
+
     def _compute_reward(self, metrics: Dict[str, float]) -> float:
-        """Reward function for monte_carlo_single.m metrics:
-          - hit_rate  : maximize (higher is better)
-          - SEP       : minimize (lower is better)
-          - peak_ny   : minimize (soft constraint)
-          - pitch_PM  : target range [pm_min, pm_max]
-          - pitch_BW  : target range [bw_min, bw_max]
+        """Tiered reward for monte_carlo_single.m metrics.
+
+        Hard truncation on dynamics divergence (PeakNy > 50g or SEP NaN/Inf).
+        Phase A (SEP > sep_survival_threshold): SEP + PeakNy only — no PM/BW.
+        Phase B: full fine-tuning terms; PM/BW scaled down when SEP is still large.
         """
-        rw       = self._rw
+        rw = self._rw
+
+        # Analytical fallback must not reward fake PM/BW from w1 scaling.
+        if metrics.get("_sim_source") == "fallback":
+            _sep_fb = metrics.get("SEP", metrics.get("miss_distance", rw["sep_mid_threshold"]))
+            try:
+                _sep_fb = float(_sep_fb)
+            except (TypeError, ValueError):
+                _sep_fb = rw["sep_mid_threshold"]
+            if math.isnan(_sep_fb) or math.isinf(_sep_fb):
+                _sep_fb = rw["sep_mid_threshold"]
+            _r = -float(np.clip(_sep_fb / 1000.0, 0.0, 10.0))
+            logger.debug("[Reward] fallback sim → SEP-only reward=%.3f", _r)
+            return float(np.clip(_r, -10.0, 10.0))
+
+        # ── Hard truncation (must run BEFORE sentinel substitution) ──────────
+        _sep_raw = metrics.get("SEP", metrics.get("miss_distance", float("nan")))
+        _pn_raw  = get_peak_ny_max(metrics)
+        try:
+            _sep_check = float(_sep_raw)
+        except (TypeError, ValueError):
+            _sep_check = float("nan")
+        try:
+            _pn_check = float(_pn_raw)
+        except (TypeError, ValueError):
+            _pn_check = float("nan")
+
+        if (
+            (not math.isnan(_pn_check) and _pn_check > float(self._rw.get("hard_truncation_peak_g", 50.0)))
+            or math.isnan(_sep_check)
+            or math.isinf(_sep_check)
+            or math.isnan(_pn_check)
+        ):
+            logger.debug(
+                "[Reward] Hard truncation: peak_ny=%s SEP=%s → %.1f",
+                _pn_raw, _sep_raw, HARD_REWARD_PENALTY,
+            )
+            return HARD_REWARD_PENALTY
+
         hit_rate = float(metrics.get("hit_rate", 0.0))
-        sep      = float(metrics.get("SEP",      metrics.get("miss_distance", 50.0)))
-        peak_ny  = float(metrics.get("peak_ny",  metrics.get("peak_n", 0.0)))
+        sep      = _sep_check
+        pny_mean = get_peak_ny(metrics)
+        pny_max  = get_peak_ny_max(metrics)
+        peak_ny  = pny_max
         pitch_pm = float(metrics.get("pitch_PM", 0.0))
         pitch_bw = float(metrics.get("pitch_BW", 0.0))
 
-        reward = 0.0
+        if math.isnan(hit_rate) or math.isinf(hit_rate):  hit_rate = 0.0
+        if math.isnan(pny_mean) or math.isinf(pny_mean):  pny_mean = 0.0
+        if math.isnan(pny_max)  or math.isinf(pny_max):   pny_max  = 0.0
+        if math.isnan(peak_ny)  or math.isinf(peak_ny):   peak_ny  = 0.0
+        if math.isnan(pitch_pm) or math.isinf(pitch_pm):  pitch_pm = 0.0
+        if math.isnan(pitch_bw) or math.isinf(pitch_bw):  pitch_bw = 0.0
 
-        # 1. Hit rate (maximize): weight * (rate/100)
+        reward = 0.0
+        _survival_thr = float(rw.get("sep_survival_threshold", 500.0))
+        survival_phase = sep > _survival_thr
+        mean_limit = float(rw.get("peak_ny_mean_max", rw.get("peak_ny_max", 20.0)))
+
+        # ── SEP absolute priority: scaled negative term (capped) ─────────────
+        r_sep = -float(np.clip(sep / 1000.0, 0.0, 10.0))
+        reward += r_sep
+
+        # ── PeakNy soft penalty (MC mean only) ──────────────────────────────
+        def _apply_peak_penalty(val: float, limit: float) -> None:
+            nonlocal reward
+            if val <= 0.0 or limit <= 0.0 or val <= limit:
+                return
+            overshoot = (val - limit) / limit
+            if overshoot < 0.05:
+                penalty_scale = 2.0
+            elif overshoot < 0.2:
+                penalty_scale = 1.0
+            elif overshoot < 0.5:
+                penalty_scale = 1.5
+            else:
+                penalty_scale = 2.5
+            reward -= rw["peak_ny_penalty"] * penalty_scale * min(overshoot, 2.0)
+            overshoot_g = val - limit
+            if 0.0 < overshoot_g <= 2.0:
+                reward -= rw["peak_ny_penalty"] * 2.5 * overshoot_g
+
+        _apply_peak_penalty(pny_mean, mean_limit)
+
+        if survival_phase:
+            # Phase A — survival: no hit_rate / PM / BW; force approach to target first
+            return float(np.clip(reward, -10.0, 10.0))
+
+        # ── Phase B — fine-tuning (SEP <= sep_survival_threshold) ────────────
+
+        # Hit rate
         reward += rw["hit_rate"] * (hit_rate / 100.0)
 
-        # 2. SEP (minimize): bonus below sep_low_threshold, linear in mid range
+        # Low-SEP bonus (only meaningful when already in range)
         _sl = rw["sep_low_threshold"]
         _sm = rw["sep_mid_threshold"]
         if sep < _sl:
             reward += rw["sep_low_bonus"]
         elif sep < _sm:
             reward += rw["sep_mid_weight"] * (1.0 - (sep - _sl) / (_sm - _sl))
-        else:
-            reward -= min(rw["sep_low_bonus"], (sep - _sm) / _sm)
 
-        # 3. PeakNy (soft constraint): penalty when exceeding peak_ny_max
-        if peak_ny > 0.0 and rw["peak_ny_max"] > 0.0 and peak_ny > rw["peak_ny_max"]:
-            overshoot = (peak_ny - rw["peak_ny_max"]) / rw["peak_ny_max"]
-            reward -= rw["peak_ny_penalty"] * min(overshoot, 2.0)
+        # PeakNy progressive guide (fine-tuning only, toward mean limit)
+        _pn_progressive_low  = rw.get("peak_ny_progressive_low", 15.0)
+        _pn_progressive_high = mean_limit
+        if pny_mean > 0.0 and _pn_progressive_low <= pny_mean <= _pn_progressive_high:
+            reward += 0.5 * (_pn_progressive_high - pny_mean) / (_pn_progressive_high - _pn_progressive_low)
+        elif pny_mean > 0.0 and pny_mean > _pn_progressive_high:
+            reward += 0.05 * max(-1.0, (_pn_progressive_high - pny_mean) / _pn_progressive_high)
 
-        # 4. PM (target range): bonus if in [pm_min, pm_max], penalty if outside
-        _pm_min = rw["pm_min"]; _pm_max = rw["pm_max"]
+        # PM/BW terms fade in as SEP improves (prevents hacking at large SEP).
+        _fine_scale = max(0.0, 1.0 - sep / max(_survival_thr, 1.0))
+
+        # PM (target range)
+        _pm_min = rw["pm_min"]
+        _pm_max = rw["pm_max"]
         if _pm_min <= pitch_pm <= _pm_max:
-            reward += rw["pm_bonus"]
+            reward += rw["pm_bonus"] * _fine_scale
+        elif pitch_pm < 0:
+            reward -= rw["pm_penalty"] * _fine_scale * (3.0 + abs(pitch_pm) / 15.0)
         else:
             dist_pm = max(_pm_min - pitch_pm, pitch_pm - _pm_max, 0.0)
-            reward -= rw["pm_penalty"] * min(1.0, dist_pm / max(_pm_min, 1.0))
+            reward -= rw["pm_penalty"] * _fine_scale * min(5.0, dist_pm / max(_pm_min, 1.0))
 
-        # 5. BW (target range): bonus if in [bw_min, bw_max], penalty if outside
-        _bw_min = rw["bw_min"]; _bw_max = rw["bw_max"]
+        # BW (target range)
+        _bw_min = rw["bw_min"]
+        _bw_max = rw["bw_max"]
         if _bw_min <= pitch_bw <= _bw_max:
-            reward += rw["bw_bonus"]
+            reward += rw["bw_bonus"] * _fine_scale
         else:
             dist_bw = max(_bw_min - pitch_bw, pitch_bw - _bw_max, 0.0)
-            reward -= rw["bw_penalty"] * min(1.0, dist_bw / max(_bw_min, 1.0))
+            reward -= rw["bw_penalty"] * _fine_scale * min(5.0, dist_bw / max(_bw_max, 1.0))
 
-        return float(reward)
+        return float(np.clip(reward, -10.0, 10.0))
 
     # ── network init ──────────────────────────────────────────────────────────
+
+    # Pitch-channel params that dominate PM & BW — get higher initial
+    # exploration noise so RL discovers the PM/BW sweet spot faster.
+    _PITCH_KEYS = {"w1", "zeta1", "tao1"}
 
     def _init_networks(self) -> None:
         dummy = self._build_state(self._base_auto, self._base_phys, self._last_metrics)
         self._state_dim = len(dummy)
         self._actor  = ActorNet(self._state_dim, self._action_dim, self.hidden_dim, self.lr_actor)
         self._critic = CriticNet(self._state_dim, self.hidden_dim, self.lr_critic)
-        logger.info(f"RL networks initialised: state_dim={self._state_dim}, action_dim={self._action_dim}")
+
+        # Per-dimension exploration: pitch params (w1/zeta1/tao1) get 2× more
+        # exploration noise because PM & BW are almost entirely determined by
+        # these three.  Other params start with lower noise to avoid wasteful
+        # exploration in dimensions that barely affect stability margins.
+        _pitch_log_std = self._pitch_log_std
+        _other_log_std = self._other_log_std
+        for i, k in enumerate(self._action_keys):
+            self._actor.log_std[i] = (
+                _pitch_log_std if k in self._PITCH_KEYS else _other_log_std
+            )
+        logger.info(
+            f"RL networks initialised: state_dim={self._state_dim}, "
+            f"action_dim={self._action_dim}, "
+            f"mode=contextual_bandit(gamma=0), "
+            f"batch={self.episodes_per_update}, entropy_coef={self.entropy_coef}, "
+            f"pitch_std={np.exp(_pitch_log_std):.2f}, "
+            f"other_std={np.exp(_other_log_std):.2f}"
+        )
 
     # ── parameter extraction from script ─────────────────────────────────────
 
@@ -882,12 +1975,16 @@ class MatlabRLOptimizer:
                 return await self._run_matlab_simulation(
                     auto_params, script_path, mission_conditions, nmc
                 )
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                raise
             except Exception as exc:
                 logger.warning(f"MATLAB run failed ({exc}), falling back to internal sim")
 
         if self.simulator:
             try:
                 return await self._run_internal_simulation(auto_params, mission_conditions)
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                raise
             except Exception as exc:
                 logger.warning(f"Internal sim failed: {exc}")
 
@@ -1084,6 +2181,15 @@ class MatlabRLOptimizer:
                 f"the internal Python simulator for this episode."
             )
             return await self._run_internal_simulation(auto_params, mission_conditions)
+
+        # ── Reject scripts that cannot drive real MATLAB MC simulation ─────
+        _rl_ok, _rl_reason = validate_rl_script_content(content)
+        if not _rl_ok:
+            logger.error(
+                f"  [RL] Refusing to run on '{os.path.basename(script_path)}': "
+                f"{_rl_reason}. Falling back to internal Python simulator."
+            )
+            return await self._run_internal_simulation(auto_params, mission_conditions)
         # ────────────────────────────────────────────────────────────────────
 
         # ── Strategy A: patch RL_PARAMS_BEGIN block (monte_carlo_single style) ──
@@ -1114,7 +2220,7 @@ class MatlabRLOptimizer:
             content = rl_block_pat.sub(
                 lambda m: m.group(1) + new_block + m.group(3), content, count=1
             )
-            logger.info(f"  [RL] RL_PARAMS block patched: {patched_rl}")
+            logger.debug(f"  [RL] RL_PARAMS block patched: {patched_rl}")
         else:
             # ── Strategy B: legacy dp.* patching for old-style templates ────
             _unpatched: Dict[str, float] = {}
@@ -1136,6 +2242,10 @@ class MatlabRLOptimizer:
                     content = _inject + "\n" + content
                     logger.warning(f"  [RL] No dp=struct; prepended {len(_unpatched)} fields")
 
+        _ny_lim_val = auto_params.get("ny_lim")
+        if _ny_lim_val is not None and re.search(r"\bny_lim\s*=", content):
+            content = patch_ny_lim_in_script(content, float(_ny_lim_val))
+
         # ── Patch N_MC (monte_carlo_single) or Nmc (legacy) ─────────────────
         content = re.sub(r"\bN_MC\s*=\s*\d+\s*;", f"N_MC = {nmc};", content)
         content = re.sub(r"\bNmc\s*=\s*\d+\s*;",  f"Nmc = {nmc};",  content)
@@ -1151,7 +2261,15 @@ class MatlabRLOptimizer:
                     f"RUN_CASE='{rc_val}'", content
                 )
                 content = re.sub(r"SUB_IDX\s*=\s*\d+", f"SUB_IDX={si_val}", content)
-                logger.info(f"  [RL] Mission patched: RUN_CASE='{rc_val}' SUB_IDX={si_val}")
+                if not getattr(self, "_rl_mission_logged", False):
+                    logger.info(
+                        f"  [RL] Mission: RUN_CASE='{rc_val}' SUB_IDX={si_val} nmc={nmc}"
+                    )
+                    self._rl_mission_logged = True
+                else:
+                    logger.debug(
+                        f"  [RL] Mission patched: RUN_CASE='{rc_val}' SUB_IDX={si_val}"
+                    )
 
         # ── Strip plot_results call (monte_carlo_single has one call) ────────
         content = re.sub(
@@ -1161,6 +2279,13 @@ class MatlabRLOptimizer:
         )
         # Legacy: strip old-style plot_* helpers
         content = self._strip_plot_calls_for_rl(content)
+
+        # ── Strip clc / close all (interfere with engine stdout capture) ────
+        # In MATLAB Engine API on Windows, 'clc' can disrupt fprintf redirection
+        # to the Python StringIO buffer, causing empty stdout.  Safe to remove
+        # for batch/headless execution.
+        content = re.sub(r"\bclc\b\s*;?", "", content)
+        content = re.sub(r"\bclose\s+all\b\s*;?", "", content)
 
         tmp_dir = os.path.dirname(os.path.abspath(script_path))
 
@@ -1195,6 +2320,9 @@ class MatlabRLOptimizer:
             "unbalanced", "unexpected",
             "不匹配的分隔符", "mismatched",
             "此类型的变量不支持", "undefined function",
+            # Octave: illegal use of reserved keyword (e.g. spurious function-level 'end')
+            "非法使用保留关键字", "illegal use of reserved keyword",
+            "非法使用", "reserved keyword",
         )
 
         def _is_syntax_error(stderr_text: str) -> bool:
@@ -1204,6 +2332,16 @@ class MatlabRLOptimizer:
         try:
             with open(tmp_path, "w", encoding="utf-8") as fh:
                 fh.write(content)
+
+            # ── Diagnostic: verify the patched RL_PARAMS actually appear in the file ──
+            _diag_block = re.search(r"RL_PARAMS_BEGIN.*?RL_PARAMS_END", content, re.DOTALL)
+            if _diag_block:
+                _diag_w1_m = re.search(r"rl_w1\s*=\s*([\d.]+)", _diag_block.group())
+                logger.debug(
+                    f"  [RL DIAG] tmp_path={os.path.basename(tmp_path)} "
+                    f"call_name={call_name} "
+                    f"rl_w1_in_file={_diag_w1_m.group(1) if _diag_w1_m else 'NOT_FOUND'}"
+                )
 
             # ── First attempt ────────────────────────────────────────────────
             self._last_exec_stderr = ""
@@ -1255,9 +2393,31 @@ class MatlabRLOptimizer:
 
                 if not stdout_text:
                     logger.warning("MATLAB subprocess produced no output; using internal fallback")
-                    return await self._run_internal_simulation(auto_params, mission_conditions)
+                    _fb_result = await self._run_internal_simulation(auto_params, mission_conditions)
+                    logger.debug(
+                        f"  [RL DIAG] internal_fallback metrics: BW={_fb_result.get('pitch_BW',0):.1f} PM={_fb_result.get('pitch_PM',0):.1f}"
+                    )
+                    return _tag_sim_metrics(_fb_result, "fallback")
 
-            return self._parse_sim_output(stdout_text)
+            # ── Diagnostic: log stdout snippet to verify parsing input ──
+            _stdout_len = len(stdout_text) if stdout_text else 0
+            if _stdout_len > 0:
+                _diag_lines = [l for l in stdout_text.splitlines() if 'rl_w1' in l.lower() or 'PM' in l or 'BW' in l or '命中率' in l or 'HIT' in l or 'MISS' in l]
+                logger.debug(
+                    f"  [RL DIAG] stdout_len={_stdout_len} "
+                    f"metric_lines(first3)={_diag_lines[:3]}"
+                )
+            _parsed = self._parse_sim_output(stdout_text)
+            # If all key metrics are at defaults, dump raw stdout for debugging
+            if (abs(_parsed.get("pitch_PM", 30.0) - 30.0) < 0.01
+                    and abs(_parsed.get("pitch_BW", 15.0) - 15.0) < 0.01
+                    and _parsed.get("hit_rate", 0.0) == 0.0
+                    and _stdout_len > 0):
+                logger.warning(
+                    f"  [RL DIAG] Parse produced ALL defaults from {_stdout_len} chars. "
+                    f"Raw stdout (first 800 chars):\n{stdout_text[:800]}"
+                )
+            return _tag_sim_metrics(_parsed, "matlab")
         finally:
             try:
                 os.remove(tmp_path)
@@ -1281,6 +2441,21 @@ class MatlabRLOptimizer:
         oct_path  = getattr(executor, "octave_path",  "octave")
         mat_path  = getattr(executor, "matlab_path",  "matlab")
 
+        # ── One-time engine availability diagnostic ──────────────────────
+        if not getattr(self, "_engine_diag_done", False):
+            self._engine_diag_done = True
+            _be = getattr(executor, "matlab_engine_backend", None)
+            _be_status = "started" if (_be and _be.started) else ("exists-not-started" if _be else "None")
+            import shutil
+            _mat_on_path = shutil.which(mat_path)
+            _oct_on_path = shutil.which(oct_path)
+            logger.info(
+                f"  [RL] Engine diagnostic: engine={engine}  "
+                f"matlab_engine_backend={_be_status}  "
+                f"matlab_path={mat_path!r}→{_mat_on_path}  "
+                f"octave_path={oct_path!r}→{_oct_on_path}"
+            )
+
         script_dir  = os.path.dirname(os.path.abspath(script_path)).replace("\\", "/")
         script_abs  = os.path.abspath(script_path).replace("\\", "/")
 
@@ -1289,6 +2464,22 @@ class MatlabRLOptimizer:
         # the (5–15 s on Windows) MATLAB launch cost on every RL episode.
         # When the backend can't start we silently fall through to the
         # subprocess matlab branch below.
+        #
+        # SKIP on Python 3.13+: MATLAB Engine API (R2025a) only supports
+        # Python 3.9-3.12.  On 3.13 the C extension returns garbage stdout
+        # or crashes silently.  Go directly to subprocess which works fine.
+        import sys as _sys
+        _skip_engine = _sys.version_info >= (3, 13)
+        if _skip_engine and engine == "matlab_engine":
+            if not getattr(self, "_engine_skip_warned", False):
+                self._engine_skip_warned = True
+                logger.info(
+                    "  [RL] Skipping matlab_engine (Python %d.%d unsupported); "
+                    "using subprocess 'matlab -batch' instead.",
+                    _sys.version_info.major, _sys.version_info.minor,
+                )
+            engine = "matlab"
+
         if engine == "matlab_engine":
             backend = getattr(executor, "matlab_engine_backend", None)
             if backend is not None and backend.started:
@@ -1296,6 +2487,8 @@ class MatlabRLOptimizer:
                 # blocking the asyncio event loop during MATLAB execution.
                 _loop = asyncio.get_event_loop()
                 _tsc  = float(DEFAULT_SUBPROCESS_TIMEOUT_SEC)
+                import time as _time_mod
+                _t0_eng = _time_mod.perf_counter()
                 stdout, stderr, ok = await _loop.run_in_executor(
                     None,
                     lambda: backend.run_script(
@@ -1304,9 +2497,13 @@ class MatlabRLOptimizer:
                         timeout_sec=_tsc,
                     ),
                 )
+                _dt_eng = _time_mod.perf_counter() - _t0_eng
                 if ok:
                     if stdout.strip():
-                        logger.debug(f"matlab.engine stdout length={len(stdout)} chars")
+                        logger.info(
+                            f"  [RL] matlab.engine OK in {_dt_eng:.1f}s  "
+                            f"stdout={len(stdout)}chars  call={call_name}"
+                        )
                         return stdout
                     # Empty stdout: MATLAB Engine API sometimes fails to
                     # capture fprintf() inside function calls on Windows.
@@ -1349,22 +2546,21 @@ class MatlabRLOptimizer:
             eval_str = build_octave_eval_string(script_abs, call_name)
             cmd = [oct_path, *OCTAVE_BATCH_FLAGS, "--eval", eval_str]
         elif engine == "matlab":
-            # MATLAB equivalent: -nosplash + -nodesktop + -nodisplay strip
-            # GUI init; -nojvm avoids JVM startup cost when feasible.  Note
-            # MATLAB respects '-batch' but still inits graphics by default;
-            # the explicit -nodisplay flag forces software offscreen mode.
+            # MATLAB -batch auto-exits after script completes (no 'exit'
+            # needed).  -nodisplay is Linux-only; on Windows use
+            # set(0,'DefaultFigureVisible','off') instead.
             if call_name:
                 eval_str = (
                     f"set(0,'DefaultFigureVisible','off'); "
-                    f"addpath('{script_dir}'); {call_name}; exit"
+                    f"cd('{script_dir}'); addpath('{script_dir}'); "
+                    f"{call_name}"
                 )
             else:
                 eval_str = (
                     f"set(0,'DefaultFigureVisible','off'); "
-                    f"run('{script_abs}'); exit"
+                    f"run('{script_abs}')"
                 )
-            cmd = [mat_path, "-nosplash", "-nodesktop", "-nodisplay",
-                   "-batch", eval_str]
+            cmd = [mat_path, "-nosplash", "-nodesktop", "-batch", eval_str]
         else:
             logger.warning(f"Unsupported engine '{engine}' for RL optimizer")
             return ""
@@ -1372,30 +2568,61 @@ class MatlabRLOptimizer:
         # Log the exact command at debug level for reproducibility
         logger.debug(f"RL subprocess: {' '.join(repr(c) for c in cmd)}")
 
+        # Use Popen + async poll instead of blocking subprocess.run() so that
+        # KeyboardInterrupt / CancelledError can be delivered between polls.
+        # Python 3.13 on Windows has a ProactorEventLoop bug with async
+        # subprocess pipes, so we stay with synchronous Popen.
+        _poll_interval = 2.0  # seconds between interrupt-check polls
+        from multi_agent.simulation.sim_timeout import get_matlab_timeout_sec
+
+        _timeout = get_matlab_timeout_sec(self.nmc_per_eval)
+
         try:
-            _aio_proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
             )
-            try:
-                _stdout_b, _stderr_b = await asyncio.wait_for(
-                    _aio_proc.communicate(), timeout=DEFAULT_SUBPROCESS_TIMEOUT_SEC
-                )
-            except asyncio.TimeoutError:
-                _aio_proc.kill()
-                raise subprocess.TimeoutExpired(cmd, DEFAULT_SUBPROCESS_TIMEOUT_SEC)
-            _stdout = _stdout_b.decode("utf-8", errors="replace")
-            _stderr = _stderr_b.decode("utf-8", errors="replace")
+            import time as _time_sub
+            _t0_sub = _time_sub.monotonic()
+            while proc.poll() is None:
+                elapsed = _time_sub.monotonic() - _t0_sub
+                if elapsed > _timeout:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                    raise subprocess.TimeoutExpired(cmd, _timeout)
+                await asyncio.sleep(_poll_interval)  # yields to event loop → Ctrl+C works
+            _stdout_bytes = proc.stdout.read() if proc.stdout else b""
+            _stderr_bytes = proc.stderr.read() if proc.stderr else b""
+
+            class _SubResult:
+                def __init__(self):
+                    self.returncode = proc.returncode
+                    self.stdout = _stdout_bytes
+                    self.stderr = _stderr_bytes
+
+            _result = _SubResult()
+            _enc = locale.getpreferredencoding(False) or "utf-8"
+            _stdout = _result.stdout.decode(_enc, errors="replace")
+            _stderr = _result.stderr.decode(_enc, errors="replace")
             stderr_excerpt = _stderr.strip()
             self._last_exec_stderr = _stderr   # always store for retry logic
-            if _aio_proc.returncode != 0:
+            if _result.returncode != 0:
                 logger.warning(
-                    f"{engine} returned code {_aio_proc.returncode} on "
+                    f"{engine} returned code {_result.returncode} on "
                     f"'{os.path.basename(script_path)}'.\n"
                     f"  cmd: {' '.join(cmd)}\n"
                     f"  stderr (up to 2000 chars):\n{stderr_excerpt[:2000]}"
                 )
+                # If MATLAB crashed AFTER printing some per-run lines
+                # (e.g. error in plot_results), return the partial stdout
+                # so the parser can still extract metrics from completed runs.
+                if _stdout.strip() and re.search(r"\[\s*\d+\]\s*(?:HIT|MISS)", _stdout):
+                    logger.info(
+                        f"  [RL] {engine} failed but stdout has {len(_stdout)} chars "
+                        f"with per-run data; returning partial output for parsing."
+                    )
+                    return _stdout
                 return ""
             if not _stdout.strip():
                 logger.warning(
@@ -1406,7 +2633,7 @@ class MatlabRLOptimizer:
                     f"  stderr (up to 2000 chars):\n{stderr_excerpt[:2000]}"
                 )
                 return ""
-            logger.debug(f"{engine} stdout length={len(_stdout)} chars")
+            logger.debug(f"  [RL] {engine} subprocess OK  stdout={len(_stdout)}chars")
             return _stdout
         except FileNotFoundError:
             logger.warning(f"{engine} executable not found; will use internal fallback")
@@ -1414,12 +2641,30 @@ class MatlabRLOptimizer:
         except subprocess.TimeoutExpired:
             logger.warning(
                 f"{engine} subprocess timed out after "
-                f"{DEFAULT_SUBPROCESS_TIMEOUT_SEC}s "
+                f"{_timeout:.0f}s "
                 f"(set MATLAB_TIMEOUT_SEC env var to override)"
             )
             return ""
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            # Kill the MATLAB process on interrupt to avoid orphaned processes
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+            except Exception:
+                pass
+            raise
         except Exception as exc:
-            logger.warning(f"{engine} subprocess failed: {exc}")
+            import traceback as _tb
+            # Ensure subprocess is cleaned up on any error
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+            except Exception:
+                pass
+            logger.warning(
+                f"{engine} subprocess failed: {type(exc).__name__}: {exc}\n"
+                f"  traceback: {_tb.format_exc()[-500:]}"
+            )
             return ""
 
     async def _run_internal_simulation(
@@ -1430,15 +2675,17 @@ class MatlabRLOptimizer:
         """
         Lightweight Python fallback used when MATLAB/Octave is unavailable.
 
-        Builds analytical metrics that vary smoothly with 8 tunable
-        parameters (6 autopilot + 2 guidance law) so the RL signal is
+        Builds analytical metrics that vary smoothly with 9 tunable
+        parameters (8 autopilot + N_pn guidance) so the RL signal is
         non-degenerate even without a full simulator.
         """
-        # 1. Pull all tunable params with sensible defaults
+        # 1. Pull all 9 tunable params from ALL_TUNABLE_PARAM_SPECS
         w1    = float(auto_params.get("w1",    ALL_TUNABLE_PARAM_SPECS["w1"]["nominal"]))
         zeta1 = float(auto_params.get("zeta1", ALL_TUNABLE_PARAM_SPECS["zeta1"]["nominal"]))
+        tao1  = float(auto_params.get("tao1",  ALL_TUNABLE_PARAM_SPECS["tao1"]["nominal"]))
         w2    = float(auto_params.get("w2",    ALL_TUNABLE_PARAM_SPECS["w2"]["nominal"]))
         zeta2 = float(auto_params.get("zeta2", ALL_TUNABLE_PARAM_SPECS["zeta2"]["nominal"]))
+        tao2  = float(auto_params.get("tao2",  ALL_TUNABLE_PARAM_SPECS["tao2"]["nominal"]))
         w3    = float(auto_params.get("w3",    ALL_TUNABLE_PARAM_SPECS["w3"]["nominal"]))
         zeta3 = float(auto_params.get("zeta3", ALL_TUNABLE_PARAM_SPECS["zeta3"]["nominal"]))
         N_pn  = float(auto_params.get("N_pn",  ALL_TUNABLE_PARAM_SPECS["N_pn"]["nominal"]))
@@ -1461,8 +2708,12 @@ class MatlabRLOptimizer:
         _mm  = rw["sep_mid_threshold"]   # e.g. 5.0 m
 
         if study:
+            import math as _im
             m = study[0].get("metrics", {}) or {}
             base_miss = float(m.get("SEP", m.get("miss_distance", _mm)))
+            if _im.isnan(base_miss) or _im.isinf(base_miss):
+                logger.debug("[InternalSim] parameter_study returned NaN SEP; using mid-range fallback")
+                base_miss = _mm
             base_hit  = 100.0 if m.get("success", True) else 50.0
         else:
             base_miss, base_hit = _mm, 80.0
@@ -1474,8 +2725,6 @@ class MatlabRLOptimizer:
             half = (spec["max"] - spec["min"]) / 2.0
             return abs(val - spec["nominal"]) / max(half, 1e-6)
 
-        tao1  = float(auto_params.get("tao1", ALL_TUNABLE_PARAM_SPECS["tao1"]["nominal"]))
-        tao2  = float(auto_params.get("tao2", ALL_TUNABLE_PARAM_SPECS["tao2"]["nominal"]))
         dev_total = (_dev("w1", w1) + _dev("zeta1", zeta1) + _dev("tao1", tao1)
                    + _dev("w2", w2) + _dev("zeta2", zeta2) + _dev("tao2", tao2)
                    + _dev("w3", w3) + _dev("zeta3", zeta3)
@@ -1484,25 +2733,31 @@ class MatlabRLOptimizer:
         sep      = base_miss * (1.0 + 1.5 * dev_total)
         hit_rate = max(0.0, base_hit * (1.0 - 0.5 * dev_total))
 
-        # Stability margins anchored to reward_weights thresholds.
+        # Stability margins: PM & BW are PRIMARILY determined by pitch
+        # channel (w1, zeta1, tao1).  Yaw/roll have negligible effect.
         rw        = self._rw
         _pm_mid   = (rw["pm_min"] + rw["pm_max"]) / 2.0
         _pm_range = abs(rw["pm_max"] - rw["pm_min"]) / 2.0
-        pitch_PM  = max(5.0, _pm_mid + _pm_range * (zeta1 - 0.5) * 2.0)
+        # PM ↑ with zeta1, ↓ with tao1; w1 has weak inverse effect
+        pitch_PM  = max(5.0, _pm_mid
+                        + _pm_range * (zeta1 - 0.7) * 2.5
+                        - 25.0 * (tao1 - 0.15)
+                        - 0.15 * (w1 - 40.0))
 
-        _bw_mid  = (rw["bw_min"] + rw["bw_max"]) / 2.0
-        pitch_BW = max(2.0, _bw_mid + 0.3 * (w1 + w2 + w3) / 3.0)
+        # BW is dominated by w1 (pitch natural frequency)
+        pitch_BW = max(2.0, 0.8 * w1 + 0.05 * w2)
+        # Rough overload proxy so fallback is not treated as zero-g
+        peak_ny_est = max(0.0, 0.12 * w1 + 0.05 * w2)
 
-        return {
+        return _tag_sim_metrics({
             "hit_rate":    float(hit_rate),
             "SEP":         float(sep),
             "miss_distance": float(sep),
-            "peak_ny":     0.0,
-            "peak_n":      0.0,
+            "peak_ny":     float(peak_ny_est),
             "pitch_PM":    float(pitch_PM),
             "pitch_BW":    float(pitch_BW),
             "pitch_GM":    8.0,
-        }
+        }, "fallback")
 
     def _parse_sim_output(self, raw: Any) -> Dict[str, float]:
         """Parse rich MATLAB stdout into the metric dict.
@@ -1513,7 +2768,23 @@ class MatlabRLOptimizer:
         """
         return parse_sim_stdout(raw)
 
-    # ── PPO update ────────────────────────────────────────────────────────────
+    # ── PPO update (contextual bandit: gamma=0, no GAE) ─────────────────────
+
+    def _flush_ppo_batch_if_ready(
+        self,
+        batch: List[EpisodeResult],
+        old_lps: List[float],
+    ) -> None:
+        """Run PPO update when batch is full; clear batch buffers."""
+        if len(batch) >= self.episodes_per_update:
+            loss = self._ppo_update(batch, old_lps)
+            logger.info(
+                f"  [Update] batch={len(batch)} actor_loss={loss.get('actor_loss', 0):.4f}  "
+                f"critic_loss={loss.get('critic_loss', 0):.4f}  "
+                f"entropy={loss.get('entropy', 0):.4f}"
+            )
+            batch.clear()
+            old_lps.clear()
 
     def _ppo_update(
         self, episodes: List[EpisodeResult], old_log_probs: List[float]
@@ -1522,20 +2793,29 @@ class MatlabRLOptimizer:
             return {}
         n = len(episodes)
         rewards = np.array([ep.reward for ep in episodes], dtype=np.float32)
-        old_lp  = np.array(old_log_probs,                  dtype=np.float32)
+        values  = np.array([ep.value for ep in episodes], dtype=np.float32)
+        old_lp  = np.array(old_log_probs, dtype=np.float32)
 
-        # Discounted returns
-        returns = np.zeros(n, dtype=np.float32)
-        running = 0.0
-        for i in reversed(range(n)):
-            running = rewards[i] + self.gamma * running
-            returns[i] = running
-        ret_mean, ret_std = returns.mean(), returns.std() + 1e-8
-        returns_n = (returns - ret_mean) / ret_std
+        # Contextual bandit: each episode is independent → G_t = R_t (gamma forced 0).
+        returns = rewards.copy()
+        adv = returns - values
+        adv_std = float(adv.std())
+        if adv_std > 1e-6:
+            adv = (adv - adv.mean()) / (adv_std + 1e-8)
 
-        values = np.array([ep.value for ep in episodes], dtype=np.float32)
-        adv = returns_n - (values - ret_mean) / ret_std
-        adv = (adv - adv.mean()) / (adv.std() + 1e-8)
+        log_std = self._actor.log_std
+        std = np.exp(np.clip(log_std, -4.0, 2.0))
+        entropy = float(np.sum(log_std + 0.5 * (1.0 + math.log(2.0 * math.pi))))
+
+        dW1_a = np.zeros_like(self._actor.W1)
+        db1_a = np.zeros_like(self._actor.b1)
+        dW2_a = np.zeros_like(self._actor.W2)
+        db2_a = np.zeros_like(self._actor.b2)
+
+        dW1_c = np.zeros_like(self._critic.W1)
+        db1_c = np.zeros_like(self._critic.b1)
+        dW2_c = np.zeros_like(self._critic.W2)
+        db2_c = np.zeros_like(self._critic.b2)
 
         a_loss_total, c_loss_total = 0.0, 0.0
 
@@ -1544,42 +2824,54 @@ class MatlabRLOptimizer:
             a = ep.action
 
             mean_out, h_a = self._actor.forward(s)
-            std = np.exp(np.clip(self._actor.log_std, -4.0, 2.0))
             noise = (a - mean_out) / (std + 1e-8)
-            new_lp = float(-0.5 * np.sum(noise ** 2 + 2 * self._actor.log_std + math.log(2 * math.pi)))
+            new_lp = float(-0.5 * np.sum(noise ** 2 + 2 * log_std + math.log(2 * math.pi)))
 
             ratio = math.exp(min(max(new_lp - old_lp[i], -10.0), 10.0))
+            clip_r = float(np.clip(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio))
             obj1  = ratio * adv[i]
-            obj2  = float(np.clip(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio)) * adv[i]
-            a_loss = -min(obj1, obj2)
+            obj2  = clip_r * adv[i]
+            a_loss = -min(obj1, obj2) - self.entropy_coef * entropy
             a_loss_total += a_loss
 
-            d_mean = (-(a - mean_out) / (std ** 2 + 1e-8)
-                      * float(np.clip(ratio, 1 - self.clip_ratio, 1 + self.clip_ratio))
-                      * adv[i])
-            dW2_a = np.outer(h_a, d_mean)
-            db2_a = d_mean
+            d_mean = (-(a - mean_out) / (std ** 2 + 1e-8) * clip_r * adv[i])
+            dW2_a += np.outer(h_a, d_mean)
+            db2_a += d_mean
             dh_a  = d_mean @ self._actor.W2.T
             dpre  = dh_a * (1.0 - h_a ** 2)
-            dW1_a = np.outer(s, dpre)
-            db1_a = dpre
-            self._actor.adam_step([dW1_a, db1_a, dW2_a, db2_a])
+            dW1_a += np.outer(s, dpre)
+            db1_a += dpre
 
             v_pred, h_c = self._critic.forward(s)
-            v_err = float(v_pred[0]) - returns_n[i]
+            v_err = float(v_pred[0]) - returns[i]
             c_loss_total += v_err ** 2
             dv   = np.array([2.0 * v_err], dtype=np.float32)
-            dW2c = np.outer(h_c, dv)
-            db2c = dv
+            dW2_c += np.outer(h_c, dv)
+            db2_c += dv
             dhc  = dv @ self._critic.W2.T
             dprc = dhc * (1.0 - h_c ** 2)
-            dW1c = np.outer(s, dprc)
-            db1c = dprc
-            self._critic.adam_step([dW1c, db1c, dW2c, db2c])
+            dW1_c += np.outer(s, dprc)
+            db1_c += dprc
 
+        inv_n = 1.0 / n
+        self._actor.adam_step([dW1_a * inv_n, db1_a * inv_n, dW2_a * inv_n, db2_a * inv_n])
+        self._critic.adam_step([dW1_c * inv_n, db1_c * inv_n, dW2_c * inv_n, db2_c * inv_n])
+
+        # Entropy bonus — one update per batch (not per sample).
+        d_log_std = self.entropy_coef * np.ones(self._action_dim, dtype=np.float32)
+        self._actor.log_std = np.clip(
+            self._actor.log_std + self.lr_actor * d_log_std,
+            -4.0, 2.0,
+        )
+
+        logger.debug(
+            f"[PPO/bandit] batch={n} gamma=0 adv_mean={float(adv.mean()):.4f} "
+            f"entropy={entropy:.4f} ent_coef={self.entropy_coef}"
+        )
         return {
             "actor_loss":  float(a_loss_total / n),
             "critic_loss": float(c_loss_total / n),
+            "entropy":     entropy,
         }
 
     # ── main optimization loop ────────────────────────────────────────────────
@@ -1597,6 +2889,8 @@ class MatlabRLOptimizer:
         reflect_every: Optional[int] = None,
         initial_auto_params: Optional[Dict[str, float]] = None,
         metric_requirements: Optional[Dict[str, Any]] = None,
+        optimization_history: Optional[List[Dict[str, Any]]] = None,
+        resume_checkpoint: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Run the RL optimization loop. Early-exit is **driven solely by the
@@ -1622,6 +2916,12 @@ class MatlabRLOptimizer:
         """
         max_ep = max_episodes or self.max_episodes
         n_mc   = nmc or self.nmc_per_eval
+
+        self._configure_fre(mission_conditions, task_prompt, metric_requirements)
+        _task_reqs = resolve_requirements(
+            metric_requirements, task_prompt,
+            reflection_agent or self.reflection_agent,
+        )
 
         active_reflector = reflection_agent or self.reflection_agent
         cadence = max(1, int(reflect_every) if reflect_every is not None
@@ -1656,50 +2956,281 @@ class MatlabRLOptimizer:
 
         self._init_networks()
 
-        logger.info("Evaluating baseline (PE-retrieved / script params)…")
-        baseline_metrics = await self._run_simulation_with_params(
-            self._base_auto, mission_conditions, script_path, n_mc
-        )
-        baseline_reward = self._compute_reward(baseline_metrics)
-        logger.info(f"Baseline reward={baseline_reward:.3f}  metrics={baseline_metrics}")
+        resume_meta: Optional[Dict[str, Any]] = None
+        start_ep = 0
+        baseline_reward = 0.0
+        baseline_metrics: Dict[str, float] = {}
 
-        self._best_reward    = baseline_reward
-        self._best_params    = copy.deepcopy(self._base_auto)
-        self._best_metrics   = copy.deepcopy(baseline_metrics)
-        self._best_miss_ever  = float(baseline_metrics.get("miss_distance", float("inf")))
-        self._best_peak_n_ever = float(baseline_metrics.get("peak_n", float("inf")))
-        self._last_metrics   = baseline_metrics
+        ckpt_path = PPOCheckpointManager.resolve_checkpoint_path(resume_checkpoint)
+        if ckpt_path:
+            self._checkpoint_mgr = PPOCheckpointManager(
+                checkpoint_dir=self._checkpoint_dir,
+                save_every_episodes=self._checkpoint_save_every,
+                keep_last_n=self._checkpoint_keep_last_n,
+                enabled=self._checkpoint_enabled,
+            )
+            resume_meta = self._checkpoint_mgr.load(self, ckpt_path)
+            start_ep = int(resume_meta.get("episode_completed", 0))
+            baseline_reward = float(self._best_reward)
+            baseline_metrics = copy.deepcopy(self._best_metrics)
+            self._init_training_loggers(
+                resume_run_id=str(resume_meta.get("run_id", "")),
+                append_only=True,
+            )
+            logger.info(
+                f"[RL] Resuming from checkpoint ep {start_ep} → "
+                f"will run episodes {start_ep + 1}..{max_ep}"
+            )
+        else:
+            self._init_training_loggers()
+
+        logger.info(
+            f"[RL] Contextual-bandit PPO | batch={self.episodes_per_update} | "
+            f"nmc={n_mc} | gamma=0 | entropy_coef={self.entropy_coef}"
+        )
+
+        if not resume_meta:
+            logger.info("Evaluating baseline (PE-retrieved / script params)…")
+            baseline_metrics = await self._run_simulation_with_params(
+                self._base_auto, mission_conditions, script_path, n_mc
+            )
+            _bl_peak = get_peak_ny_max(baseline_metrics)
+            _reset_peak = float(self._rw.get("baseline_reset_peak_g", 40.0))
+            if task_prompt and _bl_peak > _reset_peak:
+                try:
+                    from multi_agent.integration.t4_low_risk import resolve_initial_auto_params
+                    _conservative = resolve_initial_auto_params(
+                        self._base_auto,
+                        task_prompt=task_prompt,
+                    )
+                    _retry_metrics = await self._run_simulation_with_params(
+                        _conservative, mission_conditions, script_path, n_mc
+                    )
+                    if get_peak_ny_max(_retry_metrics) < _bl_peak:
+                        logger.info(
+                            "[RL] Baseline peak %.1fg > %.1fg — reset to conservative params (peak→%.1fg)",
+                            _bl_peak,
+                            _reset_peak,
+                            get_peak_ny_max(_retry_metrics),
+                        )
+                        self._base_auto = copy.deepcopy(_conservative)
+                        baseline_metrics = _retry_metrics
+                except Exception as _br_exc:
+                    logger.debug("[RL] Baseline conservative reset skipped: %s", _br_exc)
+            baseline_reward = self._compute_reward(baseline_metrics)
+            logger.info(f"Baseline reward={baseline_reward:.3f}  metrics={baseline_metrics}")
+
+            if initial_auto_params or baseline_reward >= self._baseline_reward_threshold:
+                self._shrink_log_std_for_warmstart()
+
+            self._best_constrained_params = {}
+            self._best_constrained_metrics = {}
+            self._best_constrained_fitness = -1.0
+            self._best_borderline_params = {}
+            self._best_borderline_metrics = {}
+            self._last_constrained_improve_ep = 0
+            self._last_peak_improve_ep = 0
+            self._consecutive_diverge = 0
+            self._update_constrained_best(self._base_auto, baseline_metrics, -1)
+            self._update_borderline_best(self._base_auto, baseline_metrics)
+
+            self._best_reward    = baseline_reward
+            self._best_params    = copy.deepcopy(self._base_auto)
+            self._best_metrics   = copy.deepcopy(baseline_metrics)
+            import math as _bm
+            _bl_miss = float(baseline_metrics.get("miss_distance", float("inf")))
+            self._best_miss_ever   = _bl_miss if not _bm.isnan(_bl_miss) else float("inf")
+            _bl_pkn  = get_peak_ny_max(baseline_metrics)
+            self._best_peak_n_ever = _bl_pkn if _bl_pkn > 0 and not _bm.isnan(_bl_pkn) else float("inf")
+            _bl_sep = float(baseline_metrics.get("SEP", baseline_metrics.get("miss_distance", 0.0)))
+            if _bm.isnan(_bl_sep) or _bm.isinf(_bl_sep):
+                logger.warning(
+                    "[RL] Baseline SEP=NaN — external MATLAB and internal fallback both failed. "
+                    "Using zeroed default metrics for RL state initialisation to avoid NaN propagation."
+                )
+                self._last_metrics = {k: 0.0 for k in self._last_metrics}
+            else:
+                self._last_metrics = baseline_metrics
+
+            self._current_params = copy.deepcopy(self._base_auto)
+        else:
+            import math as _bm
+            if resume_meta.get("max_episodes"):
+                max_ep = max(max_ep, int(resume_meta["max_episodes"]))
 
         batch: List[EpisodeResult] = []
         old_lps: List[float] = []
         final_status = "success"
         episodes_run = 0
         last_reflection: Optional[Dict[str, Any]] = None
+        _interrupted = False
+        
+        # ── Initialize steep gradient detector for T4 narrow feasible region ──
+        steep_detector = SteepGradientDetector(window_size=5, threshold=2.0)
+        if self._adaptive_explore_enabled:
+            self._adaptive_ctrl = AdaptiveExplorationController(
+                steepness_threshold=self._adaptive_steepness_threshold,
+                log_std_min_scale=self._adaptive_log_std_min,
+                log_std_max_scale=self._adaptive_log_std_max,
+                ema_alpha=self._adaptive_ema_alpha,
+                low_reward_threshold=self._diverge_reward_threshold,
+            )
+        else:
+            self._adaptive_ctrl = None
+        self._ep_prev_params = copy.deepcopy(self._current_params)
+        self._ep_prev_reward = 0.0
 
-        for ep in range(max_ep):
+        for ep in range(start_ep, max_ep):
+          try:
             episodes_run = ep + 1
-            state      = self._build_state(self._base_auto, self._base_phys, self._last_metrics)
+            # Episode exploration decay (see docsNew/PPO_intr.html §3.5)
+            if self._actor is not None and max_ep > 0:
+                # ── Adaptive exploration decay based on gradient steepness ──
+                is_steep = steep_detector.is_steep_gradient()
+                
+                if is_steep:
+                    # Steep gradient: reduce exploration (conservative)
+                    _decay = max(0.05, 1.0 - ep / float(max_ep)) * 0.5
+                    logger.info(
+                        f"  [Ep {ep+1}] Steep gradient detected, reducing exploration "
+                        f"(decay={_decay:.3f})"
+                    )
+                else:
+                    # Normal gradient: standard exploration decay
+                    _decay = max(0.15, 1.0 - ep / float(max_ep))
+
+                _adapt_scale = 1.0
+                if self._adaptive_ctrl is not None:
+                    _adapt_scale = float(self._adaptive_ctrl.state.log_std_scale)
+                    if steep_detector.is_steep_gradient():
+                        self._adaptive_ctrl.ingest_neighborhood_steepness(
+                            steep_detector.threshold * 1.5, blend=0.5,
+                        )
+                        _adapt_scale = min(
+                            _adapt_scale,
+                            float(self._adaptive_ctrl.state.log_std_scale),
+                        )
+
+                for i, k in enumerate(self._action_keys):
+                    _base_ls = (
+                        self._pitch_log_std if k in self._PITCH_KEYS else self._other_log_std
+                    )
+                    self._actor.log_std[i] = float(
+                        np.clip(
+                            _base_ls + math.log(max(_decay * _adapt_scale, 0.05)),
+                            -4.0,
+                            2.0,
+                        )
+                    )
+            state      = self._build_state(self._current_params, self._base_phys, self._last_metrics)
             action, lp = self._actor.sample(state, explore=True)
             value      = self._critic.value(state)
+
             new_params = self._action_to_params(action)
 
             metrics = await self._run_simulation_with_params(
                 new_params, mission_conditions, script_path, n_mc
             )
+
+            # ── Staleness guard: identical metrics with different params ──────
+            if ep > 0 and self._last_metrics:
+                _key_metrics = ("pitch_PM", "pitch_BW", "SEP", "hit_rate", "peak_ny")
+                _same = all(
+                    abs(metrics.get(k, 0) - self._last_metrics.get(k, -1)) < 1e-6
+                    for k in _key_metrics
+                    if isinstance(metrics.get(k, 0), (int, float)) and isinstance(self._last_metrics.get(k, 0), (int, float))
+                )
+                if _same:
+                    self._stale_count = getattr(self, "_stale_count", 0) + 1
+                    if self._stale_count >= 3:
+                        logger.warning(
+                            f"  [Ep {ep+1}] ⚠️ STALE METRICS detected ({self._stale_count} consecutive identical results). "
+                            f"Disabling matlab_engine for remaining episodes; forcing subprocess."
+                        )
+                        # Force the executor to use subprocess instead of engine
+                        _exec = getattr(self.simulator, "executor", None)
+                        if _exec and getattr(_exec, "engine", "") == "matlab_engine":
+                            _exec.engine = "matlab"
+                            logger.info("  [RL] Switched executor engine → 'matlab' (subprocess)")
+                        self._stale_count = 0  # reset after switching
+                else:
+                    self._stale_count = 0
+
             reward = self._compute_reward(metrics)
+            _anomalous = self._is_anomalous(metrics)
+
+            if reward <= self._diverge_reward_threshold:
+                self._consecutive_diverge += 1
+                if self._consecutive_diverge >= self._diverge_penalty_episodes:
+                    self._apply_diverge_exploration_penalty()
+                    self._consecutive_diverge = 0
+                if self._adaptive_ctrl is not None:
+                    self._adaptive_ctrl.on_low_reward()
+            else:
+                self._consecutive_diverge = 0
+
+            if self._adaptive_ctrl is not None:
+                _was_best = reward > self._best_reward
+                self._adaptive_ctrl.update_episode(
+                    self._ep_prev_params,
+                    new_params,
+                    self._ep_prev_reward,
+                    reward,
+                    new_best=_was_best,
+                )
+                self._ep_prev_params = copy.deepcopy(new_params)
+                self._ep_prev_reward = float(reward)
+            
+            # ── Feasible Region Explorer: modify reward and track phase progress ──
+            reward_with_fre_bonus = self._fre_reward_modifier.modify_reward(reward, metrics)
+            self._fre.update_episode(metrics, reward)
+            
+            # Log FRE phase status periodically
+            if (ep + 1) % 5 == 0:
+                self._fre.log_phase_status()
+            
+            # Check if should advance to next phase
+            if self._fre.should_advance_phase():
+                self._fre.advance_phase()
 
             batch.append(EpisodeResult(
                 params=copy.deepcopy(new_params), metrics=copy.deepcopy(metrics),
-                reward=reward, state=state, action=action, log_prob=lp, value=value,
+                reward=reward_with_fre_bonus, state=state, action=action, log_prob=lp, value=value,
             ))
             old_lps.append(lp)
+
+            if _anomalous:
+                _sep_raw = metrics.get("SEP", metrics.get("miss_distance", "?"))
+                logger.warning(
+                    f"  [Ep {ep+1}/{max_ep}] 数据异常 — SEP={_sep_raw} hit={metrics.get('hit_rate',0):.1f}% "
+                    f"(仿真发散或解析失败); 跳过 best-update; reward={reward:.3f}"
+                )
+                self._log_episode_training(
+                    ep=ep,
+                    max_ep=max_ep,
+                    new_params=new_params,
+                    metrics=metrics,
+                    reward=reward,
+                    constrained=False,
+                )
+                self._maybe_save_checkpoint(
+                    ep=ep, max_ep=max_ep, script_path=script_path, nmc=n_mc,
+                )
+                self._flush_ppo_batch_if_ready(batch, old_lps)
+                continue
+
+            self._update_constrained_best(new_params, metrics, ep)
+            self._update_borderline_best(new_params, metrics)
 
             new_best = reward > self._best_reward
             if new_best:
                 self._best_reward  = reward
                 self._best_params  = copy.deepcopy(new_params)
                 self._best_metrics = copy.deepcopy(metrics)
-                logger.info(f"  [Ep {ep+1}] New best reward={reward:.3f}  params={new_params}")
+                if is_verbose():
+                    logger.info(
+                        f"  [Ep {ep+1}] New best reward={reward:.3f}  params={new_params}"
+                    )
                 # Store every reward-best to SHORT_TERM for intra-session tracking
                 if self.parameter_experience:
                     try:
@@ -1724,40 +3255,127 @@ class MatlabRLOptimizer:
                     )
                     final_status = "requirements_met"
                     break
+                if (
+                    self._early_stop_enabled
+                    and self._early_stop_use_rule_first
+                    and _task_reqs
+                    and (ep + 1) >= self._early_stop_min_episodes
+                    and self._best_constrained_metrics
+                    and constraints_satisfied(self._best_constrained_metrics, _task_reqs)
+                ):
+                    logger.info(
+                        f"  [RL] Multi-criteria requirements met at episode {ep+1}; early exit."
+                    )
+                    final_status = "requirements_met"
+                    break
             # Track best miss and peak_n independently of reward
             cur_miss   = float(metrics.get("miss_distance", float("inf")))
-            cur_peak_n = float(metrics.get("peak_n", float("inf")))
+            cur_peak_n = get_peak_ny_max(metrics)
             if cur_miss < self._best_miss_ever:
                 self._best_miss_ever = cur_miss
-            if cur_peak_n < self._best_peak_n_ever:
+            if cur_peak_n > 0 and cur_peak_n < self._best_peak_n_ever:
                 self._best_peak_n_ever = cur_peak_n
+                self._last_peak_improve_ep = ep + 1
 
             self._last_metrics = metrics
+            self._current_params = copy.deepcopy(new_params)
             self._history.append({
                 "episode": ep + 1, "reward": reward,
                 "metrics": metrics, "params": new_params,
             })
+            
+            # ── Update steep gradient detector ──
+            steep_detector.update(reward, new_params)
 
             best_reward_miss = float(self._best_metrics.get("miss_distance", 99.0))
-            _peak_n_str = f"{metrics.get('peak_n', 0.0):.2f}" if metrics.get('peak_n', 0.0) > 0 else "N/A"
-            logger.info(
+            _pny = get_peak_ny(metrics)
+            _pny_max = get_peak_ny_max(metrics)
+            _peak_n_str = f"{_pny:.2f}" if _pny > 0 else "N/A"
+            _peak_n_max_str = f"{_pny_max:.2f}" if _pny_max > 0 else "N/A"
+            _sep = float(metrics.get("SEP", metrics.get("miss_distance", 99)))
+            _hit = float(metrics.get("hit_rate", 0))
+            _ep_line_full = (
                 f"  [Ep {ep+1}/{max_ep}] reward={reward:.3f}  "
-                f"hit={metrics.get('hit_rate',0):.1f}%  "
-                f"miss={metrics.get('miss_distance',99):.2f}m  "
-                f"best_reward_miss={best_reward_miss:.2f}m  "
-                f"best_miss_ever={self._best_miss_ever:.2f}m  "
-                f"PeakN={_peak_n_str}  "
-                f"PM={metrics.get('pitch_PM',0):.1f}°"
+                f"hit={_hit:.1f}%  "
+                f"SEP={_sep:.2f}m  "
+                f"best_reward_SEP={best_reward_miss:.2f}m  "
+                f"best_SEP_ever={self._best_miss_ever:.2f}m  "
+                f"PeakN={_peak_n_str}(max={_peak_n_max_str})  "
+                f"PM={metrics.get('pitch_PM',0):.1f}°(best={self._best_metrics.get('pitch_PM',0):.1f}°)  "
+                f"BW={metrics.get('pitch_BW',0):.1f}r/s(best={self._best_metrics.get('pitch_BW',0):.1f}r/s)"
+            )
+            _ep_line_compact = (
+                f"  [Ep {ep+1}/{max_ep}] reward={reward:.2f} "
+                f"hit={_hit:.0f}% SEP={_sep:.2f}m PeakN_max={_peak_n_max_str}g"
+            )
+            if should_log_rl_episode(ep, max_ep, new_best=new_best):
+                if is_verbose():
+                    logger.info(_ep_line_full)
+                else:
+                    logger.info(_ep_line_compact + (" ★" if new_best else ""))
+            else:
+                logger.debug(_ep_line_full)
+
+            _constrained_ok = bool(
+                self._best_constrained_metrics
+                and constraints_satisfied(self._best_constrained_metrics, _task_reqs)
+            ) if _task_reqs else False
+            self._log_episode_training(
+                ep=ep,
+                max_ep=max_ep,
+                new_params=new_params,
+                metrics=metrics,
+                reward=reward,
+                constrained=_constrained_ok,
+            )
+            self._maybe_save_checkpoint(
+                ep=ep, max_ep=max_ep, script_path=script_path, nmc=n_mc,
             )
 
-            # ── Reflection-based task-requirement check (sole early-exit) ─────────
+            # ── Patience early stop (multi-criteria plateau) ─────────────────
+            _peak_limit = float(self._rw.get("peak_ny_mean_max", self._rw.get("peak_ny_max", 20.0)))
+            _near_miss = (
+                self._best_peak_n_ever < float("inf")
+                and _peak_limit < self._best_peak_n_ever <= _peak_limit + 8.0
+            )
+            _patience = (
+                self._early_stop_peak_only_patience
+                if _near_miss
+                else self._early_stop_patience
+            )
+            _last_improve = (
+                self._last_peak_improve_ep
+                if _near_miss and not self._best_constrained_metrics
+                else self._last_constrained_improve_ep
+            )
+            if (
+                self._early_stop_enabled
+                and (ep + 1) >= self._early_stop_min_episodes
+                and (
+                    self._best_constrained_metrics
+                    or _near_miss
+                )
+                and (ep + 1 - _last_improve) >= _patience
+            ):
+                logger.info(
+                    f"  [RL] Patience early stop at episode {ep+1} "
+                    f"(no {'peak' if _near_miss else 'constrained'} improvement for {_patience} ep)"
+                )
+                final_status = "success"
+                break
+
+            # ── Reflection-based task-requirement check ─────────────────────
+            _reflect_params, _reflect_metrics, _sel = self._select_return_best()
             if (reflection_enabled
-                    and ((ep + 1) % cadence == 0)):
+                    and ((ep + 1) % cadence == 0)
+                    and (ep + 1) >= self._early_stop_min_episodes):
                 try:
                     reflection_input = {
-                        "parameters":          self._best_params,
-                        "metrics":             metrics,
+                        "parameters":          _reflect_params,
+                        "metrics":             _reflect_metrics,
                         "best_reward_metrics": self._best_metrics,
+                        "best_constrained_metrics": self._best_constrained_metrics,
+                        "best_selection":      _sel,
                         "best_miss_ever":      self._best_miss_ever,
                         "best_peak_n_ever":    self._best_peak_n_ever,
                         "episode":             ep + 1,
@@ -1767,7 +3385,8 @@ class MatlabRLOptimizer:
                     if miss_threshold is not None:
                         reflection_input["miss_threshold_hint"] = float(miss_threshold)
                     reflection = await active_reflector.reflect(
-                        task_prompt, reflection_input
+                        task_prompt, reflection_input,
+                        optimization_history=optimization_history,
                     )
                     last_reflection = reflection
                     needs_more = bool(reflection.get("needs_optimization", True))
@@ -1799,49 +3418,120 @@ class MatlabRLOptimizer:
                     logger.warning(f"  [RL] Reflection call failed: {ref_exc}")
             # ──────────────────────────────────────────────────────────────
 
-            if len(batch) >= self.episodes_per_update:
-                loss = self._ppo_update(batch, old_lps)
-                logger.info(f"  [Update] actor_loss={loss.get('actor_loss',0):.4f}  "
-                            f"critic_loss={loss.get('critic_loss',0):.4f}")
-                batch.clear()
-                old_lps.clear()
+            self._flush_ppo_batch_if_ready(batch, old_lps)
+
+            if _interrupted:
+                break
+          except (KeyboardInterrupt, asyncio.CancelledError):
+            _interrupted = True
+            logger.warning(
+                f"  [RL] ⚠️ Interrupted at episode {ep+1}/{max_ep}. "
+                f"Saving best results (reward={self._best_reward:.3f})..."
+            )
+            print(
+                f"\n  [RL] ⚠️ 优化被中断 (episode {ep+1}/{max_ep}). "
+                f"保存当前最优结果..."
+            )
+            final_status = "interrupted"
+            self._maybe_save_checkpoint(
+                ep=ep, max_ep=max_ep, script_path=script_path, nmc=n_mc, force=True,
+            )
+            break
 
         if batch:
             self._ppo_update(batch, old_lps)
+
+        self._maybe_save_checkpoint(
+            ep=max(episodes_run - 1, 0),
+            max_ep=max_ep,
+            script_path=script_path,
+            nmc=n_mc,
+            force=True,
+        )
+        if self._episode_logger is not None:
+            self._episode_logger.close()
+
+        ret_params, ret_metrics, selection = self._select_return_best()
+        self._best_params = ret_params
+        self._best_metrics = ret_metrics
 
         if self.parameter_experience and self._best_params:
             await self._store_best_params(task_context or {}, final_status=final_status)
 
         return {
             "status":          final_status,
-            "best_params":     self._best_params,
-            "best_metrics":    self._best_metrics,
+            "best_params":     ret_params,
+            "best_metrics":    ret_metrics,
             "best_reward":     self._best_reward,
+            "best_selection":  selection,
+            "best_constrained_metrics": copy.deepcopy(self._best_constrained_metrics),
             "baseline_reward": baseline_reward,
             "total_episodes":  episodes_run,
             "history":         self._history[-10:],
             "reflection":      last_reflection,
+            "amro_stats":      None,
+            "jsonl_path":      self._episode_logger.path if self._episode_logger else "",
+            "checkpoint_dir":  self._checkpoint_dir,
+            "resumed_from":    resume_meta.get("_json_path", "") if resume_meta else "",
         }
 
     def _compute_pe_fitness(self, metrics: Dict[str, float]) -> float:
         """
-        四指标综合适应度，用于 ParameterExperience 存储与检索排序。
-        权重: hit_rate(↑)×0.40 + miss_distance(↓)×0.30 + pitch_PM(↑)×0.20 + peak_n(↓)×0.10
-        返回值在 [0, 1] 之间，越大越好。当 peak_n 无有效值（≤0）时按 0.5 中性处理。
+        五指标综合适应度，用于 ParameterExperience 存储与检索排序。
+        权重: hit_rate(↑)×0.35 + miss_distance(↓)×0.25 + pitch_PM(↑)×0.20
+              + pitch_BW(目标区间)×0.10 + peak_n(↓)×0.10
+        返回值在 [0, 1] 之间，越大越好。
+        BW score: 在 [bw_min, bw_max] 内得 1.0，线性衰减到边界外 ±50% 处得 0。
+        peak_n 无有效值（≤0）时按 0.5 中性处理。
         """
+        import math as _m
         hit    = float(metrics.get("hit_rate",      0.0))
-        miss   = float(metrics.get("miss_distance", 100.0))
+        miss   = get_sep(metrics, 100.0)
+        if math.isnan(miss) or math.isinf(miss):
+            miss = 100.0
         pm     = float(metrics.get("pitch_PM",       0.0))
-        peak_n = float(metrics.get("peak_n",         0.0))
+        bw     = float(metrics.get("pitch_BW",       0.0))
+        peak_n = get_peak_ny_max(metrics)
         pn_ref = max(1.0, float(self._peak_n_max))
+
+        # Sanitize NaN/inf → neutral/worst-case values
+        if _m.isnan(hit)    or _m.isinf(hit):    hit    = 0.0
+        if _m.isnan(miss)   or _m.isinf(miss):   miss   = 100.0
+        if _m.isnan(pm)     or _m.isinf(pm):     pm     = 0.0
+        if _m.isnan(bw)     or _m.isinf(bw):     bw     = 0.0
+        if _m.isnan(peak_n) or _m.isinf(peak_n): peak_n = 0.0
 
         hit_score    = hit / 100.0
         miss_score   = 1.0 / (1.0 + miss)
-        pm_score     = min(max(pm, 0.0), 90.0) / 90.0
         peak_n_score = 1.0 / (1.0 + max(0.0, peak_n) / pn_ref) if peak_n > 0 else 0.5
 
+        rw = self._rw
+
+        # PM score: 1.0 inside [pm_min, pm_max], linear decay outside
+        pm_min   = rw.get("pm_min", 45.0)
+        pm_max   = rw.get("pm_max", 70.0)
+        pm_range = max(pm_max - pm_min, 1.0)
+        if pm_min <= pm <= pm_max:
+            pm_score = 1.0
+        elif pm < pm_min:
+            pm_score = max(0.0, 1.0 - (pm_min - pm) / (0.5 * pm_range))
+        else:
+            pm_score = max(0.0, 1.0 - (pm - pm_max) / (0.5 * pm_range))
+
+        # BW score: 1.0 inside [bw_min, bw_max], linear decay outside
+        bw_min   = rw.get("bw_min", 20.0)
+        bw_max   = rw.get("bw_max", 85.0)
+        bw_range = max(bw_max - bw_min, 1.0)
+        if bw_min <= bw <= bw_max:
+            bw_score = 1.0
+        elif bw < bw_min:
+            bw_score = max(0.0, 1.0 - (bw_min - bw) / (0.5 * bw_range))
+        else:
+            bw_score = max(0.0, 1.0 - (bw - bw_max) / (0.5 * bw_range))
+
         return max(0.0, min(1.0,
-            0.4 * hit_score + 0.3 * miss_score + 0.2 * pm_score + 0.1 * peak_n_score
+            0.35 * hit_score + 0.25 * miss_score + 0.20 * pm_score
+            + 0.10 * bw_score + 0.10 * peak_n_score
         ))
 
     async def _store_best_params(self, task_context: Dict[str, Any], final_status: str = "success") -> None:
@@ -1858,11 +3548,15 @@ class MatlabRLOptimizer:
 
         objectives = {
             "hit_rate":       float(self._best_metrics.get("hit_rate",       0.0)),
-            "miss_distance":  float(self._best_metrics.get("miss_distance",  100.0)),
+            "SEP":            get_sep(self._best_metrics, 100.0),
+            "miss_distance":  get_sep(self._best_metrics, 100.0),
             "control_energy": float(self._best_metrics.get("control_energy", 50.0)),
             "pitch_PM":       float(self._best_metrics.get("pitch_PM",       0.0)),
+            "pitch_BW":       float(self._best_metrics.get("pitch_BW",       0.0)),
             "pitch_GM":       float(self._best_metrics.get("pitch_GM",       0.0)),
-            "peak_n":         float(self._best_metrics.get("peak_n",         0.0)),
+            "peak_ny":        get_peak_ny_max(self._best_metrics),
+            "peak_n":         get_peak_ny_max(self._best_metrics),
+            "peak_ny_max":    get_peak_ny_max(self._best_metrics),
         }
 
         fitness = self._compute_pe_fitness(self._best_metrics)

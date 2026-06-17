@@ -1,0 +1,509 @@
+# =============================================================================
+# Multi-Agent Guidance System - 主配置文件 (config.yaml)
+# 三层架构版本 | monte_carlo_single.m 模板 | T/G/AP/R 工况体系
+# =============================================================================
+# 系统架构:
+#   Layer 1: cli_agent.py   — 自然语言输入 → 工况解析(T/G/AP/R) → 主循环
+#   Layer 2: Hermes Agent   — 动态工具编排 (rag_retrieve / generate_matlab /
+#                              syntax_check_matlab / run_simulation / judge_requirements)
+#   Layer 3: OptimizationWorkflow — RL优化器 ⇔ 判断智能体 → 反思智能体 → 经验回写
+#
+# 使用说明:
+#   1. 填入 llm.api_key / rag.embedding_api_key
+#   2. 设置 simulation.engine / octave_path / matlab_path
+#   3. python cli_agent.py --prompt "您的任务描述"
+# 所有相对路径均以运行 cli_agent.py 的目录为基准。
+# =============================================================================
+
+
+# =============================================================================
+# 消融实验开关 (Ablation Study Flags)
+# =============================================================================
+#
+# 六个消融维度:
+#   1. guidance_compat_verification  → Hermes 工具: verify_guidance_compat
+#                                      制导律修改后的数学适配性证明（控制论带宽分离/稳定裕度）
+#                                      false → 跳过适配性验证，直接进入仿真
+#   2. syntax_check                  → Hermes 工具: syntax_check_matlab
+#                                      LLM 智能体驱动的 MATLAB 脚本语法迭代修正
+#                                      false → 跳过语法检查，直接运行生成的脚本
+#   3. rl_optimization               → Layer 3: PPO 参数优化器
+#                                      false → 跳过 RL，仅用 Hermes 初始参数单次仿真
+#   4. parameter_experience_reuse    → 历史参数经验库 (ParameterExperience)
+#                                      false → 不加载 pe_best/pe_search 工具，从零推导参数
+#   5. memory_search                 → Hermes 持久记忆 + 情节记忆 + session_search
+#                                      false → 禁用 agent_memory_*/session_search，
+#                                              不注入情节事件，不保存/读取跨会话记忆
+#   6. max_iterations (workflow)     → 外层「生成-仿真-反思」迭代轮次
+#                                      在 workflow.max_iterations 中设置（见下方）
+#                                      消融时设为 1（单轮）对比完整多轮迭代
+#
+# 八组实验配置:
+#
+#  组别       | 适配验证 | 语法检查 | RL优化 | 经验库 | 持久记忆 | max_iter
+#  ──────────┼─────────┼────────┼───────┼───────┼────────┼────────
+#  完整系统   |  true   |  true  |  true |  true |  true  |    5
+#  A 去适配   |  false  |  true  |  true |  true |  true  |    5
+#  B 去语法   |  true   | false  |  true |  true |  true  |    5
+#  C 去RL    |  true   |  true  | false |  true |  true  |    5
+#  D 去经验库 |  true   |  true  |  true | false |  true  |    5
+#  E 去记忆   |  true   |  true  |  true |  true | false  |    5
+#  F 单轮迭代 |  true   |  true  |  true |  true |  true  |    1
+#  G 纯对照   |  false  | false  | false | false | false  |    1
+#
+# 切换实验组：将下方 ablation 块替换为对应行的值，
+#            同时将 workflow.max_iterations 设为对应值。
+# =============================================================================
+
+# ── 当前激活组：完整系统（所有组件启用，5 轮迭代）─────────────────────────────
+ablation:
+  guidance_compat_verification:
+    enabled: true            # 制导律数学适配性证明
+
+  syntax_check:
+    enabled: true            # LLM 智能体驱动的 MATLAB 语法修正
+
+  rl_optimization:
+    enabled: true            # PPO 强化学习参数优化
+
+  parameter_experience_reuse:
+    enabled: true   # 历史参数经验库复用
+
+  reflection_agent:
+    enabled: true            # 反思智能体（RL 早停判断）
+
+  memory_search:
+    enabled: true    # Hermes 持久记忆 + 情节记忆注入 + session_search
+
+# ── 复制以下任一块并替换上方 ablation: + workflow.max_iterations 即可切换 ─────
+#
+# 组 A — 去制导律适配性验证（验证数学证明的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: false }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 B — 去语法检查（验证 LLM 语法修正的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: false }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 C — 去 RL 优化（验证强化学习参数调优的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: false }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 D — 去参数经验库（验证历史参数复用的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: false }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 E — 单轮迭代（验证多轮迭代的贡献；workflow.max_iterations 改为 1）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 1
+#
+# 组 F — 纯对照基线（无验证/语法检查/RL/经验库，单轮输出）:
+#   ablation:
+#     guidance_compat_verification: { enabled: false }
+#     syntax_check:                 { enabled: false }
+#     rl_optimization:              { enabled: false }
+#     parameter_experience_reuse:   { enabled: false }
+#     reflection_agent:             { enabled: false }
+#   workflow:
+#     max_iterations: 1
+
+
+# =============================================================================
+# 工作流参数
+# =============================================================================
+workflow:
+  # 每次运行允许的最大「生成-仿真-反思」迭代轮次。
+  # 每轮反思后如果仍需优化，会将建议反馈到下一轮；达到上限则强制结束。
+  # 推荐值: 2~5 (轮次越多耗时越长)
+  max_iterations: 5
+
+  # 是否在每轮迭代中让 Hermes Agent 执行内容生成（MATLAB 模型修改等）。
+  #   true  -> 每次迭代先调用 LLM 生成/修改 MATLAB 脚本，再做 RL 优化
+  #   false -> 跳过 LLM 生成步骤，直接用已有脚本做 RL 优化（适合纯参数调优）
+  hermes_execution: true
+
+  # hermes_tool_timeout: Hermes 工具分发的单次超时秒数（HERMES_TOOL_DISPATCH_TIMEOUT 环境变量优先级更高）
+  #   0     → 不限时（RL 等长时间工具推荐此值）
+  #   >0    → 固定秒数上限（如 7200 = 2 小时）
+  #   未设置 → 自动计算：max_episodes × nmc_per_eval × 120 s（floor 3600 s）
+  hermes_tool_timeout: 0
+
+
+# =============================================================================
+# 大语言模型 (LLM) 配置
+# =============================================================================
+llm:
+  # provider: LLM 服务提供商
+  #   openrouter  -> 使用 OpenRouter 聚合 API（支持 Claude、GPT、DeepSeek 等）
+  #   openai      -> 直接调用 OpenAI API
+  #   anthropic   -> 直接调用 Anthropic API
+  #   custom      -> 兼容 OpenAI 格式的自建/代理服务（如 vLLM、Ollama）
+  provider: custom
+
+  # base_url: API 端点地址
+  #   OpenRouter : https://openrouter.ai/api/v1
+  #   OpenAI     : https://api.openai.com/v1
+  #   Anthropic  : https://api.anthropic.com
+  #   本地 Ollama: http://localhost:11434/v1
+  #   本地 vLLM  : http://localhost:8000/v1
+  base_url: https://api.deepseek.com
+
+  # model: 模型名称（与所选 provider 对应）
+  #   OpenRouter 推荐:
+  #     anthropic/claude-opus-4-5     # 强推理，适合制导律生成（当前）
+  #     anthropic/claude-3-5-sonnet   # 性价比高
+  #     deepseek/deepseek-chat        # 国产高性价比
+  #     openai/gpt-4o                 # 通用强模型
+  #   本地 Ollama: llama3 / qwen2.5:72b / deepseek-r1
+  model: deepseek-v4-pro
+
+  # api_key: 对应 provider 的 API 密钥
+  #   OpenRouter -> 在 https://openrouter.ai/keys 获取，格式 sk-or-v1-...
+  #   OpenAI     -> 在 https://platform.openai.com/api-keys 获取，格式 sk-...
+  #   Anthropic  -> 在 https://console.anthropic.com 获取
+  #   本地服务   -> 填任意非空字符串，如 "local"
+  api_key: sk-4ac3052962934920b3934de9565a52c8
+
+
+# =============================================================================
+# 知识库 (RAG / ChromaDB) 配置
+# =============================================================================
+rag:
+  # persist_dir: ChromaDB 向量数据库持久化目录（首次运行自动创建）
+  persist_dir: ./chroma_db
+
+  # collection: ChromaDB 集合名，同一 persist_dir 下可建多个集合
+  collection: guidance_knowledge
+
+  # ---- Embedding 模型配置 ----
+  # embedding_provider: Embedding 服务类型
+  #   local      -> 本地 sentence-transformers 模型（无需 API Key，速度较慢）
+  #                 需先: pip install sentence-transformers
+  #   openrouter -> 使用 OpenRouter 托管的 OpenAI Embedding 接口
+  #   openai     -> 直接调用 OpenAI Embedding API
+  #   custom     -> 自定义兼容 OpenAI 的 Embedding 服务
+  embedding_provider: custom
+
+  # embedding_model: Embedding 模型名称
+  #   local 模式:
+  #     sentence-transformers/all-MiniLM-L6-v2                  (384 维，免费)
+  #     sentence-transformers/paraphrase-multilingual-mpnet-base-v2 (768 维，中文友好)
+  #   openrouter/openai 模式:
+  #     openai/text-embedding-3-large   (1024 维，效果最好)
+  #     openai/text-embedding-3-small   (1536 维，性价比高)
+  embedding_model: text-embedding-v3
+  # embedding_dim: 向量维度，必须与 embedding_model 匹配
+  #   all-MiniLM-L6-v2             -> 384
+  #   paraphrase-multilingual-...  -> 768
+  #   text-embedding-3-small       -> 1536
+  #   text-embedding-3-large       -> 1024 (OpenRouter 默认) 或 3072
+  #   text-embedding-v3 (DashScope) -> 1024 (variable, matches embedding_dim below)
+  embedding_dim: 1024
+
+  # embedding_base_url: Embedding API 端点
+  # (选填，不填则自动使用 llm.base_url)
+  embedding_base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  # embedding_api_key: Embedding API 密钥
+  # (选填，不填则自动使用 llm.api_key)
+  embedding_api_key: sk-a2143420f46b4794b817f437af61aa0c
+
+
+# =============================================================================
+# 参数经验库 (ParameterExperience) 配置
+# =============================================================================
+parameter_experience:
+  # enabled: 是否启用跨任务参数记忆（建议始终 true）
+  enabled: true
+
+  # max_short_term: 短期记忆（当前任务内）最大条目数
+  max_short_term: 100
+
+  # max_long_term: 长期记忆（跨任务最优参数）最大条目数
+  max_long_term: 1000
+
+  # similarity_threshold: 检索时的相似度阈值 (0~1)
+  # 值越高检索越精确但召回率越低；推荐 0.6~0.8
+  similarity_threshold: 0.7
+
+matlab_rl_optimizer:
+  # layer3_strategy: Layer 3 优化策略选择
+  #   'expert' — LLM 智能体逐轮分析调参（3轮，快速，适合接近达标时微调）
+  #   'ppo'    — PPO 强化学习系统搜索（10-50 episode，适合大范围探索）
+  #   'auto'   — LLM 根据当前指标自动选择 expert 或 ppo
+  layer3_strategy: auto
+
+  # max_episodes: 每迭代 Layer3 内最多运行的 RL episode 数
+  # 越多优化越充分；推荐 10~50
+  # 注意：如果优化效率低，建议增加到 75-100
+  max_episodes: 100  # 从 75 → 100（充分探索）
+
+  # nmc_per_eval: 每个 episode 的 Monte Carlo 次数 (monte_carlo_single N_MC)
+  # 推荐 5~20，越多评估越准确但耗时越长
+  # 注意：太少会导致评估噪声大，RL 学不到正确的梯度
+  nmc_per_eval: 30  # 从 20 → 30（提高评估准确性）
+
+  # episodes_per_update: 累积多少轮 episode 后做一次 PPO 策略更新
+  # 越小越频繁更新（加快收敛），越大越稳定（但收敛慢）
+  # 推荐: 3~10
+  episodes_per_update: 3  # 从 5 → 3（更频繁更新）
+
+  # hidden_dim: Actor-Critic 神经网络隐层宽度（神经元数）
+  # 推荐: 32~128
+  # 注意：更大的网络容量可以学习更复杂的策略
+  hidden_dim: 128  # 从 64 → 128（提高网络容量）
+
+  # lr_actor: Actor 网络学习率 (Adam 优化器)
+  # 推荐范围: 1e-4 ~ 1e-3
+  # 注意：更高的学习率可以加快收敛，但可能降低稳定性
+  lr_actor: 0.0003  # 保持稳定，防止振荡
+
+  # lr_critic: Critic 网络学习率，通常略大于 lr_actor
+  # 推荐范围: 5e-4 ~ 3e-3
+  lr_critic: 0.0008  # 从 0.001 → 0.0008（平衡收敛和稳定）
+
+  # gamma: 折扣因子，控制对未来奖励的重视程度
+  # 接近 1 表示长视野；推荐 0.95~0.999
+  gamma: 0.995  # 从 0.99 → 0.995（更长的视野）
+
+  # clip_ratio: PPO 裁剪系数，防止策略更新幅度过大
+  # 推荐范围: 0.1~0.3
+  # 注意：更小的值更保守，更大的值更激进
+  clip_ratio: 0.15  # 从 0.2 → 0.15（更保守，防止振荡）
+
+  # ---------------------------------------------------------------------------
+  # 自适应多区域优化（AMRO）配置 — 处理参数空间跳变区域
+  # ---------------------------------------------------------------------------
+  # amro_enabled: 是否启用自适应多区域优化
+  # true  → 自动检测跳变区域，避免低效探索，提升优化效率 20-40%
+  # false → 使用标准 PPO 探索
+  amro_enabled: false  # 禁用 AMRO，使用标准 PPO 探索
+
+  # gradient_threshold: 奖励梯度阈值，超过则判定为跳变
+  # 值越小越敏感（容易误报），值越大越保守
+  # 推荐: 0.3~0.7
+  # 注意：如果跳变检测不足，降低此值；如果误报过多，提高此值
+  amro_gradient_threshold: 0.4  # 从 0.5 → 0.4（更敏感）
+
+  # forbidden_zone_radius: 禁区半径（归一化参数空间 [-1, 1]）
+  # 检测到低效区域后，在该区域周围标记禁区，避免重复探索
+  # 推荐: 0.1~0.2
+  # 注意：太大会限制探索空间，太小无法有效避免低效区域
+  amro_forbidden_zone_radius: 0.15  # 从 0.2 → 0.15（平衡探索和避免）
+
+  # history_window: 用于梯度计算的历史窗口大小
+  # 越大越平滑，越小越敏感
+  # 推荐: 5~15
+  amro_history_window: 8  # 从 10 → 8（更敏感）
+
+  # ---------------------------------------------------------------------------
+  # PeakN 过载约束（约束指标，要求 PeakN ≤ peak_n_max）
+  # ---------------------------------------------------------------------------
+  # peak_n_max: PeakN 的约束上限（均值），超出则向奖励施加惩罚
+  # 设为 0 表示不约束（禁用该惩罚项）
+  peak_n_max: 20.0
+
+  # peak_n_penalty: 超出约束时每单位的惩罚权重
+  # 惩罚 = peak_n_penalty * min((peak_n - peak_n_max) / peak_n_max, 2.0)
+  # 注意：如果 PeakNy 经常超标，增大此值（推荐 2.0~5.0）
+  peak_n_penalty: 2.5  # 从 1.0 → 2.5（强化 PeakNy 约束）
+
+  # ---------------------------------------------------------------------------
+  # 奖励函数权重配置（对应 _compute_reward 中每个分量的权重/阈值）
+  # 修改后无需改代码，重启程序即可生效
+  # ---------------------------------------------------------------------------
+  reward_weights:
+    # 命中率：越高越好
+    hit_rate: 3.0
+
+    # SEP (脱靶量)：越小越好
+    sep_low_bonus: 2.0        # SEP < sep_low_threshold 时固定奖励
+    sep_low_threshold: 2.0    # m
+    sep_mid_weight: 1.0       # SEP 在 [sep_low, sep_mid] 线性奖励
+    sep_mid_threshold: 5.0    # m
+
+    # PeakNy (峰值法向过载)：软约束，越小越好
+    peak_ny_max: 20.0         # g，超出时惩罚 (hard limit)
+    peak_ny_penalty: 2.5      # 惩罚权重（从 1.0 → 2.5，强化约束）
+
+    # PM (相位裕度)：目标范围 [pm_min, pm_max] 度
+    pm_bonus: 1.5             # 在范围内奖励（从 0.5 → 1.5，提升权重）
+    pm_min: 45.0              # deg
+    pm_max: 70.0              # deg
+    pm_penalty: 3.0           # 超出范围惩罚（从 0.3 → 3.0，强化约束）
+
+    # BW (带宽)：目标范围 [bw_min, bw_max] rad/s
+    bw_bonus: 0.8             # 在范围内奖励（从 0.2 → 0.8，提升权重）
+    bw_min: 20.0              # rad/s
+    bw_max: 85.0              # rad/s
+    bw_penalty: 1.2           # 超出范围惩罚（从 0.1 → 1.2，强化约束）
+
+
+# =============================================================================
+# 文件输出目录配置
+# =============================================================================
+#
+# 输出物理结构（两棵树）:
+#
+#   guidance_output/           ← 单次运行产物（可清理）
+#     ├── scripts/             ← Layer2 生成脚本 + Layer3 RL 工作目录（合二为一）
+#     ├── sysml/               ← SysML BDD/IBD/Parametric 输出
+#     └── reports/             ← 仿真报告 JSON / MD（cli_agent 写入）
+#
+#   parameter_experience_base/ ← 持久化经验库（跨任务保留）
+#     ├── params/
+#     │   ├── short_term/      ← 短期记忆 JSON
+#     │   └── long_term/       ← 长期记忆 JSON（含 model_filename 关联字段）
+#     └── models/
+#         ├── short_term/      ← 反思验收通过的模型 .m 副本
+#         └── long_term/       ← 晋升后的最优模型
+#
+# =============================================================================
+model_output:
+  # Layer2 generate_matlab 保存生成脚本的目录
+  # Layer3 run_simulation / MatlabRLOptimizer 也从此目录读取最新脚本
+  # （两者合并到同一目录，消除中间复制步骤）
+  generated_dir: ./guidance_output/scripts
+  matlab_scripts_dir: ./guidance_output/scripts
+
+  # Layer2 generate_sysml 输出目录
+  sysml_output_dir: ./guidance_output/sysml
+
+  # Layer3 反思验收通过后的模型副本（自动关联 ParameterExperience 记录）
+  # 注意: 此路径必须在 experience_base_dir/models/ 下，否则晋升逻辑会失效
+  success_dir: ./parameter_experience_base/models
+
+  # ParameterExperience 持久化根目录（params/ + models/ 子目录自动创建）
+  experience_base_dir: ./parameter_experience_base
+
+
+# =============================================================================
+# 知识库文件目录
+# =============================================================================
+knowledge_base:
+  # matlab_dir: 项目内置 MATLAB 知识库脚本所在目录
+  # 启动时会自动被索引进 RAG，供 Hermes 检索参考
+  matlab_dir: ./knowledge_base/matlab
+
+
+# =============================================================================
+# 仿真引擎配置（两种方式：自动 / 手动）
+# =============================================================================
+#
+# 【方式一 — 自动配置 AUTO】
+#   将 engine 设为 "auto"，系统按优先级自动探测可用引擎：
+#     matlab_engine > matlab > octave > python
+#   matlab_path / octave_path 保持裸名称，通过 PATH 自动查找。
+#
+# 【方式二 — 手动配置 MANUAL】
+#   将 engine 设为具体引擎名称，并填写对应的绝对路径。
+#   根据当前操作系统选择下方 Windows 或 Linux 示例块。
+#
+# engine 取值说明:
+#   "auto"          — 自动选择最优后端（推荐用于跨平台）
+#   "matlab_engine" — MATLAB Engine API (进程内调用，最快；需安装 matlabengine 包)
+#   "matlab"        — MATLAB 命令行子进程 (matlab -batch ...)
+#   "octave"        — GNU Octave 子进程（免费开源，兼容 MATLAB 语法）
+#   "python"        — 内置 Python 仿真器（无需 MATLAB/Octave，精度较低）
+#
+# 环境变量覆盖（无需修改此文件即可临时切换）:
+#   SIMULATION_ENGINE  →  engine
+#   MATLAB_PATH        →  matlab_path
+#   OCTAVE_PATH        →  octave_path
+#   MATLAB_TIMEOUT_SEC →  单脚本超时秒数（默认 1200）
+# =============================================================================
+
+simulation:
+
+  # ===========================================================================
+  # ▶ 方式一：自动配置（当前激活）
+  #   适用于 Octave 或 MATLAB 已加入系统 PATH 的情况。
+  # ===========================================================================
+  engine: matlab_engine
+  matlab_path: matlab      # 裸名称 → 自动通过 PATH 查找
+  octave_path: octave      # 裸名称 → 自动通过 PATH 查找
+
+  # ===========================================================================
+  # ▶ 方式二：手动配置（选择当前操作系统对应的示例块，取消注释后激活）
+  # ===========================================================================
+
+  # ---------------------------------------------------------------------------
+  # Windows 手动配置示例
+  # （取消注释后请同时注释掉上方方式一的三行）
+  # ---------------------------------------------------------------------------
+  # Octave（推荐，免费）:
+  # engine: octave
+  # octave_path: "C:/Program Files/GNU Octave/Octave-9.2.0/mingw64/bin/octave-cli.exe"
+  # matlab_path: matlab
+  #
+  # MATLAB 命令行:
+  # engine: matlab
+  # matlab_path: "E:/software/MATLAB/R2025a/bin/matlab.exe"
+  # octave_path: octave
+  #
+  # MATLAB Engine API for Python（最快，复用同一 MATLAB 进程）:
+  # engine: matlab_engine
+  # matlab_path: "E:/software/MATLAB/R2025a/bin/matlab.exe"
+  # octave_path: octave
+
+  # ---------------------------------------------------------------------------
+  # Linux 手动配置示例
+  # （取消注释后请同时注释掉上方方式一的三行）
+  # ---------------------------------------------------------------------------
+  # Octave（推荐，免费）:
+  # engine: octave
+  # octave_path: /usr/bin/octave
+  # matlab_path: matlab
+  #
+  # MATLAB 命令行:
+  # engine: matlab
+  # matlab_path: /usr/local/MATLAB/R2025a/bin/matlab
+  # octave_path: octave
+  #
+  # MATLAB Engine API for Python（最快，复用同一 MATLAB 进程）:
+  # engine: matlab_engine
+  # matlab_path: /usr/local/MATLAB/R2025a/bin/matlab
+  # octave_path: octave
+
+
+# =============================================================================
+# 兼容性保留字段（不影响主流程，可保持默认值）
+# =============================================================================
+optimizer:
+  enabled: false   # 旧版遗传算法优化器开关，已被 MatlabRLOptimizer 取代
+  type: rl
+
+rl:
+  algorithm: ppo   # PPO 为当前主算法（由 MatlabRLOptimizer 实现）
+  learning_rate: 0.0003
+  discount_factor: 0.99

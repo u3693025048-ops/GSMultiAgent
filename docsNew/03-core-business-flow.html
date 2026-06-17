@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — 核心业务流程</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --border:#2d3a4f; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#3fb950; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    header { background: linear-gradient(135deg, #161b22 0%, #21262d 100%); border-bottom: 1px solid var(--border); padding: 2rem 2.5rem; }
+    header h1 { font-size: 1.75rem; margin-bottom: .5rem; }
+    header p { color: var(--muted); }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 2.5rem; background: #161b22; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    nav a { color: var(--accent); text-decoration: none; padding: .35rem .75rem; border-radius: 6px; font-size: .875rem; }
+    nav a:hover, nav a.active { background: var(--card); border: 1px solid var(--border); }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.35rem; margin-bottom: 1rem; color: var(--accent); border-left: 4px solid var(--accent); padding-left: .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .75rem; color: var(--accent2); }
+    p, li { color: #c9d1d9; margin-bottom: .5rem; }
+    ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+    .mermaid { background: #0d1117; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .875rem; }
+    th, td { border: 1px solid var(--border); padding: .6rem .8rem; text-align: left; vertical-align: top; }
+    th { background: #21262d; color: var(--accent); }
+    code { background: #21262d; padding: .15rem .4rem; border-radius: 4px; font-size: .85em; }
+    footer { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GSMultiAgent — 核心业务流程</h1>
+    <p>从用户 prompt 到参数优化与经验晋升的端到端流程</p>
+  </header>
+  <nav>
+    <a href="index.html">索引</a>
+    <a href="01-overall-architecture.html">整体架构</a>
+    <a href="02-module-division.html">模块划分</a>
+    <a href="03-core-business-flow.html" class="active">业务流程</a>
+    <a href="04-tech-stack.html">技术选型</a>
+    <a href="05-design-patterns.html">设计模式</a>
+    <a href="06-security-design.html">安全设计</a>
+    <a href="LaysIntr.html">三层与 T4 路径</a>
+    <a href="PPO_intr.html">PPO 详解</a>
+  </nav>
+  <main>
+    <section>
+      <h2>1. 端到端泳道图</h2>
+      <div class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    participant L1 as cli_agent
+    participant TP as TaskPlanner
+    participant H as Hermes
+    participant SIM as monte_carlo_single
+    participant L3 as OptimizationWorkflow
+    participant RL as MatlabRLOptimizer
+    participant R as ReflectionAgent
+    participant PE as ParameterExperience
+
+    U->>L1: --prompt 任务描述
+    L1->>TP: 工况解析 T/G/AP/R
+    TP-->>L1: TaskPlan(mode, subtasks)
+    L1->>H: 生成/修改 MATLAB
+    H->>SIM: run_simulation
+    SIM-->>L1: metrics (last_metrics / stdout)
+    L1->>L1: rule-check hermes_sim_metrics
+    alt Gate 未通过且非 near-miss
+        L1-->>U: layer2_gate_blocked → 下轮 MODIFY
+    else 指标未满足且 RL 开启
+        L1->>L3: run(task_prompt, script)
+        L3->>RL: optimize() 最多 max_episodes
+        loop 每 episode
+            RL->>SIM: patch RL_PARAMS + N_MC
+            SIM-->>RL: metrics + reward
+        end
+        RL-->>L3: best_params/metrics
+    end
+    L3->>R: reflect(needs_optimization?)
+    R-->>L1: next_action / done
+    L1->>PE: store + 模型晋升
+    L1-->>U: report JSON/MD
+      </div>
+    </section>
+
+    <section>
+      <h2>2. TaskPlanner 三种模式</h2>
+      <table>
+        <thead><tr><th>模式</th><th>触发条件</th><th>行为</th></tr></thead>
+        <tbody>
+          <tr><td><code>REUSE_HISTORY</code></td><td>PE 已有足够优参数</td><td>直接加载历史最优 <code>dp_*</code> 仿真，跳过生成</td></tr>
+          <tr><td><code>TUNE_PARAMS</code></td><td>结构 OK、需调参</td><td>生成脚本 → 校正 → 仿真 → Layer 3</td></tr>
+          <tr><td><code>MODIFY_LAW</code></td><td>需改制导律结构 / T4 4/5 仅 peak 超标</td><td>RAG → 改 <code>gf()</code>（T4 可用内置 APN 模板）→ physics_bounds → 兼容/语法 → 仿真</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. Layer 3 策略选择</h2>
+      <p><code>OptimizationWorkflow._select_strategy()</code> 读取 <code>config.yaml → matlab_rl_optimizer.layer3_strategy</code>，并叠加 <code>t4_low_risk</code> 与 <code>design_path_policy</code> 覆盖：</p>
+      <table>
+        <thead><tr><th>策略</th><th>行为</th></tr></thead>
+        <tbody>
+          <tr><td><code>expert</code></td><td>LLM 引导多轮专家调参（默认 5 轮，nmc≈30）；不足则 fallback PPO</td></tr>
+          <tr><td><code>ppo</code></td><td>直接 <code>MatlabRLOptimizer.optimize()</code></td></tr>
+          <tr><td><code>auto</code></td><td>按失败指标数量启发式或 LLM JSON 选择 expert/ppo</td></tr>
+          <tr><td><strong>T4 post-MODIFY</strong></td><td><code>should_force_expert_after_modify</code> → 首轮强制 Expert，PPO episode 上限 50</td></tr>
+          <tr><td><strong>4/5 仅 peak</strong></td><td><code>should_skip_layer3_param_search</code> → 跳过 Expert/PPO，<code>next_action=modify_law</code></td></tr>
+          <tr><td><strong>MODIFY 灾难性失败</strong></td><td>peak&gt;30g 或 hit&lt;85% → <code>should_block_tune_after_bad_modify</code> 禁止 TUNE</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. Layer2 Gate 与 near-miss TUNE（v0.4.1）</h2>
+      <p>在 Hermes 仿真与 Layer3 之间，<code>cli_agent.py</code> 调用 <code>ensure_script_ready_for_layer3</code> 做结构化门禁：</p>
+      <div class="mermaid">
+flowchart TD
+    A["Hermes: generate + run_simulation"] --> B["cli: _rule_check 复核 metrics"]
+    B --> C{"directly_satisfied?"}
+    C -->|是| D["跳过 Layer3 RL"]
+    C -->|否| E["Layer2 Gate"]
+    E --> F["syntax + validate_rl_script"]
+    F --> G["smoke nmc=layer2_smoke_nmc"]
+    G --> H{"MODIFY_LAW + T4?"}
+    H -->|是| I["闭环快扫 nmc=modify_gate_nmc"]
+    I --> J{"PeakNy_max ≤ modify_gate_peak_g?"}
+    J -->|否| K["BLOCK Layer3"]
+    K --> L{"should_gate_near_miss_tune?"}
+    L -->|20g &lt; max ≤ 30g 且 hit/SEP OK| M["同轮 TUNE_PARAMS → Layer3"]
+    L -->|否| N["continue → 下轮 MODIFY"]
+    J -->|是| O["Gate PASS → Layer3"]
+    H -->|否| O
+      </div>
+      <table>
+        <thead><tr><th>配置项</th><th>默认</th><th>含义</th></tr></thead>
+        <tbody>
+          <tr><td><code>simulation.seed_policy</code></td><td>iterative</td><td>Gate/Layer3 通过脚本作 MODIFY 种子；<code>safe_kb</code> 为 legacy</td></tr>
+          <tr><td><code>simulation.prefer_kb_template</code></td><td>false</td><td>无迭代种子时的兜底；Gate 失败 regen 仍 <code>force_kb</code></td></tr>
+          <tr><td><code>t4_low_risk.deterministic_apn_kb_only</code></td><td>true</td><td>仅 KB 种子写内置 APN；续写脚本走 LLM MODIFY</td></tr>
+          <tr><td><code>simulation.layer2_smoke_nmc</code></td><td>25</td><td>smoke 仿真 Nmc</td></tr>
+          <tr><td><code>simulation.modify_gate_nmc</code></td><td>10</td><td>T4 MODIFY 闭环快扫 Nmc</td></tr>
+          <tr><td><code>t4_low_risk.modify_gate_peak_g</code></td><td>30</td><td>Gate 闭环 PeakNy 上限（任务仍要求 ≤20g）</td></tr>
+          <tr><td><code>t4_low_risk.gate_near_miss_tune_enabled</code></td><td>true</td><td>Gate 近失配时同轮切 TUNE</td></tr>
+          <tr><td><code>simulation.matlab_timeout_sec</code></td><td>900</td><td>MATLAB 子进程超时上限</td></tr>
+        </tbody>
+      </table>
+      <p><strong>near-miss 条件：</strong><code>task_mode=MODIFY_LAW</code>、T4 工况、Gate 因 peak 拦截，且 <code>peak_ny_max</code> 在 (20g, 30g]、命中率与 SEP 已达标 → 不切回外层 MODIFY，而是本轮以 <code>TUNE_PARAMS</code> 进入 Layer3 Expert/PPO。</p>
+    </section>
+
+    <section>
+      <h2>5. T4 低风险子流程（v0.4.0+）</h2>
+      <div class="mermaid">
+flowchart TD
+    A["识别 T4<br/>RUN_CASE=T SUB_IDX=4"] --> B{Layer2 指标}
+    B -->|4/5 仅 PeakNy_max| C["mode=MODIFY_LAW"]
+    C --> D{"deterministic_apn?"}
+    D -->|是| E["ModelGen 写入 GF_APN_T4_MINIMAL<br/>跳过 LLM"]
+    D -->|否| F["LLM 改写 gf()"]
+    E --> G["physics_bounds 桩探测"]
+    F --> G
+    G -->|pass| H["run_simulation"]
+    G -->|fail| C
+    H --> I["Layer3: Expert 首轮"]
+    I --> J{"peak/hit OK?"}
+    J -->|否| C
+    J -->|是| K["Expert/PPO ≤50 ep + CLS"]
+      </div>
+      <p>配置段 <code>config.yaml → t4_low_risk</code> 控制是否启用、APN 模板、保守 autopilot 初值与 MODIFY 失败阈值。</p>
+    </section>
+
+    <section>
+      <h2>6. PPO 优化子流程</h2>
+      <div class="mermaid">
+flowchart LR
+    A["extract RL_PARAMS"] --> B["baseline 仿真"]
+    B --> C["for ep in max_episodes"]
+    C --> D["state=_current_params+metrics"]
+    D --> E["Actor sample → 9维 params"]
+    E --> F["patch rl_w* / rl_N_pn"]
+    F --> G["monte_carlo_single N_MC=10"]
+    G --> H["_compute_reward Phase A/B"]
+    H --> I{"batch≥64?"}
+    I -->|是| J["_ppo_update + adaptive log_std"]
+    J --> C
+    I -->|否| C
+    C --> K["Reflection 早停?"]
+    K -->|是| L["PE 回写"]
+      </div>
+    </section>
+
+    <section>
+      <h2>7. 早停与退出状态</h2>
+      <table>
+        <thead><tr><th>status</th><th>触发</th></tr></thead>
+        <tbody>
+          <tr><td><code>task_requirements_met</code></td><td>ReflectionAgent 返回 <code>needs_optimization=False</code></td></tr>
+          <tr><td><code>requirements_met</code></td><td>数值规则 <code>metric_requirements</code> 全满足</td></tr>
+          <tr><td><code>needs_design_path_change</code></td><td>Reflection 建议修改制导律结构</td></tr>
+          <tr><td><code>interrupted</code></td><td>KeyboardInterrupt，保存当前最优</td></tr>
+          <tr><td><code>success</code></td><td>跑满 <code>max_episodes</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>8. ParameterExperience 晋升</h2>
+      <ul>
+        <li><code>task_requirements_met</code> → LONG_TERM 记忆</li>
+        <li>普通 success → SHORT_TERM，后续可 auto_promote</li>
+        <li>模型副本：<code>parameter_experience_base/models/{short,long}_term/</code></li>
+        <li>与 Chroma RAG 分离：PE 参数 JSON 不混入向量索引</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>9. 防护嵌入点（流程内）</h2>
+      <div class="mermaid">
+flowchart TD
+    R[ReflectionAgent JSON] --> FW[sanitize_rl_hyperparams]
+    FW --> L1[cli_agent 下一轮 Layer 3]
+    E[Expert LLM JSON] --> CT[clamp_tunable_params]
+    CT --> SIM[run_simulation]
+    L1 --> TW[TaskWorkspace UUID 目录]
+    TW --> L3[OptimizationWorkflow.run]
+    L3 --> RL[rltmp_uuid.m 临时脚本]
+      </div>
+      <ul>
+        <li>每轮 Layer 3 前：<code>TaskWorkspace.prepare_script()</code> 拷贝 .m 至独立沙箱</li>
+        <li>Expert 每轮：LLM 输出 JSON → <code>clamp_tunable_params</code>（9 维白名单 + min/max）</li>
+        <li>Reflection 返回：<code>_postprocess_reflection</code> → reward 权重等有界校验</li>
+        <li>MODIFY_LAW：<code>physics_bounds</code> 桩探测 gf() 输出；T4 <code>clamp_autopilot_params</code> 限制 w/N_pn</li>
+        <li>Judge / cli 复核：<code>peak_ny_max</code> 硬约束；cli 对 <code>run_simulation</code> 解析指标做 <code>_rule_check</code>，与 Hermes judge 结果交叉校验</li>
+        <li>Layer2 Gate：MODIFY 后 peak&gt;30g 或 hit&lt;85% 禁止进 RL；20–30g 近失配可走 near-miss TUNE</li>
+        <li>异步：<code>--async-run</code> 子进程写 task 状态；PPO <code>progress_callback</code> 回写 episode</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. 异步 CLI 用法</h2>
+      <pre style="background:#0d1117;padding:1rem;border-radius:8px;color:#a5d6ff;font-size:.85rem;">python cli_agent.py --async-run --prompt "RUN_CASE='T'; SUB_IDX=4; ..."
+python cli_agent.py --task-status &lt;task_id&gt;
+python cli_agent.py --serve-tasks --task-port 8765</pre>
+      <p>HTTP 服务提供 <code>POST /tasks</code>、<code>GET /tasks/{id}</code>，供外部编排器轮询长 PPO 任务。</p>
+    </section>
+  </main>
+  <footer>GSMultiAgent · 核心业务流程 · docsNew/03-core-business-flow.html · 2026-06-11</footer>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });</script>
+</body>
+</html>

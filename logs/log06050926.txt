@@ -1,0 +1,296 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-05 09:26:12
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06050926.txt
+================================================================================
+
+2026-06-05 09:26:12 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06050926.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06050926.txt
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-05 09:26:12
+Task: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+运行工况：RUN_CASE='T'; SUB_IDX=4;
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+命中率     >= 92%
+SEP脱靶量  <= 7 m
+PeakNy峰值法向过载 <= 20 g
+PM相位裕度 在 45°~ 70° 范围内
+BW带宽     在 20 ~ 85 rad/s 范围内
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+设计约束
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 模板要求: 以 monte_carlo_single.m 为基础模板
+   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）
+   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数
+   - rl_N_pn对应制导律参数
+   - base=struct(...) 中引用上述 rl_* 变量
+
+2. 不可大变动的部分（接口与变量可改）:
+   - 六自由度弹道模型（df/rk4f 函数）
+   - 驾驶仪设计函数（cg 函数）
+   - 气动力计算（af 函数）
+   - 控制律（cf 函数）
+
+3. 可选修改:
+   - 制导律（gf 函数）：可修改导引律结构，但接口不变
+   - 初始交战参数（base struct 中的目标/导弹参数）
+
+4.MATLAB代码要求：
+- 要符合matlab语法规范
+- 变量定义完整，且整体一致
+- 不出现未定义变量
+- 保持原有接口兼容
+- 对关键参数和新增项加注释
+
+4. 仿真输出格式要求（RL优化器解析依赖）:
+   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm
+   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg
+   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB
+
+注意：
+若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-05 09:26:30 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-05 09:26:30 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-05 09:26:31 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+C:\Users\Lenovo\anaconda3\envs\GS312\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_184439.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_000409.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 09:26:32 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 09:26:33 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-05 09:26:33 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 6/6 documents
+2026-06-05 09:26:33 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 6 docs from 'guidance_output'
+  Indexed 6 report file(s) from ./guidance_output (source_tag=reports)
+2026-06-05 09:26:33 - multi_agent.memory.rag_knowledge_base - INFO - purge_stale_pe_docs: removed 6 non-KB doc(s) from collection.
+  [RAG Purge] Removed 6 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.
+2026-06-05 09:26:33 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-05 09:26:33 - multi_agent.memory.parameter_experience - INFO - Successfully loaded Parameter Experience memory from parameter_experience_memory.json
+2026-06-05 09:26:33 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-05 09:26:33 - langchain_openai.chat_models._client_utils - INFO - langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+
+[Pre-Step] Parsing mission conditions from prompt…
+  [DEBUG] args.prompt = "制导系统设计任务（三层架构系统输入示例）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n运行工况：RUN_CASE='T'; SUB_IDX=4;\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n命中率     >= 92%\nSEP脱靶量  <= 7 m\nPeakNy峰值法向过载 <= 20 g\nPM相位裕度 在 45°~ 70° 范围内\nBW带宽     在 20 ~ 85 rad/s 范围内\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n设计约束\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n1. 模板要求: 以 monte_carlo_single.m 为基础模板\n   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）\n   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数\n   - rl_N_pn对应制导律参数\n   - base=struct(...) 中引用上述 rl_* 变量\n\n2. 不可大变动的部分（接口与变量可改）:\n   - 六自由度弹道模型（df/rk4f 函数）\n   - 驾驶仪设计函数（cg 函数）\n   - 气动力计算（af 函数）\n   - 控制律（cf 函数）\n\n3. 可选修改:\n   - 制导律（gf 函数）：可修改导引律结构，但接口不变\n   - 初始交战参数（base struct 中的目标/导弹参数）\n\n4.MATLAB代码要求：\n- 要符合matlab语法规范\n- 变量定义完整，且整体一致\n- 不出现未定义变量\n- 保持原有接口兼容\n- 对关键参数和新增项加注释\n\n4. 仿真输出格式要求（RL优化器解析依赖）:\n   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm\n   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg\n   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB\n\n注意：\n若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明"
+  [DEBUG] parse_mission_conditions → {'T': [4]}
+  Category T (目标机动 (Target Maneuver)): ['4']
+  Initializing Hermes persistent memory...
+2026-06-05 09:26:33 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 2 entries from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+  Loaded 2 long-term memories from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-05 09:26:33 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+
+  [Miss Hint] Detected user requirement: miss distance ≤ 7.00 m
+  Note: only the reflection agent's evaluation of ALL stated
+        requirements (PM/GM/hit rate/miss/etc.) will trigger early exit.
+
+========================================
+Iteration 1/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+  Hermes not available. Skipping task planning.
+  [DEBUG] mission_conditions before build = {'T': [4]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=4;
+
+[Layer 3] Optimization Workflow | script=guidance_sim_T4_TUNE_iter2_1780621224.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\a95d6a8149754a928d9efca920a0d702
+  [DEBUG Layer3] mission_conditions = {'T': [4]}
+2026-06-05 09:26:33 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Starting | directly_satisfied=False | script=guidance_sim_T4_TUNE_iter2_1780621224.m
+2026-06-05 09:26:33 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Heuristic → ppo (4 failing metrics)
+  [Layer 3] Strategy selected: PPO
+2026-06-05 09:26:33 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Optimization strategy: ppo
+2026-06-05 09:26:33 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 11 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\a95d6a8149754a928d9efca920a0d702\guidance_sim_T4_TUNE_iter2_1780621224.m
+2026-06-05 09:26:33 - multi_agent.rl.matlab_rl_optimizer - INFO - RL networks initialised: state_dim=16, action_dim=9, mode=contextual_bandit(gamma=0), batch=64, entropy_coef=0.05, pitch_std=1.00, other_std=0.37
+2026-06-05 09:26:33 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Contextual-bandit PPO | batch=64 | nmc=10 | gamma=0 | entropy_coef=0.05
+2026-06-05 09:26:33 - multi_agent.rl.matlab_rl_optimizer - INFO - Evaluating baseline (PE-retrieved / script params)…
+2026-06-05 09:26:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=55.0000', 'rl_zeta1=0.5500', 'rl_tao1=0.0700', 'rl_w2=50.0000', 'rl_zeta2=0.5500', 'rl_tao2=0.1000', 'rl_w3=48.0000', 'rl_zeta3=0.6000', 'rl_N_pn=5.0000']
+2026-06-05 09:26:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:26:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Engine diagnostic: engine=matlab  matlab_engine_backend=None  matlab_path='E:\\software\\MATLAB\\R2025a\\extern\\engines\\python\\..\\..\\..\\bin\\win64\\matlab.EXE'→E:\software\MATLAB\R2025a\extern\engines\python\..\..\..\bin\win64\matlab.EXE  octave_path='E:\\software\\Octave-11.1.0\\octave-launch.exe'→E:\software\Octave-11.1.0\octave-launch.exe
+2026-06-05 09:26:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:26:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:26:50 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:26:54 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:26:54 - multi_agent.rl.matlab_rl_optimizer - INFO - Baseline reward=-0.590  metrics={'hit_rate': 0.0, 'SEP': 50.0, 'peak_ny': 0.0, 'pitch_PM': 30.0, 'pitch_BW': 21.12, 'pitch_GM': 6.09, 'miss_distance': 50.0, 'peak_n': 0.0, '_sim_source': 'matlab'}
+2026-06-05 09:26:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=24.4695', 'rl_zeta1=0.6304', 'rl_tao1=0.2605', 'rl_w2=45.1051', 'rl_zeta2=0.7658', 'rl_tao2=0.1858', 'rl_w3=54.6452', 'rl_zeta3=0.7509', 'rl_N_pn=6.0000']
+2026-06-05 09:26:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:27:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:27:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:27:10 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:27:14 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:27:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 1/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:27:14 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:27:20 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:27:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 1] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:27:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=50.4381', 'rl_zeta1=0.3624', 'rl_tao1=0.0637', 'rl_w2=60.0000', 'rl_zeta2=1.2000', 'rl_tao2=0.3049', 'rl_w3=40.8610', 'rl_zeta3=0.4150', 'rl_N_pn=5.6024']
+2026-06-05 09:27:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:27:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:27:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:27:36 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:27:40 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:27:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 2/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:27:40 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:27:45 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:27:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 2] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:27:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=32.6398', 'rl_zeta1=0.3500', 'rl_tao1=0.1991', 'rl_w2=45.9198', 'rl_zeta2=0.9761', 'rl_tao2=0.2649', 'rl_w3=28.6977', 'rl_zeta3=0.6251', 'rl_N_pn=6.0000']
+2026-06-05 09:27:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:28:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:28:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:28:02 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:28:05 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:28:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 3/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:28:05 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:28:12 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:28:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 3] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:28:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=25.1706', 'rl_zeta1=0.3500', 'rl_tao1=0.0500', 'rl_w2=60.0000', 'rl_zeta2=0.7597', 'rl_tao2=0.2664', 'rl_w3=27.3943', 'rl_zeta3=0.8982', 'rl_N_pn=5.4301']
+2026-06-05 09:28:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:28:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:28:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:28:28 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:28:32 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:28:32 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 4] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-05 09:28:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 4/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:28:32 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:28:38 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:28:38 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 4] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:28:38 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=33.7013', 'rl_zeta1=0.3500', 'rl_tao1=0.0884', 'rl_w2=46.4529', 'rl_zeta2=0.3500', 'rl_tao2=0.1944', 'rl_w3=20.0000', 'rl_zeta3=0.9351', 'rl_N_pn=6.0000']
+2026-06-05 09:28:38 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:28:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:28:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:28:55 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:28:58 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:28:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 5/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:28:58 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:29:05 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:29:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 5] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:29:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=20.0000', 'rl_zeta1=0.6180', 'rl_tao1=0.0500', 'rl_w2=37.3963', 'rl_zeta2=0.4586', 'rl_tao2=0.2865', 'rl_w3=30.3185', 'rl_zeta3=1.0288', 'rl_N_pn=6.0000']
+2026-06-05 09:29:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:29:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:29:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:29:21 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:29:25 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:29:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 6/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:29:25 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:29:30 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:29:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 6] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:29:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=39.6805', 'rl_zeta1=1.0493', 'rl_tao1=0.3499', 'rl_w2=50.6177', 'rl_zeta2=0.3500', 'rl_tao2=0.2841', 'rl_w3=37.5736', 'rl_zeta3=0.7946', 'rl_N_pn=5.8327']
+2026-06-05 09:29:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:29:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:29:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:29:47 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:29:50 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:29:50 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 7] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-05 09:29:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 7/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:29:50 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:29:55 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:29:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 7] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:29:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=45.1053', 'rl_zeta1=0.5315', 'rl_tao1=0.0998', 'rl_w2=60.0000', 'rl_zeta2=0.6145', 'rl_tao2=0.3500', 'rl_w3=48.1434', 'rl_zeta3=0.6352', 'rl_N_pn=5.9670']
+2026-06-05 09:29:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:30:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:30:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:30:11 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:30:14 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:30:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 8/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:30:14 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:30:21 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:30:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 8] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:30:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=20.0000', 'rl_zeta1=0.3500', 'rl_tao1=0.0500', 'rl_w2=40.4044', 'rl_zeta2=0.5241', 'rl_tao2=0.3500', 'rl_w3=31.9112', 'rl_zeta3=0.4269', 'rl_N_pn=5.5015']
+2026-06-05 09:30:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:30:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:30:35 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:30:35 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:30:39 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:30:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 9/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:30:39 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:30:46 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:30:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 9] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:30:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=27.4967', 'rl_zeta1=0.4994', 'rl_tao1=0.2067', 'rl_w2=44.6445', 'rl_zeta2=0.9172', 'rl_tao2=0.2505', 'rl_w3=27.0478', 'rl_zeta3=0.3500', 'rl_N_pn=6.0000']
+2026-06-05 09:30:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:30:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:30:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:30:58 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:31:02 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:31:02 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [Ep 10] ⚠️ STALE METRICS detected (3 consecutive identical results). Disabling matlab_engine for remaining episodes; forcing subprocess.
+2026-06-05 09:31:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 10/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:31:02 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:31:09 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:31:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 10] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:31:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=60.0000', 'rl_zeta1=0.4892', 'rl_tao1=0.1754', 'rl_w2=60.0000', 'rl_zeta2=1.2000', 'rl_tao2=0.3500', 'rl_w3=26.6314', 'rl_zeta3=0.6898', 'rl_N_pn=5.4487']
+2026-06-05 09:31:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:31:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:31:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:31:21 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:31:25 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:31:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 11/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:31:25 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:31:31 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:31:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 11] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:31:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=37.8845', 'rl_zeta1=0.8812', 'rl_tao1=0.0826', 'rl_w2=48.5100', 'rl_zeta2=1.0256', 'rl_tao2=0.3077', 'rl_w3=20.0000', 'rl_zeta3=1.0847', 'rl_N_pn=6.0000']
+2026-06-05 09:31:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:31:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1025chars
+2026-06-05 09:31:43 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1025 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  Mean pitch PM: 30.5 deg, BW: 21.12 rad/s, GM: 6.09 dB', 'Case        Hit %   MeanMiss MeanNy  MeanPM MeanBW MeanGM']
+2026-06-05 09:31:43 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:31:46 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 09:31:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 12/100] reward=-0.590  hit=0.0%  SEP=50.00m  best_reward_SEP=50.00m  best_SEP_ever=50.00m  PeakN=N/A  PM=30.0°(best=30.0°)  BW=21.1r/s(best=21.1r/s)
+2026-06-05 09:31:47 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-05 09:31:55 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 09:31:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 12] needs_optimization=True | 命中率 0.0% < 92.0% [NG]; SEP 50.00m > 7.00m [NG]; PM 30.0deg 在 [45.0, 70.0] [NG]
+2026-06-05 09:31:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=29.2377', 'rl_zeta1=1.0814', 'rl_tao1=0.0500', 'rl_w2=56.9848', 'rl_zeta2=0.5475', 'rl_tao2=0.3023', 'rl_w3=29.7396', 'rl_zeta3=1.0316', 'rl_N_pn=4.1281']
+2026-06-05 09:31:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-05 09:32:05 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL] ⚠️ Interrupted at episode 13/100. Saving best results (reward=-0.590)...
+
+  [RL] ⚠️ 优化被中断 (episode 13/100). 保存当前最优结果...
+2026-06-05 09:32:05 - multi_agent.memory.parameter_experience - INFO - Stored memory 189998a443dbd92d with fitness 0.15490196078431373
+2026-06-05 09:32:05 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-05 09:32:05 - multi_agent.rl.matlab_rl_optimizer - INFO - Best params stored → memory_id=189998a443dbd92d, fitness=0.1549, layer=SHORT_TERM | guidance={'N_pn': 5.0} | autopilot_w1=55.0
+2026-06-05 09:32:05 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] PPO done: status=interrupted episodes=13 best_reward=-0.590
+2026-06-05 09:32:05 - multi_agent.integration.reflection_agent - INFO - [Reflection] Extracted gf/cg source from guidance_sim_T4_TUNE_iter2_1780621224.m (49 chars)
+2026-06-05 09:32:05 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+
+
+────────────────────────────────────────────────────────────────
+  [人机中断] Ctrl+C — 当前执行已中止
+────────────────────────────────────────────────────────────────
+  原始任务: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━...
+  ────────────────────────────────────────────────────────────────
+  继续执行（保持当前指令）               → 输入 c 或 continue
+  手动晋升短期记忆到长期记忆             → 输入 p 或 promote
+  输入修改指令（追加到原始任务上）        → 直接输入修改内容
+  完全替换原始任务                       → 以 !! 开头输入新任务
+  恢复原始任务重启                       → 直接回车
+  退出程序                               → 再次 Ctrl+C
+  ────────────────────────────────────────────────────────────────
+  >>> 
+  [退出] 程序已终止。
+[0m
+================================================================================
+Finished    : 2026-06-05 09:32:06
+Exit code   : 0
+================================================================================

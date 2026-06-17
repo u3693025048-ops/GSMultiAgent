@@ -194,12 +194,23 @@ class ParameterExperience:
             params_dir = self.experience_base_dir / "params" / tier
             params_dir.mkdir(parents=True, exist_ok=True)
             file_path = params_dir / f"{entry.memory_id[:16]}.json"
+            def _numeric_fields(d: Dict[str, Any]) -> Dict[str, float]:
+                out: Dict[str, float] = {}
+                for k, v in (d or {}).items():
+                    if str(k).startswith("_"):
+                        continue
+                    try:
+                        out[k] = float(v)
+                    except (TypeError, ValueError):
+                        continue
+                return out
+
             data = {
                 "memory_id":   entry.memory_id,
                 "memory_type": entry.memory_type.value,
                 "task_context": entry.task_context,
-                "parameters":  {k: float(v) for k, v in entry.parameters.items()},
-                "objectives":  {k: float(v) for k, v in entry.objectives.items()},
+                "parameters":  _numeric_fields(entry.parameters),
+                "objectives":  _numeric_fields(entry.objectives),
                 "fitness":     float(entry.fitness),
                 "timestamp":   entry.timestamp,
                 "metadata":    entry.metadata,
@@ -308,11 +319,11 @@ class ParameterExperience:
         objectives: Dict[str, float],
         hit_min:    float = 80.0,
         sep_max:    float = 10.0,
-        peak_ny_max: float = 25.0,
+        peak_ny_max: float = 20.0,
         pm_min:     float = 45.0,
-        pm_max:     float = 65.0,
-        bw_min:     float = 12.0,
-        bw_max:     float = 22.0,
+        pm_max:     float = 70.0,
+        bw_min:     float = 20.0,
+        bw_max:     float = 85.0,
     ) -> float:
         """Compute a normalised fitness \u2208 [0, 1] from simulation objectives.
 
@@ -462,8 +473,15 @@ class ParameterExperience:
         task_context: Dict[str, Any],
         top_k: int = 5,
     ) -> List[Dict[str, Any]]:
-        """Retrieve best performing experiences"""
-        all_entries = list(self._long_term_memory.values())
+        """Retrieve best performing experiences.
+
+        Records with empty parameters are excluded — they have no
+        reusable data for REUSE_HISTORY mode.
+        """
+        all_entries = [
+            e for e in self._long_term_memory.values()
+            if e.parameters and any(e.parameters.values())
+        ]
 
         scored_entries = []
         for entry in all_entries:
@@ -834,6 +852,54 @@ class ParameterExperience:
             logger.error(f"Failed to save Parameter Experience memory to disk: {e}")
             return False
 
+    def _rebuild_from_base_dir(self) -> int:
+        """Rebuild in-memory entries from individual JSON files in experience_base_dir.
+
+        Scans ``params/long_term/*.json`` and ``params/short_term/*.json``,
+        deserialises each file (same format as ``_write_experience_file``),
+        and inserts the entry into the corresponding in-memory dict.
+
+        Returns the number of entries recovered.
+        """
+        recovered = 0
+        for tier, mem_dict, mem_type in [
+            ("long_term",  self._long_term_memory,  MemoryType.LONG_TERM),
+            ("short_term", self._short_term_memory, MemoryType.SHORT_TERM),
+        ]:
+            tier_dir = self.experience_base_dir / "params" / tier
+            if not tier_dir.exists():
+                continue
+            for jf in sorted(tier_dir.glob("*.json")):
+                try:
+                    raw = json.loads(jf.read_text(encoding="utf-8"))
+                    mid = raw.get("memory_id", "")
+                    if not mid or mid in mem_dict:
+                        continue
+                    entry = MemoryEntry(
+                        memory_id=mid,
+                        memory_type=mem_type,
+                        task_context=raw.get("task_context", {}),
+                        parameters=raw.get("parameters", {}),
+                        objectives=raw.get("objectives", {}),
+                        fitness=float(raw.get("fitness", 0.0)),
+                        timestamp=float(raw.get("timestamp", 0.0)),
+                        access_count=int(raw.get("access_count", 0)),
+                        last_access=float(raw.get("last_access", 0.0)),
+                        metadata=raw.get("metadata", {}),
+                    )
+                    mem_dict[mid] = entry
+                    recovered += 1
+                except Exception as exc:
+                    logger.debug(f"Skipping {jf.name}: {exc}")
+        if recovered:
+            logger.info(
+                f"[PE] Rebuilt {recovered} entries from {self.experience_base_dir}/params/ "
+                f"(long_term={len(self._long_term_memory)}, "
+                f"short_term={len(self._short_term_memory)})"
+            )
+            self.save()
+        return recovered
+
     def load(self) -> bool:
         """Load memory from disk"""
         if not self.persist_path.exists():
@@ -865,6 +931,16 @@ class ParameterExperience:
             
             # Load access counts
             self._access_counts = data.get("access_counts", {})
+
+            # ── Auto-recovery ────────────────────────────────────────────────
+            # If the main JSON has no long_term/short_term entries but the
+            # base directory has individual JSON files, rebuild from them.
+            # This handles the case where the main JSON was cleared/corrupted
+            # but the individual experience files are still intact.
+            if not self._long_term_memory and not self._short_term_memory:
+                n = self._rebuild_from_base_dir()
+                if n:
+                    logger.info(f"[PE] Auto-recovered {n} entries from base directory")
             
             logger.info(f"Successfully loaded Parameter Experience memory from {self.persist_path}")
             return True

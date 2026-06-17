@@ -11,10 +11,6 @@ from .guidance_simulator import (
     MATLABScriptGenerator,
     SimulationExecutor,
 )
-from .guidance_optimization_workflow import (
-    GuidanceOptimizationWorkflow,
-    OptimizationObjectives,
-)
 from .optimization_workflow import OptimizationWorkflow
 
 __all__ = [
@@ -24,7 +20,5 @@ __all__ = [
     "SysMLModelGenerator",
     "MATLABScriptGenerator",
     "SimulationExecutor",
-    "GuidanceOptimizationWorkflow",
-    "OptimizationObjectives",
     "OptimizationWorkflow",
 ]

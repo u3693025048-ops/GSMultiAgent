@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — 关键技术选型</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --border:#2d3a4f; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#3fb950; --warn:#d29922; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    header { background: linear-gradient(135deg, #161b22 0%, #21262d 100%); border-bottom: 1px solid var(--border); padding: 2rem 2.5rem; }
+    header h1 { font-size: 1.75rem; margin-bottom: .5rem; }
+    header p { color: var(--muted); }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 2.5rem; background: #161b22; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    nav a { color: var(--accent); text-decoration: none; padding: .35rem .75rem; border-radius: 6px; font-size: .875rem; }
+    nav a:hover, nav a.active { background: var(--card); border: 1px solid var(--border); }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.35rem; margin-bottom: 1rem; color: var(--accent); border-left: 4px solid var(--accent); padding-left: .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .75rem; color: var(--accent2); }
+    p, li { color: #c9d1d9; margin-bottom: .5rem; }
+    ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .875rem; }
+    th, td { border: 1px solid var(--border); padding: .6rem .8rem; text-align: left; vertical-align: top; }
+    th { background: #21262d; color: var(--accent); }
+    code { background: #21262d; padding: .15rem .4rem; border-radius: 4px; font-size: .85em; }
+    .risk { border-left: 4px solid var(--warn); padding-left: 1rem; margin: .75rem 0; }
+    footer { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GSMultiAgent — 关键技术选型</h1>
+    <p>各技术组件的选择理由、替代方案与风险缓解</p>
+  </header>
+  <nav>
+    <a href="index.html">索引</a>
+    <a href="01-overall-architecture.html">整体架构</a>
+    <a href="02-module-division.html">模块划分</a>
+    <a href="03-core-business-flow.html">业务流程</a>
+    <a href="04-tech-stack.html" class="active">技术选型</a>
+    <a href="05-design-patterns.html">设计模式</a>
+    <a href="06-security-design.html">安全设计</a>
+    <a href="LaysIntr.html">三层与 T4 路径</a>
+    <a href="PPO_intr.html">PPO 详解</a>
+  </nav>
+  <main>
+    <section>
+      <h2>1. 技术栈总览</h2>
+      <table>
+        <thead><tr><th>领域</th><th>选型</th><th>版本/配置</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td>语言运行时</td><td>Python 3.10+</td><td>asyncio CLI</td><td>与 MATLAB Engine、httpx、numpy 生态兼容；3.13+ 禁用 Engine API</td></tr>
+          <tr><td>LLM 接入</td><td>OpenAI 兼容 API</td><td><code>config.yaml → llm</code></td><td>统一 AsyncOpenAI 客户端，支持 OpenRouter/DeepSeek 等</td></tr>
+          <tr><td>Agent 框架</td><td>Hermes (<code>run_agent</code>)</td><td>外部包</td><td>Tool Schema + 流式对话；本项目为其扩展 Tools</td></tr>
+          <tr><td>向量检索</td><td>ChromaDB</td><td><code>chroma_db/</code></td><td>本地持久化、零运维；collection: guidance_knowledge</td></tr>
+          <tr><td>Embedding</td><td>sentence-transformers 或 API</td><td><code>rag.embedding_provider</code></td><td>本地/API 可切换</td></tr>
+          <tr><td>RL 训练</td><td>纯 NumPy PPO</td><td>无 PyTorch</td><td>轻量部署；手写 Adam + tanh MLP</td></tr>
+          <tr><td>仿真</td><td>MATLAB / Octave</td><td><code>simulation.engine</code></td><td>复用 <code>monte_carlo_single.m</code> 蒙特卡洛模板</td></tr>
+          <tr><td>业务安全</td><td>parameter_firewall</td><td>无 Pydantic 硬依赖</td><td>LLM 毒药参数拦截；与 RL clip 双保险</td></tr>
+          <tr><td>并发隔离</td><td>TaskWorkspace</td><td>UUID 目录</td><td>MATLAB 脚本/rltmp 文件不跨任务覆盖</td></tr>
+          <tr><td>异步任务</td><td><code>multi_agent/async</code></td><td>CLI + HTTP</td><td>长 PPO 后台执行与进度轮询</td></tr>
+          <tr><td>T4 策略</td><td><code>t4_low_risk</code> 配置</td><td>确定性 gf + 流程门控</td><td>降低 LLM 激进 APN 风险</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 仿真引擎选型</h2>
+      <table>
+        <thead><tr><th>engine</th><th>机制</th><th>适用场景</th></tr></thead>
+        <tbody>
+          <tr><td><code>matlab_engine</code></td><td>in-process MATLAB Engine API</td><td>Windows 重复 episode 时免启动开销（Py≤3.12）</td></tr>
+          <tr><td><code>matlab</code></td><td><code>subprocess</code> 调用 matlab -batch</td><td>Engine 不可用或 Py3.13+</td></tr>
+          <tr><td><code>octave</code></td><td>Octave 批处理</td><td>无 MATLAB 许可证的开发机</td></tr>
+          <tr><td><code>python</code></td><td>GuidanceSimulator 内置</td><td>冒烟测试；RL fallback 解析奖励</td></tr>
+          <tr><td><code>auto</code></td><td>按可用性探测</td><td>默认推荐</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. PPO 实现选型</h2>
+      <ul>
+        <li><strong>Contextual Bandit</strong>：每 episode 独立仿真，无跨步 MDP → γ=0，Returns=R</li>
+        <li><strong>有界绝对寻优</strong>：<code>param = mid + a×half</code>，非 baseline 残差</li>
+        <li><strong>batch=64</strong>：稳定梯度；<code>nmc_per_eval=10</code> 平衡耗时与方差</li>
+        <li><strong>entropy_coef=0.05</strong>：防探索塌缩；episode 级 log_std 衰减</li>
+        <li><strong>AdaptiveExplorationController</strong>（v0.4.0）：按 reward EMA / 参数步长动态缩放 log_std（<code>exploration.adaptive_*</code>）</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>4. Judge、Gate 与指标解析</h2>
+      <ul>
+        <li><code>parse_sim_stdout</code>：从 MC 输出分离 <code>peak_ny</code>（均值）与 <code>peak_ny_max</code>（max=XXg）</li>
+        <li><code>run_simulation.last_metrics</code>：仿真工具缓存解析结果；cli Gate 与复核优先使用</li>
+        <li><code>judge_requirements_tool._rule_check</code>：有 <code>peak_ny_max</code> 时以 max 判 PeakNy；硬约束失败时 LLM 不得翻案</li>
+        <li><code>cli_agent</code>：进 Layer3 前对 <code>hermes_sim_metrics</code> 再跑 <code>_rule_check</code>，纠正 judge/LLM 手填与 stdout 不一致（log06102355 类回归）</li>
+        <li><code>layer2_script_gate</code>：T4 MODIFY 闭环 <code>modify_gate_nmc</code>；<code>modify_gate_peak_g=30</code> 为 Gate 上限（任务指标仍 ≤20g）</li>
+        <li><code>should_gate_near_miss_tune</code>：Gate 拦截但 peak 在 (20,30]g 且 hit/SEP OK → 同轮 TUNE 进 Layer3</li>
+        <li><code>get_peak_ny_max()</code>：RL 奖励、Gate、规则检查统一读取入口</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. 与替代方案对比</h2>
+      <table>
+        <thead><tr><th>决策点</th><th>当前方案</th><th>替代</th><th>未选原因</th></tr></thead>
+        <tbody>
+          <tr><td>RL 框架</td><td>自研 NumPy PPO</td><td>Stable-Baselines3 / Ray</td><td>依赖重；动作空间定制简单</td></tr>
+          <tr><td>参数搜索</td><td>PPO + Expert LLM</td><td>纯 GA (<code>optimizer</code> 遗留)</td><td>GA 已 disabled；PPO 可处理连续 9 维</td></tr>
+          <tr><td>AMRO（旧）</td><td>已移除</td><td>自适应 action 修正</td><td>破坏 PPO importance sampling；由 AdaptiveExploration 取代</td></tr>
+          <tr><td>MODIFY gf()</td><td>LLM 自由重写</td><td>内置 APN 模板（T4）</td><td>历史 LLM APN 曾 61g；T4 用确定性模板</td></tr>
+          <tr><td>同步 CLI</td><td>阻塞至 PPO 结束</td><td><code>--async-run</code></td><td>外部 HTTP 编排需 task_id 轮询</td></tr>
+          <tr><td>知识库</td><td>Chroma 本地</td><td>Pinecone / ES</td><td>单机离线优先</td></tr>
+          <tr><td>编排</td><td>Hermes Tool calling</td><td>LangGraph 固定 DAG</td><td>任务模式多样，需动态工具</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 技术风险与缓解</h2>
+      <div class="risk"><strong>R1 MATLAB 启动慢</strong> — 使用 matlab_engine 热会话；RL 剥离 plot 调用；stale metrics 检测后切换 subprocess。</div>
+      <div class="risk"><strong>R2 仿真 stdout 解析失败</strong> — 多模式 regex + LLM fallback；诊断日志 dump；内部 fallback 仅 SEP 奖励。</div>
+      <div class="risk"><strong>R3 LLM 幻觉脚本</strong> — syntax_check 迭代；verify_guidance_compat；interface_check 文件。</div>
+      <div class="risk"><strong>R4 Reward hacking (T4)</strong> — Phase A 禁 PM/BW；硬截断 PeakNy&gt;50；T4 低风险策略限制 MODIFY 后 PPO；自适应探索低 reward 收缩。</div>
+      <div class="risk"><strong>R7 MODIFY gf 过载爆炸</strong> — <code>physics_bounds</code> 桩探测；T4 内置 tanh+clip 20g APN；MODIFY 失败禁 TUNE。</div>
+      <div class="risk"><strong>R5 Windows asyncio</strong> — SelectorEventLoopPolicy；子进程替代 async pipe。</div>
+      <div class="risk"><strong>R6 API 密钥泄露</strong> — 应使用 .env；勿将真实 key 提交仓库（见安全设计）。</div>
+      <div class="risk"><strong>R8 LLM 毒药参数</strong> — <code>clamp_tunable_params</code> + <code>sanitize_rl_hyperparams</code>；禁止物理量键；PPO 动作有界映射。</div>
+      <div class="risk"><strong>R9 并发仿真文件冲突</strong> — <code>TaskWorkspace</code> 每任务独立目录 + episode 级 <code>rltmp_{uuid}</code>。</div>
+      <div class="risk"><strong>R10 双标尺指标</strong> — Hermes judge 可能手填 metrics；cli 以 stdout 解析 + Gate 闭环 metrics 为准；部署时同步 <code>judge_requirements_tool</code> 与 <code>cli_agent</code> 复核逻辑。</div>
+      <div class="risk"><strong>R11 Gate 误拦/漏拦</strong> — <code>modify_gate_peak_g</code> 与任务 20g 分离；peak&gt;30g 必须继续 MODIFY；20–30g 可 near-miss TUNE；多项崩盘（hit/SEP 失败）不触发 near-miss。</div>
+      <div class="risk"><strong>R12 MATLAB 长仿真超时</strong> — <code>matlab_timeout_sec</code> / <code>matlab_timeout_per_mc_sec</code>；Gate smoke + MODIFY 闭环需足够 Nmc 与 timeout。</div>
+    </section>
+  </main>
+  <footer>GSMultiAgent · 技术选型 · docsNew/04-tech-stack.html · 2026-06-11</footer>
+</body>
+</html>

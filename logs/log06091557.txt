@@ -1,0 +1,46 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-09 15:57:30
+Command     : cli_agent.py --preflight-only --file prompts/prompt_log06082330.txt
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06091557.txt
+================================================================================
+
+2026-06-09 15:57:30 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06091557.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06091557.txt
+2026-06-09 15:57:30 - multi_agent.simulation.engine_resolver - WARNING - engine='matlab' but no MATLAB executable was found at 'matlab'.  Set MATLAB_PATH env var or simulation.matlab_path in config.yaml.
+2026-06-09 15:57:30 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=no, matlab.exe=no, octave=no)
+2026-06-09 15:57:39 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-09 15:57:42 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-09 15:57:42 - multi_agent.rl.matlab_rl_optimizer - WARNING - [parse_sim_stdout] hit_rate/SEP at sentinel defaults (0%% / 50m) with no MC evidence in stdout — metrics unreliable for RL
+
+========================================================================
+  GSMultiAgent 启动前检查 (Preflight)
+========================================================================
+  [WARN] python_version: Python 3.14.5 — in-process matlab.engine 可能不可用，建议 simulation.engine=matlab
+         → config.yaml: engine: matlab
+  [WARN] imports_optional: 可选依赖未安装: langchain_openai, chromadb（LLM/RAG 功能可能受限）
+  [OK] config_file: E:\PythonProject\GSMultiAgent13\config.yaml
+  [OK] llm_api_key: LLM 已配置 model=deepseek-v4-pro
+  [OK] ablation_workflow: optimization_workflow / rl_optimization 已启用
+  [OK] layer2_gate_config: layer2_script_gate=true
+  [FAIL] simulation_engine: engine=matlab 但未找到 MATLAB 可执行文件 (matlab)
+         → config.yaml 中设置 matlab_path 为 matlab.exe 绝对路径
+  [OK] knowledge_base: knowledge_base 存在 (4 md, 1 m)
+  [OK] kb_template: monte_carlo_single.m 可用 (338 行)
+  [OK] layer2_gate_code: Layer2 Gate 模块与 force_kb_template 可用
+  [OK] parser: parse_sim_stdout 自检通过（含占位值检测）
+  [WARN] guidance_scripts: 发现 5/31 个可能不可用的 .m 脚本: hermes_generated_2.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch; hermes_generated_1.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch; hermes_generated_5.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch 等共 5 个
+         → 删除 guidance_output/scripts 下旧脚本，或开启 layer2_script_gate 自动重生
+  [WARN] hermes: Hermes (run_agent) 不可用 — 将跳过 Layer2 任务规划（Layer3 RL 仍可运行）
+  [OK] cli_agent_gate: cli_agent 已集成 Gate + Preflight
+------------------------------------------------------------------------
+  结论: 1 项失败，请修复后再运行 cli_agent。
+========================================================================
+
+2026-06-09 15:57:42 - multi_agent.preflight.preflight_check - ERROR - Preflight failed — aborting startup
+
+================================================================================
+Finished    : 2026-06-09 15:57:42
+Exit code   : 0
+================================================================================

@@ -1,3 +1,4 @@
+# [交付包] API Key 与发件方共用；matlab_path 已重置为通用值，Preflight 失败时改为本机 matlab.exe 路径。
 # =============================================================================
 # Multi-Agent Guidance System - 主配置文件 (config.yaml)
 # 三层架构版本 | monte_carlo_single.m 模板 | T/G/AP/R 工况体系
@@ -19,48 +20,131 @@
 # =============================================================================
 # 消融实验开关 (Ablation Study Flags)
 # =============================================================================
-# 用于消融实验，每个子模块可独立开启/关闭。
-#   enabled: true  → 启用（默认，全功能运行）
-#   enabled: false → 拔除（关闭该模块，流程降级或跳过）
 #
-# 组件说明（对应新三层架构）:
-#   rl_optimization            → Layer 3: 关闭 RL 优化器
-#                                false → OptimizationWorkflow 跳过 RL，仅做反思判断
-#   optimization_workflow      → Layer 3: 关闭整个 Layer3 工作流
-#                                false → Hermes(Layer2)生成后直接跳至报告
-#   hermes_rl_tool             → 已弃用（matlab_rl_optimize 已从 Hermes 工具列表永久移除）
-#                                RL 完全由 Layer3 OptimizationWorkflow 负责
-#   parameter_experience_reuse → 历史参数经验复用开关
-#                                false → Hermes 不加载 parameter_experience_* 工具；
-#                                        回写仍执行，但不加载历史参数
-#   reflection_agent           → 反思智能体 + Layer3 判断智能体全局开关
-#                                false → 不创建 JudgmentAgent/ReflectionAgent；
-#                                        Layer3 运行到 max_episodes 后直接回写
+# 六个消融维度:
+#   1. guidance_compat_verification  → Hermes 工具: verify_guidance_compat
+#                                      制导律修改后的数学适配性证明（控制论带宽分离/稳定裕度）
+#                                      false → 跳过适配性验证，直接进入仿真
+#   2. syntax_check                  → Hermes 工具: syntax_check_matlab
+#                                      LLM 智能体驱动的 MATLAB 脚本语法迭代修正
+#                                      false → 跳过语法检查，直接运行生成的脚本
+#   3. rl_optimization               → Layer 3: PPO 参数优化器
+#                                      false → 跳过 RL，仅用 Hermes 初始参数单次仿真
+#   4. parameter_experience_reuse    → 历史参数经验库 (ParameterExperience)
+#                                      false → 不加载 pe_best/pe_search 工具，从零推导参数
+#   5. memory_search                 → Hermes 持久记忆 + 情节记忆 + session_search
+#                                      false → 禁用 agent_memory_*/session_search，
+#                                              不注入情节事件，不保存/读取跨会话记忆
+#   6. max_iterations (workflow)     → 外层「生成-仿真-反思」迭代轮次
+#                                      在 workflow.max_iterations 中设置（见下方）
+#                                      消融时设为 1（单轮）对比完整多轮迭代
 #
-# 典型消融实验配置示例（全拔除对照组）:
-#   ablation:
-#     rl_optimization:            { enabled: false }
-#     optimization_workflow:      { enabled: false }
-#     hermes_rl_tool:             { enabled: false }
-#     parameter_experience_reuse: { enabled: false }
-#     reflection_agent:           { enabled: false }
+# 八组实验配置:
+#
+#  组别       | 适配验证 | 语法检查 | RL优化 | 经验库 | 持久记忆 | max_iter
+#  ──────────┼─────────┼────────┼───────┼───────┼────────┼────────
+#  完整系统   |  true   |  true  |  true |  true |  true  |    5
+#  A 去适配   |  false  |  true  |  true |  true |  true  |    5
+#  B 去语法   |  true   | false  |  true |  true |  true  |    5
+#  C 去RL    |  true   |  true  | false |  true |  true  |    5
+#  D 去经验库 |  true   |  true  |  true | false |  true  |    5
+#  E 去记忆   |  true   |  true  |  true |  true | false  |    5
+#  F 单轮迭代 |  true   |  true  |  true |  true |  true  |    1
+#  G 纯对照   |  false  | false  | false | false | false  |    1
+#
+# 切换实验组：将下方 ablation 块替换为对应行的值，
+#            同时将 workflow.max_iterations 设为对应值。
 # =============================================================================
+
+# ── 当前激活组：完整系统（所有组件启用，5 轮迭代）─────────────────────────────
 ablation:
+  guidance_compat_verification:
+    enabled: true            # 制导律数学适配性证明
+
+  syntax_check:
+    enabled: true            # LLM 智能体驱动的 MATLAB 语法修正
+
   rl_optimization:
-    enabled: true
-
-  optimization_workflow:
-    enabled: true
-
-  hermes_rl_tool:
-    enabled: true
+    enabled: true            # PPO 强化学习参数优化
 
   parameter_experience_reuse:
-    enabled: true
+    enabled: true   # 历史参数经验库复用
 
   reflection_agent:
-    enabled: true
+    enabled: true            # 反思智能体（RL 早停判断）
 
+  memory_search:
+    enabled: true    # Hermes 持久记忆 + 情节记忆注入 + session_search
+
+# ── 复制以下任一块并替换上方 ablation: + workflow.max_iterations 即可切换 ─────
+#
+# 组 A — 去制导律适配性验证（验证数学证明的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: false }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 B — 去语法检查（验证 LLM 语法修正的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: false }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 C — 去 RL 优化（验证强化学习参数调优的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: false }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 D — 去参数经验库（验证历史参数复用的贡献）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: false }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 5
+#
+# 组 E — 单轮迭代（验证多轮迭代的贡献；workflow.max_iterations 改为 1）:
+#   ablation:
+#     guidance_compat_verification: { enabled: true  }
+#     syntax_check:                 { enabled: true  }
+#     rl_optimization:              { enabled: true  }
+#     parameter_experience_reuse:   { enabled: true  }
+#     reflection_agent:             { enabled: true  }
+#   workflow:
+#     max_iterations: 1
+#
+# 组 F — 纯对照基线（无验证/语法检查/RL/经验库，单轮输出）:
+#   ablation:
+#     guidance_compat_verification: { enabled: false }
+#     syntax_check:                 { enabled: false }
+#     rl_optimization:              { enabled: false }
+#     parameter_experience_reuse:   { enabled: false }
+#     reflection_agent:             { enabled: false }
+#   workflow:
+#     max_iterations: 1
+
+
+# =============================================================================
+# 日志 verbosity（quiet | normal | verbose）
+# =============================================================================
+logging:
+  verbosity: normal
+  rl_episode_interval: 10
 
 # =============================================================================
 # 工作流参数
@@ -181,77 +265,127 @@ parameter_experience:
   similarity_threshold: 0.7
 
 matlab_rl_optimizer:
-  # max_episodes: 每迭代 Layer3 内最多运行的 RL episode 数
-  # 越多优化越充分；推荐 10~50
-  max_episodes: 20
+  # layer3_strategy: 'expert' | 'ppo' | 'auto'
+  # T4 有 Layer2 好基线时推荐 expert（先 5 轮 LLM 调参，不足再 PPO）
+  layer3_strategy: expert
 
-  # nmc_per_eval: 每个 episode 的 Monte Carlo 次数 (monte_carlo_single N_MC)
-  # 推荐 5~20，越多评估越准确但耗时越长
-  nmc_per_eval: 10
+  max_episodes: 50
+  nmc_per_eval: 25
+  nmc_refine: 25
+  episodes_per_update: 16
 
-  # episodes_per_update: 累积多少轮 episode 后做一次 PPO 策略更新
-  episodes_per_update: 5
+  hidden_dim: 128
+  lr_actor: 0.00015
+  lr_critic: 0.0005
+  gamma: 0.0
+  entropy_coef: 0.02
+  clip_ratio: 0.10
 
-  # hidden_dim: Actor-Critic 神经网络隐层宽度（神经元数）
-  # 推荐: 32~128
-  hidden_dim: 64
+  exploration:
+    pitch_log_std: -0.7      # std ≈ 0.50（w1/zeta1/tao1）
+    other_log_std: -1.6        # std ≈ 0.20
+    warm_start_std_scale: 0.3  # PE/Hermes 基线存在时再缩探索
+    baseline_reward_threshold: 0.5
+    diverge_penalty_episodes: 3
+    diverge_log_std_delta: -0.5
+    diverge_reward_threshold: -9.5
 
-  # lr_actor: Actor 网络学习率 (Adam 优化器)
-  # 推荐范围: 1e-4 ~ 1e-3
-  lr_actor: 0.0003
+    adaptive_enabled: true
+    adaptive_steepness_threshold: 2.0
+    adaptive_log_std_min_scale: 0.35
+    adaptive_log_std_max_scale: 1.0
+    adaptive_ema_alpha: 0.3
 
-  # lr_critic: Critic 网络学习率，通常略大于 lr_actor
-  # 推荐范围: 5e-4 ~ 3e-3
-  lr_critic: 0.001
+  early_stop:
+    enabled: true
+    min_episodes: 10
+    patience: 15
+    peak_only_patience: 20
+    reward_plateau_delta: 0.05
+    reflect_every: 5
+    use_rule_first: true
+    use_multi_criteria_best: true
 
-  # gamma: 折扣因子，控制对未来奖励的重视程度
-  # 接近 1 表示长视野；推荐 0.95~0.999
-  gamma: 0.99
+  constraint_local_search:
+    enabled: true
+    max_steps: 25
+    nmc_per_eval: 25
+    step_scale: 0.12
+    borderline_select: true
+    borderline_hit_min_pct: 92.0
+    borderline_sep_max_m: 7.0
+    prefer_ppo_best_peak: true
 
-  # clip_ratio: PPO 裁剪系数，防止策略更新幅度过大
-  # 推荐范围: 0.1~0.3
-  clip_ratio: 0.2
+  checkpoint:
+    enabled: true
+    dir: ./parameter_experience_base/checkpoints/ppo
+    save_every_episodes: 10
+    keep_last_n: 5
+    rolling_window: 20
+    stats_log_every: 1
+    jsonl_log_dir: logs
 
   # ---------------------------------------------------------------------------
-  # PeakN 过载约束（约束指标，要求 PeakN ≤ peak_n_max）
+  # AMRO（已废弃）— 动作篡改会破坏 PPO 重要性采样，运行时一律忽略
   # ---------------------------------------------------------------------------
-  # peak_n_max: PeakN 的约束上限（均值），超出则向奖励施加惩罚
-  # 设为 0 表示不约束（禁用该惩罚项）
-  peak_n_max: 20.0
+  amro_enabled: false
 
-  # peak_n_penalty: 超出约束时每单位的惩罚权重
-  # 惩罚 = peak_n_penalty * min((peak_n - peak_n_max) / peak_n_max, 2.0)
-  peak_n_penalty: 1.0
+  # ---------------------------------------------------------------------------
+  # PeakN 过载约束（MC 平均值 ≤ peak_ny_mean_max）
+  peak_n_max: 20.0              # 兼容旧字段 = mean 上限
+  peak_ny_mean_max: 20.0
+  peak_n_penalty: 4.0
 
   # ---------------------------------------------------------------------------
   # 奖励函数权重配置（对应 _compute_reward 中每个分量的权重/阈值）
   # 修改后无需改代码，重启程序即可生效
   # ---------------------------------------------------------------------------
   reward_weights:
-    # 命中率：越高越好
-    hit_rate: 3.0
-
-    # SEP (脱靶量)：越小越好
-    sep_low_bonus: 2.0        # SEP < sep_low_threshold 时固定奖励
-    sep_low_threshold: 2.0    # m
-    sep_mid_weight: 1.0       # SEP 在 [sep_low, sep_mid] 线性奖励
-    sep_mid_threshold: 5.0    # m
-
-    # PeakNy (峰值法向过载)：软约束，越小越好
-    peak_ny_max: 20.0         # g，超出时惩罚 (hard limit)
-    peak_ny_penalty: 1.0      # 惩罚权重
+    hit_rate: 4.0
+    sep_low_bonus: 3.0
+    sep_low_threshold: 2.0
+    sep_mid_weight: 1.0
+    sep_mid_threshold: 5.0
+    peak_ny_max: 20.0
+    peak_ny_mean_max: 20.0
+    peak_ny_penalty: 4.0
+    peak_ny_progressive_low: 18.0
+    hard_truncation_peak_g: 35.0
+    baseline_reset_peak_g: 40.0
+    sep_survival_threshold: 300.0
 
     # PM (相位裕度)：目标范围 [pm_min, pm_max] 度
-    pm_bonus: 0.5             # 在范围内奖励
+    pm_bonus: 0.8             # 在范围内奖励（Phase B 内随 SEP 衰减）
     pm_min: 45.0              # deg
-    pm_max: 65.0              # deg
-    pm_penalty: 0.3           # 超出范围惩罚
+    pm_max: 70.0              # deg
+    pm_penalty: 3.0           # 超出范围惩罚
 
     # BW (带宽)：目标范围 [bw_min, bw_max] rad/s
-    bw_bonus: 0.2             # 在范围内奖励
-    bw_min: 12.0              # rad/s
-    bw_max: 22.0              # rad/s
-    bw_penalty: 0.1           # 超出范围惩罚
+    bw_bonus: 0.4             # 在范围内奖励（Phase B 内随 SEP 衰减）
+    bw_min: 20.0              # rad/s
+    bw_max: 85.0              # rad/s
+    bw_penalty: 1.2
+
+
+# =============================================================================
+# Feasible Region Explorer (FRE) — 逐步收紧 SEP/命中率约束
+# =============================================================================
+fre:
+  default:
+    initial_sep: 100.0
+    initial_hit_rate: 50.0
+    target_sep: 7.0
+    target_hit_rate: 92.0
+    phase_episodes: 20
+    num_phases: 3
+  t4:
+    # 勿用 500m/10% 起步：PPO 会在宽松 FRE 里发散，无法从 Expert 11m 基线继续收敛
+    initial_sep: 14.0
+    initial_hit_rate: 90.0
+    target_sep: 7.0
+    target_hit_rate: 92.0
+    phase_episodes: 8
+    num_phases: 2
 
 
 # =============================================================================
@@ -334,9 +468,21 @@ simulation:
   # ▶ 方式一：自动配置（当前激活）
   #   适用于 Octave 或 MATLAB 已加入系统 PATH 的情况。
   # ===========================================================================
-  engine: matlab_engine
-  matlab_path: matlab      # 裸名称 → 自动通过 PATH 查找
+  engine: matlab           # subprocess 比 matlab_engine 更稳（尤其 Python 3.13+）
+  matlab_path: matlab
   octave_path: octave      # 裸名称 → 自动通过 PATH 查找
+  prefer_kb_template: true   # TUNE 时优先 KB 模板，避免拿 guidance_output 下坏历史 .m 当种子
+  seed_policy: iterative      # iterative | safe_kb（legacy 每轮 KB 种子）
+  layer2_script_gate: true
+  layer2_smoke_nmc: 25
+  modify_gate_nmc: 10
+  physics_bounds_enabled: false
+  physics_bounds_ny_limit_g: 20.0
+  physics_bounds_timeout_sec: 120
+  physics_bounds_skip_deterministic_t4_apn: true
+  matlab_timeout_sec: 900
+  matlab_timeout_floor_sec: 360
+  matlab_timeout_per_mc_sec: 22
 
   # ===========================================================================
   # ▶ 方式二：手动配置（选择当前操作系统对应的示例块，取消注释后激活）
@@ -380,6 +526,50 @@ simulation:
   # matlab_path: /usr/local/MATLAB/R2025a/bin/matlab
   # octave_path: octave
 
+
+# =============================================================================
+# T4 低风险策略（确定性 APN + 保守调参）
+# =============================================================================
+t4_low_risk:
+  enabled: true
+  deterministic_apn: true
+  deterministic_apn_kb_only: true   # 仅 KB 种子写入内置 APN；Gate 通过脚本上走 LLM 增量 MODIFY
+  ny_limit_g: 20.0
+  max_w: 45.0
+  max_n_pn: 4.5
+  # A: Gate 闭环快扫仅看 PeakNy MC 均值；peak_ny_max 不参与 Gate/验收
+  modify_gate_peak_g: 35.0
+  modify_gate_hit_min_pct: 80.0
+  modify_fail_peak_g: 50.0
+  # B: Gate 因 mean 略超 20g 但 ≤ modify_gate_peak 时，同轮切 TUNE 进 Layer3
+  gate_near_miss_tune_enabled: true
+  modify_fail_hit_rate_min: 80.0
+  post_modify_first_tune_strategy: expert
+  post_modify_max_episodes: 50
+  post_modify_ppo_max_episodes: 40
+  post_modify_expert_rounds: 3
+  post_modify_ppo_peak_max_g: 40.0
+  post_modify_ppo_hit_min_pct: 80.0
+  # Expert 基线 SEP 已进近邻（如 11m）时跳过 PPO，直接 CLS，避免破坏基线
+  skip_ppo_expert_sep_max_m: 15.0
+  skip_ppo_expert_hit_min_pct: 90.0
+  peak_near_miss_g: 8.0
+  near_miss_ppo_max_episodes: 60
+  first_iter_mode: modify_law
+  modify_gate_nmc: 10
+  pe_store_peak_max_g: 25.0
+  pe_store_hit_min_pct: 92.0
+  borderline_nmc_revalidate: 30
+  conservative_autopilot:
+    w1: 35.0
+    zeta1: 0.65
+    tao1: 0.12
+    w2: 32.0
+    zeta2: 0.65
+    tao2: 0.12
+    w3: 35.0
+    zeta3: 0.65
+    N_pn: 3.5
 
 # =============================================================================
 # 兼容性保留字段（不影响主流程，可保持默认值）

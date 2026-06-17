@@ -1,161 +1,246 @@
 {
   "short_term": [
     {
-      "memory_id": "ba2d730e878d3e9c",
+      "memory_id": "75c527da85ff9bc4",
       "memory_type": "short_term",
       "task_context": {
-        "task": "guidance_rl_optimization",
-        "algorithm": "PPO",
-        "best_reward": -0.25416666666666665
+        "task": "rl_episode_best",
+        "episode": 5
       },
       "parameters": {
-        "dp_w1": 40.0,
-        "dp_zeta1": 0.45,
-        "dp_tao1": 0.2,
-        "dp_w2": 35.0,
-        "dp_zeta2": 0.45,
-        "dp_tao2": 0.2,
-        "dp_w3": 40.0,
-        "dp_zeta3": 0.22,
-        "dp_N_pn": 4.0,
-        "phys_m": 1030.0,
-        "phys_P": 6350.0
+        "w1": 37.46168375015259,
+        "zeta1": 0.849901720136404,
+        "tao1": 0.05,
+        "w2": 20.0,
+        "zeta2": 0.4087456077337264,
+        "tao2": 0.35,
+        "w3": 60.0,
+        "zeta3": 1.1983623892068862,
+        "N_pn": 4.495365026872605,
+        "ny_lim": 17.471848487854004
       },
       "objectives": {
-        "hit_rate": 43.333333333333336,
-        "miss_distance": NaN,
-        "control_energy": 50.0,
-        "pitch_PM": 54.0,
-        "pitch_GM": 8.0,
-        "peak_n": 0.0
-      },
-      "fitness": 1.0,
-      "timestamp": 1778209617.4759912,
-      "access_count": 15,
-      "last_access": 1778229844.3699284,
-      "metadata": {
-        "optimizer": "MatlabRLOptimizer",
-        "episode_count": 2,
-        "timestamp": 1778209617.4759493,
-        "final_status": "needs_design_path_change",
-        "guidance_params": {
-          "N_pn": 4.0
-        },
-        "autopilot_params": {
-          "w1": 40.0,
-          "zeta1": 0.45,
-          "tao1": 0.2,
-          "w2": 35.0,
-          "zeta2": 0.45,
-          "tao2": 0.2,
-          "w3": 40.0,
-          "zeta3": 0.22
-        }
-      }
-    },
-    {
-      "memory_id": "928d89079d1f4e57",
-      "memory_type": "short_term",
-      "task_context": {
-        "task": "guidance_rl_optimization",
-        "algorithm": "PPO",
-        "best_reward": -0.05416666666666667
-      },
-      "parameters": {
-        "dp_w1": 40.0,
-        "dp_zeta1": 0.75,
-        "dp_tao1": 0.2,
-        "dp_w2": 35.0,
-        "dp_zeta2": 0.75,
-        "dp_tao2": 0.2,
-        "dp_w3": 40.0,
-        "dp_zeta3": 0.7,
-        "dp_N_pn": 4.0,
-        "phys_m": 231.0,
-        "phys_P": 5000.0
-      },
-      "objectives": {
-        "hit_rate": 50.0,
-        "miss_distance": NaN,
-        "control_energy": 50.0,
-        "pitch_PM": 60.0,
-        "pitch_GM": 8.0,
-        "peak_n": 0.0
-      },
-      "fitness": 1.0,
-      "timestamp": 1778223699.004239,
-      "access_count": 6,
-      "last_access": 1778229844.3699164,
-      "metadata": {
-        "optimizer": "MatlabRLOptimizer",
-        "episode_count": 40,
-        "timestamp": 1778223699.0042017,
-        "final_status": "success",
-        "guidance_params": {
-          "N_pn": 4.0
-        },
-        "autopilot_params": {
-          "w1": 40.0,
-          "zeta1": 0.75,
-          "tao1": 0.2,
-          "w2": 35.0,
-          "zeta2": 0.75,
-          "tao2": 0.2,
-          "w3": 40.0,
-          "zeta3": 0.7
-        }
-      }
-    },
-    {
-      "memory_id": "45bccdaa60127cfe",
-      "memory_type": "short_term",
-      "task_context": {
-        "task": "guidance_rl_optimization",
-        "algorithm": "PPO",
-        "best_reward": -1.6
-      },
-      "parameters": {
-        "dp_w1": 40.0,
-        "dp_zeta1": 0.75,
-        "dp_tao1": 0.2,
-        "dp_w2": 35.0,
-        "dp_zeta2": 0.75,
-        "dp_tao2": 0.2,
-        "dp_w3": 40.0,
-        "dp_zeta3": 0.7,
-        "dp_N_pn": 4.0,
-        "phys_m": 231.0,
-        "phys_P": 5000.0
-      },
-      "objectives": {
-        "hit_rate": 10.0,
-        "miss_distance": 11887.89,
-        "control_energy": 50.0,
-        "pitch_PM": 30.0,
+        "hit_rate": 48.0,
+        "SEP": 46.18,
+        "peak_ny": 26.345,
+        "pitch_PM": 75.7,
+        "pitch_BW": 107.15000000000002,
         "pitch_GM": 6.0,
-        "peak_n": 0.0
+        "miss_distance": 46.18,
+        "peak_n": 26.345,
+        "peak_ny_mean": 26.345,
+        "peak_ny_max": 33.6,
+        "peak_n_max": 33.6,
+        "_parse_incomplete": 0.0
       },
-      "fitness": 0.1566919003091682,
-      "timestamp": 1778220078.414323,
-      "access_count": 9,
-      "last_access": 1778229844.369931,
+      "fitness": 0.35125844212919805,
+      "timestamp": 1781679862.591535,
+      "access_count": 0,
+      "last_access": 0.0,
+      "metadata": {
+        "episode": 5,
+        "reward": -0.631617856862745
+      }
+    },
+    {
+      "memory_id": "ffa8bd42043b1604",
+      "memory_type": "short_term",
+      "task_context": {
+        "task": "rl_episode_best",
+        "episode": 9
+      },
+      "parameters": {
+        "w1": 28.046998977661133,
+        "zeta1": 0.6228076785802841,
+        "tao1": 0.05,
+        "w2": 20.0,
+        "zeta2": 0.49136290252208703,
+        "tao2": 0.35,
+        "w3": 60.0,
+        "zeta3": 0.9587709322571754,
+        "N_pn": 4.233949564397335,
+        "ny_lim": 18.27889558672905
+      },
+      "objectives": {
+        "hit_rate": 44.0,
+        "SEP": 49.36,
+        "peak_ny": 22.25,
+        "pitch_PM": 78.1,
+        "pitch_BW": 10.949999999999998,
+        "pitch_GM": 6.0,
+        "miss_distance": 49.36,
+        "peak_n": 22.25,
+        "peak_ny_mean": 22.25,
+        "peak_ny_max": 24.32,
+        "peak_n_max": 24.32,
+        "_parse_incomplete": 0.0
+      },
+      "fitness": 0.3466444572915608,
+      "timestamp": 1781679975.2570593,
+      "access_count": 0,
+      "last_access": 0.0,
+      "metadata": {
+        "episode": 9,
+        "reward": 0.6971198470588237
+      }
+    },
+    {
+      "memory_id": "fd0384771a4d2f03",
+      "memory_type": "short_term",
+      "task_context": {
+        "task": "rl_episode_best",
+        "episode": 12
+      },
+      "parameters": {
+        "w1": 41.49366721510887,
+        "zeta1": 0.769822024181485,
+        "tao1": 0.05,
+        "w2": 22.10692048072815,
+        "zeta2": 0.3937543734908103,
+        "tao2": 0.35,
+        "w3": 60.0,
+        "zeta3": 1.1654234007000923,
+        "N_pn": 3.7936879992485046,
+        "ny_lim": 18.320613235235214
+      },
+      "objectives": {
+        "hit_rate": 44.0,
+        "SEP": 39.65,
+        "peak_ny": 22.295,
+        "pitch_PM": 73.3,
+        "pitch_BW": 110.31,
+        "pitch_GM": 6.0,
+        "miss_distance": 39.65,
+        "peak_n": 22.295,
+        "peak_ny_mean": 22.295,
+        "peak_ny_max": 24.4,
+        "peak_n_max": 24.4,
+        "_parse_incomplete": 0.0
+      },
+      "fitness": 0.374518183468737,
+      "timestamp": 1781680069.7428515,
+      "access_count": 0,
+      "last_access": 0.0,
+      "metadata": {
+        "episode": 12,
+        "reward": 0.7545970019607844
+      }
+    },
+    {
+      "memory_id": "3c45cf27c4570c4b",
+      "memory_type": "short_term",
+      "task_context": {
+        "task": "guidance_rl_optimization",
+        "algorithm": "PPO",
+        "best_reward": 0.7545970019607844
+      },
+      "parameters": {
+        "dp_w1": 28.046998977661133,
+        "dp_zeta1": 0.6228076785802841,
+        "dp_tao1": 0.05,
+        "dp_w2": 20.0,
+        "dp_zeta2": 0.49136290252208703,
+        "dp_tao2": 0.35,
+        "dp_w3": 60.0,
+        "dp_zeta3": 0.9587709322571754,
+        "dp_N_pn": 4.233949564397335,
+        "dp_ny_lim": 18.27889558672905,
+        "phys_m": 231.0,
+        "phys_P": 5000.0
+      },
+      "objectives": {
+        "hit_rate": 44.0,
+        "SEP": 49.36,
+        "miss_distance": 49.36,
+        "control_energy": 50.0,
+        "pitch_PM": 78.1,
+        "pitch_BW": 10.949999999999998,
+        "pitch_GM": 6.0,
+        "peak_ny": 24.32,
+        "peak_n": 24.32,
+        "peak_ny_max": 24.32
+      },
+      "fitness": 0.3466444572915608,
+      "timestamp": 1781680596.0773036,
+      "access_count": 0,
+      "last_access": 0.0,
       "metadata": {
         "optimizer": "MatlabRLOptimizer",
-        "episode_count": 20,
-        "timestamp": 1778220078.4142666,
+        "episode_count": 29,
+        "timestamp": 1781680596.0773036,
         "final_status": "success",
         "guidance_params": {
-          "N_pn": 4.0
+          "N_pn": 4.233949564397335,
+          "ny_lim": 18.27889558672905
         },
         "autopilot_params": {
-          "w1": 40.0,
-          "zeta1": 0.75,
-          "tao1": 0.2,
-          "w2": 35.0,
-          "zeta2": 0.75,
-          "tao2": 0.2,
-          "w3": 40.0,
-          "zeta3": 0.7
+          "w1": 28.046998977661133,
+          "zeta1": 0.6228076785802841,
+          "tao1": 0.05,
+          "w2": 20.0,
+          "zeta2": 0.49136290252208703,
+          "tao2": 0.35,
+          "w3": 60.0,
+          "zeta3": 0.9587709322571754
+        }
+      }
+    },
+    {
+      "memory_id": "40610b7d30bdd563",
+      "memory_type": "short_term",
+      "task_context": {
+        "task": "guidance_rl_optimization",
+        "algorithm": "PPO",
+        "best_reward": -10.0
+      },
+      "parameters": {
+        "dp_w1": 21.13282322883606,
+        "dp_zeta1": 1.048540937900543,
+        "dp_tao1": 0.30374808609485626,
+        "dp_w2": 60.0,
+        "dp_zeta2": 1.0357541173696516,
+        "dp_tao2": 0.307793653011322,
+        "dp_w3": 30.958694219589233,
+        "dp_zeta3": 0.35,
+        "dp_N_pn": 4.85515134036541,
+        "dp_ny_lim": 19.306291937828064,
+        "phys_m": 231.0,
+        "phys_P": 5000.0
+      },
+      "objectives": {
+        "hit_rate": 96.0,
+        "SEP": 22.54,
+        "miss_distance": 22.54,
+        "control_energy": 50.0,
+        "pitch_PM": -76.8,
+        "pitch_BW": 2.25,
+        "pitch_GM": 13.7,
+        "peak_ny": 27.98,
+        "peak_n": 27.98,
+        "peak_ny_max": 27.98
+      },
+      "fitness": 0.4336888712997995,
+      "timestamp": 1781685443.2880697,
+      "access_count": 0,
+      "last_access": 0.0,
+      "metadata": {
+        "optimizer": "MatlabRLOptimizer",
+        "episode_count": 53,
+        "timestamp": 1781685443.2880697,
+        "final_status": "success",
+        "guidance_params": {
+          "N_pn": 4.85515134036541,
+          "ny_lim": 19.306291937828064
+        },
+        "autopilot_params": {
+          "w1": 21.13282322883606,
+          "zeta1": 1.048540937900543,
+          "tao1": 0.30374808609485626,
+          "w2": 60.0,
+          "zeta2": 1.0357541173696516,
+          "tao2": 0.307793653011322,
+          "w3": 30.958694219589233,
+          "zeta3": 0.35
         }
       }
     }
@@ -163,559 +248,92 @@
   "long_term": [],
   "episodic": [
     {
-      "memory_id": "778a4069f021ca0f",
+      "memory_id": "a3e3e6e1693d765e",
       "memory_type": "episodic",
       "task_context": {
         "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=①任务触发 T 类（目标机动强度扫描）T1 子工况，即匀速直飞——这是最基础的标称工况，目标无机动。②monte_mean_2.md 实测数据：T1 命中率 100%、SEP 3.76m、PeakNy 5.37g 均已达标，但 PM=75.9° 超出用户要求的 45°~65° 上限，BW=8.03 ",
-        "timestamp_iso": "2026-05-08T10:17:17"
+        "description": "iter=1 mode=MODIFY_LAW reason=【逐项比对】\n数据源A(RAG历史-默认模板参数 rl_w1=40,rl_zeta1=0.75,rl_N_pn=4 等):\n  命中率94.0% ✓ | SEP 4.22m ✓ | PeakNy 51.53g ✗(超标158%) | PM 77.1° ✗(超上限7.1°) | BW 6.31rad/",
+        "timestamp_iso": "2026-06-17T14:38:04"
       },
       "parameters": {},
       "objectives": {},
       "fitness": 0.0,
-      "timestamp": 1778206637.7870736,
+      "timestamp": 1781678284.8613222,
       "access_count": 0,
       "last_access": 0.0,
       "metadata": {
         "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "5274f2bcd51f5ac2",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=100.0% SEP=3.870m PM=62.5deg",
-        "timestamp_iso": "2026-05-08T10:51:06"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778208666.3395627,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "0ad758471a9e3844",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=1 needs_opt=True suggestion=未达标项：1) 命中率43.3%，远低于92%要求；2) SEP脱靶量为NaN，无法验证≤7m要求，命中率过低导致脱靶量统计无效；3) 俯仰带宽28.5 rad/s，超出12~22 rad/s范围；4) 峰值过载数据不可用（peak_n=0.0），但优先解决命中率与带宽问题。已达标项：俯仰相位裕度5",
-        "timestamp_iso": "2026-05-08T10:51:33"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778208693.300517,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "4361ba3affdff7d7",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=2 mode=REUSE_HISTORY reason=①工况触发分析：任务指定RUN_CASE='T'; SUB_IDX=1，仅触发T类（目标机动强度扫描）中的T1子工况。T1物理含义为'匀速直飞/无目标机动'——目标不做任何机动飞行，是PNG最经典的适用场景，系统不存在结构性失效风险。G/AP/R类均未触发。②实测数据对照：monte_mean_2.",
-        "timestamp_iso": "2026-05-08T10:52:57"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778208777.3779514,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2,
-        "mode": "REUSE_HISTORY"
-      }
-    },
-    {
-      "memory_id": "73d53a60a56efd60",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=2 hit=100.0% SEP=3.950m PM=64.3deg",
-        "timestamp_iso": "2026-05-08T11:06:33"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778209593.2691057,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2
-      }
-    },
-    {
-      "memory_id": "1d751b819068903d",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=2 needs_opt=True suggestion=未达标项：1) 命中率43.3%，远低于≥92%要求；2) SEP脱靶量为NaN，无法验证≤7m要求；3) 俯仰带宽28.5 rad/s，超出12~22 rad/s范围；4) 峰值法向过载数据不可用（peak_n=0.0），但不作为阻塞条件。已达标项：俯仰相位裕度54.0°符合45°~65°范围。建",
-        "timestamp_iso": "2026-05-08T11:07:15"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778209635.3030512,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "9cb1a3ed98b7f4c5",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=3 mode=TUNE_PARAMS reason=①工况触发分析：用户明确指定RUN_CASE='T'; SUB_IDX=1，仅T类T1子工况（匀速直飞）被启用。T1是目标无机动的最简基线场景，PNG制导在其上具有完备的理论收敛性，专家路径评定为'0重用'——制导律数学结构无需改变。G/AP/R类均未启用，不涉及驾驶仪退化、交战几何变异或综合鲁棒性",
-        "timestamp_iso": "2026-05-08T11:09:05"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778209745.2245727,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 3,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "26226f97842cb3fe",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=①触发工况分析：任务指定RUN_CASE='T';SUB_IDX=1，对应T1'匀速直飞'(目标无机动)，是T类最基础baseline。T类物理含义为目标机动强度扫描，T1为无机动基准点，无G/AP/R类别触发。②模式选择依据：monte_mean_2.md实测数据表明T1基线命中率100%、SEP",
-        "timestamp_iso": "2026-05-08T12:07:59"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778213279.350496,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "4e577fbd729ba6bd",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=50.0% SEP=10.110m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T12:14:16"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778213656.7148695,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "588102396ab4b63d",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=1 needs_opt=True suggestion=多项指标不满足任务要求：(1) 命中率仅 50%，远低于 92% 目标；(2) SEP 脱靶量为 NaN，仿真未产生有效脱靶数据；(3) 俯仰通道带宽 28.5 rad/s 超出 12~22 rad/s 范围；(4) 峰值法向过载为 0.0，数据不可用，无法验证 ≤20g 约束。建议：降低 w1,w",
-        "timestamp_iso": "2026-05-08T12:14:39"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778213679.1409824,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "1d753f7f1b4fe3bc",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=①工况触发分析：仅T类触发(RUN_CASE='T',SUB_IDX=1→T1匀速直飞)，G/AP/R类均未使能。T1为最简基准工况——目标无机动恒速直飞，PNG经典适用场景，无交战几何变化、无驾驶仪退化、无综合鲁棒摄动。②模式决策依据：monte_mean_2实测数据显示T1命中率100%(≥92",
-        "timestamp_iso": "2026-05-08T12:18:04"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778213884.7089052,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "04b3b1b135794951",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=100.0% SEP=3.850m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T12:23:15"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778214195.8968124,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "5d444a68f215412f",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=1 needs_opt=True suggestion=当前仿真结果未满足任务性能要求。具体问题：\n1. 命中率 hit_rate=10.0%，远低于要求的≥92%。\n2. SEP脱靶量=11887.89m，远超要求的≤7m。\n3. 峰值法向过载 peak_ny=0.0（可能数据不可用），无法验证≤20g要求，需排查仿真是否输出了正确过载数据。\n4. 俯",
-        "timestamp_iso": "2026-05-08T12:24:27"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778214267.9016266,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "176db1547d82b664",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=2 mode=TUNE_PARAMS reason=①工况触发分析：任务明确RUN_CASE='T', SUB_IDX=1，仅触发T类（目标机动）工况。T1对应'匀速直飞'——目标无机动(Vz_amp=0, Vy=0)，是PNG最经典的适用场景。G/AP/R类未指定不启用。②物理效应与模式选择：T1无机动目标，PNG制导律结构完全胜任（专家路径明确为",
-        "timestamp_iso": "2026-05-08T12:26:57"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778214417.0548832,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "327096d71f83edec",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=2 hit=100.0% SEP=3.850m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T12:32:05"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778214725.5206375,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2
-      }
-    },
-    {
-      "memory_id": "16bc2dbb7afe5069",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=2 needs_opt=True suggestion=当前仿真结果未满足任务要求：1. 命中率仅10%，远低于≥92%要求；2. SEP脱靶量11887.89m，远超≤7m要求；3. 俯仰相位裕度30°，低于45°~65°区间；4. 峰值法向过载数据为0，可能未正常输出，无法验证≤20g约束，但此项不作为退出判定依据。已达标指标：俯仰带宽15 rad/",
-        "timestamp_iso": "2026-05-08T12:33:12"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778214792.3483636,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "03362b37d75cd0d3",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=3 mode=TUNE_PARAMS reason=①工况触发分析：任务指定RUN_CASE='T';SUB_IDX=1，仅触发T类T1子工况（目标匀速直飞，机动强度为零）。T类物理含义为'目标机动强度扫描'，控制变量是目标机动模式与幅频参数，检验制导律对不同机动强度目标的跟踪拦截能力。T1作为零机动基线工况，比例导引(PN)在结构上完全胜任。②模式",
-        "timestamp_iso": "2026-05-08T12:36:09"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778214969.209646,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 3,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "9203538e99033757",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=3 hit=100.0% SEP=3.850m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T12:43:12"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778215392.4011548,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 3
-      }
-    },
-    {
-      "memory_id": "f2fbb3a7be0934de",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=3 needs_opt=True suggestion=命中率仅10%远低于≥92%，SEP脱靶量11887.89m远大于≤7m，俯仰PM 30.0°低于45°~65°下限；俯仰BW 15.0 rad/s满足12~22 rad/s。峰值过载输出0.0g，可能数据不可用无法验证≤20g约束，但其他关键指标未达标须继续优化。建议：大幅提高N_pn（当前4.0",
-        "timestamp_iso": "2026-05-08T12:44:22"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778215462.7117147,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 3,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "8b65dac1740c3575",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=4 mode=TUNE_PARAMS reason=①工况分析：任务明确RUN_CASE='T';SUB_IDX=1对应T1(匀速直飞)，属T类目标机动强度扫描中最基本的基线工况。T类控制变量为目标机动频率和幅值，T1为无机动标称场景，是PNG最经典适用工况。未触发G(交战几何)、AP(驾驶仪退化)、R(综合鲁棒)类别。②模式选择判断：实测数据(mo",
-        "timestamp_iso": "2026-05-08T12:45:55"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778215555.7439778,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 4,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "36eea067a6d20e02",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=4 hit=100.0% SEP=3.710m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T12:57:11"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778216231.496373,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 4
-      }
-    },
-    {
-      "memory_id": "157be8b147205611",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=4 needs_opt=True suggestion=命中率仅10%远低于≥92%，SEP脱靶量11887.89m远大于≤7m，俯仰PM=30.0°低于45°~65°下限（增益裕度GM=6dB也未达到优秀水平）；俯仰BW=15.0rad/s在12~22rad/s范围内达标。峰值过载0.0g数据不可用，无法验证≤20g约束。综合判断，关键指标远未达标，必",
-        "timestamp_iso": "2026-05-08T12:58:15"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778216295.3789084,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 4,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "9ef48d7e64431623",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=5 mode=TUNE_PARAMS reason=①工况触发分析：任务显式指定RUN_CASE='T', SUB_IDX=1，仅触发T类目标机动工况下的T1子工况（匀速直飞）。T1物理含义为目标无机动，是PNG比例导引最经典适用场景，conditions.md中A1路径判定为'0重用'。②模式选择依据：参考数据(monte_mean_2.md)显示",
-        "timestamp_iso": "2026-05-08T13:00:52"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778216452.9049144,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 5,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "07f6d65acc4f3e2c",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=5 hit=100.0% SEP=4.320m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T13:05:33"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778216733.8965673,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 5
-      }
-    },
-    {
-      "memory_id": "0c00657acb1860b5",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=5 needs_opt=True suggestion=命中率仅10%，远低于92%的要求；SEP脱靶量11887.89m，远超≤7m的指标；俯仰相位裕度30.0°，未达到45°~65°范围的下限；峰值法向过载数据为0.0g，可能因仿真记录缺失而不可用，无法验证≤20g约束。俯仰带宽15.0rad/s满足12~22rad/s要求，其他未提及的指标暂不评判",
-        "timestamp_iso": "2026-05-08T13:06:41"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778216801.6470973,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 5,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "fff88249dce304d9",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=①工况触发分析：任务指定RUN_CASE='T';SUB_IDX=1，仅触发T1子工况（匀速直飞）。T1是目标机动类别的基准工况，目标无规避机动(目标机动参数Vz_amp=0,Vy=0,freq=0.2Hz)，物理含义是检验制导回路在无外部扰动下的基础跟踪精度与稳定裕度。G/AP/R类均未触发。②模",
-        "timestamp_iso": "2026-05-08T13:44:38"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778219078.9044278,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "1d2b97f2edd3668c",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=100.0% SEP=3.660m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T13:49:40"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778219380.643774,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "afe22a1922b21692",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=1 needs_opt=True suggestion=多项指标未达标：命中率仅10%（要求≥92%），SEP脱靶量11887.89m（要求≤7m），俯仰相位裕度30.0°（要求45°~65°），峰值法向过载数据不可用（peak_n=0.0，但脱靶量已严重超标表明制导回路基本失效，仍需优化）。带宽15.0 rad/s满足要求。建议大幅调整制导律参数（N_",
-        "timestamp_iso": "2026-05-08T14:01:27"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778220087.918404,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "b9ff99333284eba0",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=2 mode=MODIFY_LAW reason=①工况触发分析：任务指定RUN_CASE='T';SUB_IDX=1，仅触发T类T1子工况(匀速直飞)。T类控制目标机动模式，T1为无机动基准工况；未触发G(交战几何)、AP(驾驶仪退化)、R(综合鲁棒)类别，任务范围最小。②模式选择依据：monte_mean_2.md实测T1默认模板命中率100%",
-        "timestamp_iso": "2026-05-08T14:04:12"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778220252.0458162,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2,
         "mode": "MODIFY_LAW"
       }
     },
     {
-      "memory_id": "e585cdb89fef8237",
+      "memory_id": "edc1910c4b52d5cc",
       "memory_type": "episodic",
       "task_context": {
         "event_type": "hermes_sim",
-        "description": "iter=2 hit=100.0% SEP=3.660m PM=75.9deg",
-        "timestamp_iso": "2026-05-08T14:24:11"
+        "description": "iter=1 hit=80.0% SEP=15.01m PeakNy_avg=24.80g PeakNy_max=28.92g PM=77.1° BW=6.3r/s",
+        "timestamp_iso": "2026-06-17T14:51:18"
       },
       "parameters": {},
       "objectives": {},
       "fitness": 0.0,
-      "timestamp": 1778221451.8659413,
+      "timestamp": 1781679078.4288857,
+      "access_count": 0,
+      "last_access": 0.0,
+      "metadata": {
+        "iteration": 1
+      }
+    },
+    {
+      "memory_id": "cc03c56a8425a3b0",
+      "memory_type": "episodic",
+      "task_context": {
+        "event_type": "reflection",
+        "description": "iter=1 needs_opt=True suggestion=逐项分析：① 命中率 100% 达标；② SEP 脱靶量 7.56m > 7m 未达标；③ PeakNy 峰值法向过载 max=21.85g > 20g 未达标（均值 20.025g）；④ PM=70° 处于边界但仍在 45°~70° 内，暂可接受；⑤ BW=4.65 rad/s 严重低于 20 r",
+        "timestamp_iso": "2026-06-17T15:30:51"
+      },
+      "parameters": {},
+      "objectives": {},
+      "fitness": 0.0,
+      "timestamp": 1781681451.9254794,
+      "access_count": 0,
+      "last_access": 0.0,
+      "metadata": {
+        "iteration": 1,
+        "needs_optimization": true
+      }
+    },
+    {
+      "memory_id": "10cf260d1dc543be",
+      "memory_type": "episodic",
+      "task_context": {
+        "event_type": "plan",
+        "description": "iter=2 mode=TUNE_PARAMS reason=【逐项比对】\n数据源A(RAG历史-默认模板N=100标准PN律): 命中率94.0%✓ / SEP 4.22m✓ / PeakNy 51.53g✗(超标158%) / PM 77.1°✗(超上限) / BW 6.31rad/s✗(低于下限). 3项不达标。\n数据源B(PE参数经验): 缓冲区为空，",
+        "timestamp_iso": "2026-06-17T15:32:01"
+      },
+      "parameters": {},
+      "objectives": {},
+      "fitness": 0.0,
+      "timestamp": 1781681521.353562,
+      "access_count": 0,
+      "last_access": 0.0,
+      "metadata": {
+        "iteration": 2,
+        "mode": "TUNE_PARAMS"
+      }
+    },
+    {
+      "memory_id": "ca4d301cd7a3b6ef",
+      "memory_type": "episodic",
+      "task_context": {
+        "event_type": "hermes_sim",
+        "description": "iter=2 hit=100.0% SEP=9.07m PeakNy_avg=25.73g PeakNy_max=31.54g PM=68.8° BW=90.6r/s",
+        "timestamp_iso": "2026-06-17T15:37:24"
+      },
+      "parameters": {},
+      "objectives": {},
+      "fitness": 0.0,
+      "timestamp": 1781681844.0307126,
       "access_count": 0,
       "last_access": 0.0,
       "metadata": {
@@ -723,17 +341,17 @@
       }
     },
     {
-      "memory_id": "a4d298ec5fceef5d",
+      "memory_id": "2e54f93b1fe80686",
       "memory_type": "episodic",
       "task_context": {
         "event_type": "reflection",
-        "description": "iter=2 needs_opt=True suggestion=多项关键指标未满足要求：命中率50%（要求≥92%），SEP脱靶量数据不可用（NaN）且与命中率低一致，表明导引精度严重不足；俯仰带宽28.5 rad/s超出12~22 rad/s范围，可能导致控制品质恶化；峰值法向过载显示0.0g（数据不可用或无效），即使任务要求PeakNy≤20g，当前数据不足",
-        "timestamp_iso": "2026-05-08T14:28:04"
+        "description": "iter=2 needs_opt=True suggestion=指标达标情况逐项分析：\n① 命中率 100% 达标；\n② SEP 脱靶量 8.57m > 7m 未达标；\n③ PeakNy 峰值法向过载 max=25.34g > 20g 未达标（均值 21.92g）；\n④ PM=71.6° > 70° 未达标（超出 1.6°）；\n⑤ BW=94.0 rad/s >",
+        "timestamp_iso": "2026-06-17T16:07:35"
       },
       "parameters": {},
       "objectives": {},
       "fitness": 0.0,
-      "timestamp": 1778221684.4605796,
+      "timestamp": 1781683655.7852454,
       "access_count": 0,
       "last_access": 0.0,
       "metadata": {
@@ -742,17 +360,17 @@
       }
     },
     {
-      "memory_id": "33e0d05a8d29db6c",
+      "memory_id": "4ce278b48dd6261f",
       "memory_type": "episodic",
       "task_context": {
         "event_type": "plan",
-        "description": "iter=3 mode=TUNE_PARAMS reason=①工况分析：任务仅触发T类目标机动强度扫描中的T1子工况(匀速直飞)，目标无机动，是制导系统最简单的基本场景，比例导引(PNG)在理论上可完美处理，无需改变制导律结构。②当前状态诊断：上轮迭代结果为命中率50%、SEP NaN、BW 28.5 rad/s(超标)、PM 60°(达标)，与模板默认性能",
-        "timestamp_iso": "2026-05-08T14:29:51"
+        "description": "iter=3 mode=TUNE_PARAMS reason=【逐项比对】\n数据源A(RAG历史-默认模板标准PN律N=100): 命中率94.0%✓ / SEP 4.22m✓ / PeakNy 51.53g✗(超标158%) / PM 77.1°✗(超上限7.1°) / BW 6.31rad/s✗(低于下限13.69). 3项不达标。\n数据源B(PE参数经验",
+        "timestamp_iso": "2026-06-17T16:08:28"
       },
       "parameters": {},
       "objectives": {},
       "fitness": 0.0,
-      "timestamp": 1778221791.163755,
+      "timestamp": 1781683708.3714244,
       "access_count": 0,
       "last_access": 0.0,
       "metadata": {
@@ -761,393 +379,21 @@
       }
     },
     {
-      "memory_id": "e721e887e17efe1a",
+      "memory_id": "ee2bb1f1b55e0517",
       "memory_type": "episodic",
       "task_context": {
         "event_type": "hermes_sim",
-        "description": "iter=3 hit=100.0% SEP=3.850m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T14:35:45"
+        "description": "iter=3 hit=100.0% SEP=9.33m PeakNy_avg=34.36g PeakNy_max=48.36g PM=70.3° BW=7.7r/s",
+        "timestamp_iso": "2026-06-17T16:14:18"
       },
       "parameters": {},
       "objectives": {},
       "fitness": 0.0,
-      "timestamp": 1778222145.1984136,
+      "timestamp": 1781684058.7542741,
       "access_count": 0,
       "last_access": 0.0,
       "metadata": {
         "iteration": 3
-      }
-    },
-    {
-      "memory_id": "b4d065d463930965",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=REUSE_HISTORY reason=①工况分析：任务仅触发T类（目标机动强度扫描），SUB_IDX=1对应T1匀速直飞。T1是目标无机动的基本工况，PNG经典适用场景，目标加速度恒为零，制导律无需前馈补偿，驾驶仪工作在线性区。G/AP/R三类均未触发。②模式决策：monte_mean_2.md实测数据T1命中率100%、SEP 3.7",
-        "timestamp_iso": "2026-05-08T14:42:59"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778222579.785194,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "REUSE_HISTORY"
-      }
-    },
-    {
-      "memory_id": "d4037ef36bf6f9b8",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=100.0% SEP=3.660m PM=75.9deg",
-        "timestamp_iso": "2026-05-08T14:47:00"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778222820.078939,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "341fab0c94302d6b",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=1 needs_opt=True suggestion=未达标指标： 1) 命中率50.0% < 92%，严重不满足； 2) SEP脱靶量为NaN（可能为无效仿真导致），无法验证≤7m要求； 3) 峰值法向过载数据不可用（peak_n=0.0且best_peak_n_ever为inf），无法验证≤20g； 4) 俯仰带宽28.5 rad/s超出12~22",
-        "timestamp_iso": "2026-05-08T14:50:53"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778223053.4000392,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "10b10350b3bf24ab",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=2 mode=REUSE_HISTORY reason=① 工况触发分析：任务仅指定RUN_CASE='T';SUB_IDX=1，触发T类目标机动模式中的T1（匀速直飞）。T1控制变量为目标机动频率0Hz/幅值0g，物理含义为无机动基准工况，考验制导系统最基本跟踪能力，是全文baseline。G/AP/R类均未触发。\n\n② 模式选择推导：monte_me",
-        "timestamp_iso": "2026-05-08T14:52:30"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778223150.2016065,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2,
-        "mode": "REUSE_HISTORY"
-      }
-    },
-    {
-      "memory_id": "14d6007f4325bab1",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=2 hit=100.0% SEP=3.850m PM=75.9deg",
-        "timestamp_iso": "2026-05-08T14:58:00"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778223480.1827767,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2
-      }
-    },
-    {
-      "memory_id": "3b4d7c164b1810dd",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "reflection",
-        "description": "iter=2 needs_opt=True suggestion=1. 命中率50.0% 远低于要求92%，需要重点提升制导精度。建议排查仿真有效性，当前SEP脱靶量为NaN，可能仿真存在异常导致命中率低。2. 俯仰带宽28.5 rad/s 超出要求12~22 rad/s，需降低带宽，可通过减小w3（当前40.0）或调整驾驶仪参数（如w1,w2）实现。3. 峰值法",
-        "timestamp_iso": "2026-05-08T15:01:54"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778223714.5147417,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 2,
-        "needs_optimization": true
-      }
-    },
-    {
-      "memory_id": "9c18b44b0d9185ca",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=3 mode=TUNE_PARAMS reason=①工况物理分析：RUN_CASE='T'; SUB_IDX=1 触发T类(目标机动模式变化)的T1子工况——匀速直飞。T类控制变量为目标机动频率/幅度/波形，T1作为无机动baseline，目标加速度恒为零，PNG闭环跟踪需求最低，制导精度完全由驾驶仪响应品质决定。②模式选择依据：参考实测数据(mo",
-        "timestamp_iso": "2026-05-08T15:04:23"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778223863.6317987,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 3,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "4d0e9f7b352db3fc",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=①触发工况分析：仅T类触发(SUB_IDX=1→T1匀速直飞)，G/AP/R三类均未启用。T1物理含义为无机动目标匀速直飞，是PNG最经典适用场景，命中率和SEP天然达标。②模式决策依据：基线PM=75.9°超65°上限、BW=8.03 r/s低于12 r/s下限——两项频域指标不达标，按'超标即升",
-        "timestamp_iso": "2026-05-08T15:09:46"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778224186.9262614,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "35c9afc0b0537124",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=100.0% SEP=3.910m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T15:15:48"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778224548.7382007,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "c228128da4c999b4",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=① 任务仅触发T类SUB_IDX=1(T1匀速直飞)，不涉及G/AP/R类，类间独立无需跨类并行。T类内仅单一子工况，无T2-T4递进需求，故single策略。② T1实测：命中率100%/SEP 3.76m/PeakNy 5.37g三项核心指标全部达标，但PM=75.9°(超标约10.9°)和BW",
-        "timestamp_iso": "2026-05-08T15:25:25"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778225125.3502824,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "c7f1693d4fbaebb8",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=0.0% SEP=50.000m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T15:41:20"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778226080.5429258,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "f87543def51c0b64",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=①触发工况分析：任务指定RUN_CASE='T';SUB_IDX=1，仅触发T1（匀速直飞），属目标机动模式变化的最基本工况。T1物理含义：目标无机动、纯直线飞行，是PNG最经典适用场景，系统承受的机动压力最小。monte_mean_2实测数据：命中率100%、SEP3.76m、PeakNy=5.3",
-        "timestamp_iso": "2026-05-08T15:48:21"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778226501.8851428,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "1b29826f5f906a87",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=0.0% SEP=50.000m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T15:53:17"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778226797.8632257,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "e789abdcd4fb869e",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=①工况分析：任务仅指定RUN_CASE='T';SUB_IDX=1，即T类(目标机动模式变化)第1子工况T1(匀速直飞)。T类控制变量为目标机动频率和幅度，T1为无机动基准工况，用于校验弹体-驾驶仪基线特性。②指标诊断：monte_mean_2实测数据显示T1命中率100%、SEP=3.76m、Pe",
-        "timestamp_iso": "2026-05-08T16:01:52"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778227312.7159967,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "80948bc6110f8f99",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=100.0% SEP=3.800m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T16:07:13"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778227633.135677,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "78f52e38e57e9658",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=【mode选择依据】T1匀速直飞工况的命中率(100%)、SEP(3.76m)、PeakNy(5.37g)三项核心指标达标，但PM=75.9°超出[45°,65°]上限、BW=8.03 rad/s低于[12,22]下限，不满足任务指标要求。根据expert_design_path.md专家路径，T1",
-        "timestamp_iso": "2026-05-08T16:18:51"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778228331.3150165,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "beb74660ac926e59",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=0.0% SEP=18616.080m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T16:30:23"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778229023.6877394,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "d9c6a7171d510a6a",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=T1工况实测命中率100%、SEP 3.76m、PeakNy 5.37g均达标，但PM=75.9°超出45°~65°上限、BW=8.03 rad/s低于12~22 rad/s下限。根据超标即升级原则和expert_design_path专家路径，PM/BW属弹体-驾驶仪固有基线问题，T1推荐路径1（",
-        "timestamp_iso": "2026-05-08T16:33:52"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778229232.087318,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
-      }
-    },
-    {
-      "memory_id": "740420420c70d9d7",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "hermes_sim",
-        "description": "iter=1 hit=100.0% SEP=3.910m PM=30.0deg",
-        "timestamp_iso": "2026-05-08T16:47:15"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778230035.3709316,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1
-      }
-    },
-    {
-      "memory_id": "770f2cd8c1b742a8",
-      "memory_type": "episodic",
-      "task_context": {
-        "event_type": "plan",
-        "description": "iter=1 mode=TUNE_PARAMS reason=T1匀速直飞工况基线：命中率100%✓、SEP 3.76m✓、PeakNy 5.37g✓均达标，但PM=75.9°超标(上限65°)且BW=8.03 rad/s低于目标区间[12,22]。PM/BW为弹体-驾驶仪固有特性，与制导律耦合弱。专家路径明确建议路径1(调参)：调整导航系数和驾驶仪增益即可匹",
-        "timestamp_iso": "2026-05-08T16:54:20"
-      },
-      "parameters": {},
-      "objectives": {},
-      "fitness": 0.0,
-      "timestamp": 1778230460.944115,
-      "access_count": 0,
-      "last_access": 0.0,
-      "metadata": {
-        "iteration": 1,
-        "mode": "TUNE_PARAMS"
       }
     }
   ],

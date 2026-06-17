@@ -6,7 +6,7 @@
     <block name="GuidanceEquations">
     <!-- Navigation Law: a = N * v_c / t_go -->
     <constraint name="navigationEquation">
-      <ownedAttribute name="N" type="Real" value="nan"/>
+      <ownedAttribute name="N" type="Real" value="4.0"/>
       <ownedAttribute name="v_c" type="Real"/>
       <ownedAttribute name="t_go" type="Real"/>
       <ownedAttribute name="acceleration" type="Real"/>
@@ -14,7 +14,7 @@
     
     <!-- Damping: F_d = -c * v -->
     <constraint name="dampingEquation">
-      <ownedAttribute name="c" type="Real" value="nan"/>
+      <ownedAttribute name="c" type="Real" value="0.6"/>
       <ownedAttribute name="velocity" type="Real"/>
       <ownedAttribute name="force" type="Real"/>
     </constraint>

@@ -1,0 +1,562 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-15 14:49:50
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06151449.txt
+================================================================================
+
+2026-06-15 14:49:50 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06151449.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06151449.txt
+2026-06-15 14:49:50 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-15 14:49:54 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-15 14:49:57 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned None content
+2026-06-15 14:49:57 - multi_agent.rl.matlab_rl_optimizer - WARNING - [parse_sim_stdout] hit_rate/SEP at sentinel defaults (0%% / 50m) with no MC evidence in stdout — metrics unreliable for RL
+
+========================================================================
+  GSMultiAgent 启动前检查 (Preflight)
+========================================================================
+  [OK] python_version: Python 3.12.13
+  [OK] imports: 核心依赖 numpy / yaml / torch 可用
+  [OK] config_file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\config.yaml
+  [OK] llm_api_key: LLM 已配置 model=deepseek-v4-pro
+  [OK] ablation_workflow: optimization_workflow / rl_optimization 已启用
+  [OK] layer2_gate_config: layer2_script_gate=true
+  [OK] simulation_engine: engine=matlab  matlab_exe=True  matlab_engine=True  octave=True
+  [OK] knowledge_base: knowledge_base 存在 (4 md, 1 m)
+  [OK] kb_template: monte_carlo_single.m 可用 (339 行)
+  [OK] layer2_gate_code: Layer2 Gate 模块与 force_kb_template 可用
+  [OK] parser: parse_sim_stdout 自检通过（含占位值检测）
+  [WARN] guidance_scripts: 发现 5/31 个可能不可用的 .m 脚本: hermes_generated_2.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch; hermes_generated_1.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch; hermes_generated_5.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch 等共 5 个
+         → 删除 guidance_output/scripts 下旧脚本，或开启 layer2_script_gate 自动重生
+  [OK] hermes: Hermes run_agent 可用
+  [OK] cli_agent_gate: cli_agent 已集成 Gate + Preflight
+------------------------------------------------------------------------
+  结论: 无阻断项，有 1 条警告，可继续运行。
+========================================================================
+
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-15 14:49:57  verbosity=normal
+Task: 制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 任务工况（基于 monte_carlo_single.m T/G/AP/R 体系） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 运行工况：RUN_CASE='T'; SUB_IDX=4; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 命中率 >= 92% SEP脱靶量 <= 7 m Pe...
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+  Indexing knowledge_base + reports into RAG…
+C:\Users\Lenovo\anaconda3\envs\GS312\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-15 14:50:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_135731.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_142254.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_144411.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_164604.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_174034.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_184439.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_000409.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_204045.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_013916.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_161335.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_182024.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_232509.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_065502.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_175242.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_181819.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_184129.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_201349.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_212016.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_230610.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260610_000513.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_004552.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_010632.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_011648.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_013009.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_111139.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_172537.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260612_121026.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260612_153411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260615_001921.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:50:30 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+  RAG ready: total=9 | knowledge_base:9
+2026-06-15 14:50:37 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 14:50:37 - multi_agent.memory.parameter_experience - INFO - Successfully loaded Parameter Experience memory from parameter_experience_memory.json
+2026-06-15 14:50:37 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+
+[Pre-Step] Parsing mission conditions from prompt…
+  Initializing Hermes persistent memory...
+2026-06-15 14:50:37 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 6 entries from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+  Loaded 6 long-term memories from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (14 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 14 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:38 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:38.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-15 14:50:39 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] rag_agent → tools: ['rag_query', 'rag_retrieve', 'rag_expand']
+2026-06-15 14:50:39 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] matlab_agent → tools: ['generate_matlab', 'syntax_check_matlab', 'verify_guidance_compat']
+2026-06-15 14:50:39 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] sim_agent → tools: ['run_simulation', 'syntax_check_matlab']
+2026-06-15 14:50:39 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] analysis_agent → tools: ['judge_requirements', 'parameter_experience_best', 'parameter_experience_search']
+2026-06-15 14:50:39 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] memory_agent → tools: ['agent_memory_remember', 'agent_memory_recall', 'agent_memory_list', 'agent_memory_forget']
+2026-06-15 14:50:39 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] Specialized agents registered: ['rag_agent', 'matlab_agent', 'sim_agent', 'analysis_agent', 'memory_agent']
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (15 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 15 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:39.
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:39.
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:39.
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:39.
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:39.
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:39 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:39.
+2026-06-15 14:50:40 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:40.
+2026-06-15 14:50:40 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:50:40 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:51:40.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+  Hermes initialized with tools (task_prompt auto-injected).
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-15 14:50:40 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-15 14:50:40 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-15 14:50:40 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-15 14:50:40 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-15 14:50:40 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-15 14:50:40 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-15 14:50:40 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 100→7m | HitRate 50→92% | phases=3 x 20 ep
+2026-06-15 14:50:40 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'peak_ny_mean_max': 20.0, 'peak_ny_hard_max': 21.0}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+
+  [Miss Hint] Detected user requirement: miss distance ≤ 7.00 m
+  Note: only the reflection agent's evaluation of ALL stated
+        requirements (PM/GM/hit rate/miss/etc.) will trigger early exit.
+
+── Iter 1/5 ──
+
+[Step 2] Task Planning & Parameter Extraction...
+2026-06-15 14:50:40 - multi_agent.integration.task_planner - INFO - [Planner] Analyzing task with LLM: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━...
+2026-06-15 14:50:40 - multi_agent.integration.task_planner - INFO - [Planner] expert_design_path.md read directly from knowledge_base\expert design path.md (80 chars, full document)
+2026-06-15 14:50:40 - multi_agent.integration.task_planner - INFO - [Planner] monte_mean_2.md read directly from knowledge_base\monte mean results.md (1982 chars)
+2026-06-15 14:50:40 - multi_agent.integration.task_planner - INFO - [Planner] Extracted gf/cg source from monte_carlo_single.m (2391 chars) for structural analysis
+2026-06-15 14:50:40 - multi_agent.integration.task_planner - INFO - [Planner] Using Hermes agent with tools for planning analysis...
+💬 Starting conversation: '[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]
+
+任务描述：
+制导系统设计任务（三层架构系...'
+开始按步骤执行任务规划分析。首先并行执行步骤1和步骤2的检索：  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "top_k": 5, "detail_level": "snippet"}
+  [Tool →] call_00_aHif4wp7lE38KXboGoG02119
+  [Tool ✓] call_00_aHif4wp7lE38KXboGoG02119
+  ✅ Tool 1 completed in 0.32s - {"status": "success", "query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "detail_level": "snippet...
+  📞 Tool 2: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "top_k": 5, "detail_level": "snipp...
+  [Tool →] call_01_mVVMlUgDWPlyWMFgye8v3494
+  [Tool ✓] call_01_mVVMlUgDWPlyWMFgye8v3494
+  ✅ Tool 2 completed in 0.30s - {"status": "success", "query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "detail_level...
+
+
+步骤1和2的初步结果已获取。现在并行执行步骤3、展开步骤2的关键文档、步骤4：  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "top_k": 5, "detail_leve...
+  [Tool →] call_00_Ug4ZVnnUx8aPdPrDgZ0V4402
+  [Tool ✓] call_00_Ug4ZVnnUx8aPdPrDgZ0V4402
+  ✅ Tool 1 completed in 0.15s - {"status": "success", "query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "de...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\monte mean results.md", "max_chars": 8000}
+  [Tool →] call_01_nrsu26N8w0XLlJn5EaBu5638
+  [Tool ✓] call_01_nrsu26N8w0XLlJn5EaBu5638
+  ✅ Tool 2 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\monte mean results.md", "metadata": {"filename...
+  📞 Tool 3: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"mission_type": "T", "sub_idx": 4, "guidance_law": "PN", "autopilot_params": {}}, ...
+  [Tool →] call_02_dDtgM1dPlI8KC556SXCl8455
+  [Tool ✓] call_02_dDtgM1dPlI8KC556SXCl8455
+  ✅ Tool 3 completed in 0.00s - {"status": "success", "task_context": {"mission_type": "T", "sub_idx": 4, "guidance_law": "PN", "aut...
+
+
+步骤4返回空结果。让我扩大PE搜索范围并尝试不同查询方式：  📞 Tool 1: parameter_experience_search(['keywords', 'top_k', 'memory_type']) - {"keywords": "T4 guidance law autopilot", "top_k": 5, "memory_type": "all"}
+  [Tool →] call_00_kLKpnEQpSd3mL6nQuKkA1642
+  [Tool ✓] call_00_kLKpnEQpSd3mL6nQuKkA1642
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "query": {"task": "T4 guidance law autopilot", "description": "T4 guidance law...
+  📞 Tool 2: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"mission_type": "T"}, "top_k": 5}
+  [Tool →] call_01_tKG1ngLa54eOgI0Goa6I1272
+  [Tool ✓] call_01_tKG1ngLa54eOgI0Goa6I1272
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "task_context": {"mission_type": "T"}, "results_count": 0, "param_ranges_appli...
+
+
+所有检索完成。现在进行步骤5的逐项比对分析。
+
+---
+
+## 步骤5 — 逐项比对
+
+### 数据源 A：RAG 历史指标（monte mean results.md，默认模板参数）
+
+| 指标 | 要求 | 实际值 | 判定 |
+|------|------|--------|------|
+| 命中率 | ≥92% | **94.0%** | ✅ 达标 |
+| SEP | ≤7m | **4.22m** | ✅ 达标 |
+| PeakNy | ≤20g | **51.53g** | ❌ 未达标（超标 2.5×） |
+| PM | 45°~70° | **77.1°** | ❌ 未达标（超出上限 7.1°） |
+| BW | 20~85 rad/s | **6.31 rad/s** | ❌ 未达标（远低于下限） |
+
+### 数据源 B：PE 最优历史记录
+
+**空 — 无任何历史优化记录。** parameter_experience_best 和 parameter_experience_search 均返回 0 条结果。
+
+---
+
+## 步骤6 — Mode 决策
+
+| 规则 | 适用？ | 理由 |
+|------|--------|------|
+| PE记录全部达标 → REUSE_HISTORY | ❌ | PE为空，无达标记录 |
+| PE不达标但RAG全部达标 → REUSE_HISTORY | ❌ | RAG有3项不达标（PeakNy/PM/BW） |
+| 两个数据源均有未达标 → **TUNE_PARAMS** | ✅ | PE空(视为不达标) + RAG 3/5不达标 |
+| 需修改算法结构 → MODIFY_LAW | — | 先用TUNE_PARAMS调参，若多轮仍不达标再升级 |
+
+> 📌 **专家路径备注**：expert design path 指出"T4路径为修改制导律"，但明确先尝试调参，多轮不满足后才改为 MODIFY_LAW。
+
+---
+
+```json
+{
+  "should_split": false,
+  "strategy": "single",
+  "subagent_count": 1,
+  "subtasks": [
+    "T4高频较大幅度机动工况：驾驶仪参数调优。目标：保持命中率≥92%的前提下，将PeakNy从51.53g降至≤20g、PM从77.1°降至45°~70°、BW从6.31 rad/s提升至20~85 rad/s"
+  ],
+  "subtask_conditions": [
+    "RUN_CASE='T';SUB_IDX=4;"
+  ],
+  "reason": "【RAG历史-T4默认模板参数】命中率94.0%✅ | SEP 4.22m✅ | PeakNy 51.53g❌(要求≤20g,超标157%) | PM 77.1°❌(要求45°~70°,超标7.1°) | BW 6.31rad/s❌(要求20~85,低于下限68%)。3/5指标未达标，主要是峰值过载严重超标和带宽过低。PE经验库为空，无可复用历史最优参数。依据严格规则：两个数据源均有未达标项 → mode='TUNE_PARAMS'。专家路径建议T4最终可能需要MODIFY_LAW，但应先调参尝试。",
+  "mode": "TUNE_PARAMS",
+  "mission_analysis": "工况T4为'高频较大幅度机动'：目标z向机动幅度120m/s、目标y向匀速横移60m/s、目标z向机动频率1.2rad/s。这是T类工况中最严苛的机动模式，目标剧烈机动导致导弹需产生极大法向过载跟踪，默认模板参数下PeakNy飙升至51.53g（远超20g限制），同时驾驶仪带宽仅6.31rad/s无法匹配高频机动需求。需要系统性优化w1/w2/w3等驾驶仪带宽参数以提升跟踪能力并控制过载峰值。",
+  "mission_conditions": {
+    "T": [4]
+  }
+}
+```🎉 Conversation completed after 4 OpenAI-compatible API call(s)
+2026-06-15 14:51:47 - multi_agent.integration.task_planner - INFO - [Planner] Mode override TUNE_PARAMS → MODIFY_LAW (peak_ny / optimization task policy)
+2026-06-15 14:51:47 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 analysis: 工况T4为'高频较大幅度机动'：目标z向机动幅度120m/s、目标y向匀速横移60m/s、目标z向机动频率1.2rad/s。这是T类工况中最严苛的机动模式，目标剧烈机动导致导弹需产生极大法向过载跟踪，默认模板参数下PeakNy飙升至51.53g（远超20g限制），同时驾驶仪带宽仅6.31rad/s无法匹配高频机动需求。需要系统性优化w1/w2/w3等驾驶仪带宽参数以提升跟踪能力并控制过载峰值。
+2026-06-15 14:51:47 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 conditions: {'T': [4]}
+  工况: 工况T4为'高频较大幅度机动'：目标z向机动幅度120m/s、目标y向匀速横移60m/s、目标z向机动频率1.2rad/s。这是T类工况中最严苛的机动模式，目标剧烈机动导致导弹需产生极大法向过载跟踪，默认模板参数下PeakNy飙升至5...
+  Plan: single | mode=MODIFY_LAW | subtasks=1 | 【RAG历史-T4默认模板参数】命中率94.0%✅ | SEP 4.22m✅ | PeakNy 51.53g❌(要求≤20g,超标157%) | PM 77.1°❌(要求45°~70°,超标7.1°) | BW 6.31rad/s❌(要求20~85,低于下限68%)。3/5指标未达标，主要是峰值过载严重超标和带宽过低。PE经验库为空，无可复用历史最优参...
+2026-06-15 14:51:47 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+💬 Starting conversation: '从以下提示词中提取制导系统的初始参数，返回JSON格式。
+任务：制导系统设计任务（三层架构系统输入示例）
+━━━━━━━...'
+  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "monte_carlo_single.m RL_PARAMS_BEGIN rl_w1 rl_zeta1 rl_tao1 rl_w2 rl_zeta2 rl_tao2 rl_w3 ...
+  [Tool →] call_00_6cCkWiBsTuhhkSNEcnqb6978
+  [Tool ✓] call_00_6cCkWiBsTuhhkSNEcnqb6978
+  ✅ Tool 1 completed in 0.25s - {"status": "success", "query": "monte_carlo_single.m RL_PARAMS_BEGIN rl_w1 rl_zeta1 rl_tao1 rl_w2 rl...
+  📞 Tool 2: rag_query(['query', 'max_hops', 'top_k']) - {"query": "RUN_CASE='T' SUB_IDX=4 目标机动T4子工况 初始条件 参数范围 w1 zeta1 N_pn 推荐值", "max_hops": 2, "top_k": 4}
+  [Tool →] call_01_qvMM5XOq5e93vS4b7Wx97457
+2026-06-15 14:52:04 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 1 sub-queries: ["RUN_CASE='T' SUB_IDX=4 目标机动T4子工况 初始条件 参数范围 w1 zeta1 N_pn 推荐值"]
+2026-06-15 14:52:08 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 4 candidates → 4 kept (threshold=0.30)
+  [Tool ✓] call_01_qvMM5XOq5e93vS4b7Wx97457
+  ✅ Tool 2 completed in 14.09s - {"status": "success", "query": "RUN_CASE='T' SUB_IDX=4 目标机动T4子工况 初始条件 参数范围 w1 zeta1 N_pn 推荐值", "hops...
+
+
+Now let me get the full template to check for T4 definition:  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "max_chars": 8000}
+  [Tool →] call_00_kdJLUodkF8p1hY86lGZu7357
+  [Tool ✓] call_00_kdJLUodkF8p1hY86lGZu7357
+  ✅ Tool 1 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "meta...
+
+
+已从模板和知识库中完整提取参数。以下是 JSON 格式的初始参数：
+
+```json
+{
+  "mission": {
+    "RUN_CASE": "T",
+    "SUB_IDX": 4,
+    "SUB_NAME": "T4:高频较大幅度机动",
+    "N_MC": 100,
+    "KILL_R": 10
+  },
+  "t4_target_conditions": {
+    "T_Vz_amp": 85,
+    "T_Vy": 45,
+    "T_Vz_freq": 1.20,
+    "_note": "模板内置值; conditions.md写为120/60/1.2，以模板SC{}为准"
+  },
+  "autopilot_params": {
+    "w1": 40,
+    "zeta1": 0.75,
+    "tao1": 0.20,
+    "w2": 35,
+    "zeta2": 0.75,
+    "tao2": 0.20,
+    "w3": 40,
+    "zeta3": 0.70
+  },
+  "guidance_params": {
+    "N_pn": 4
+  },
+  "constraints": {
+    "ny_lim": 20,
+    "gama_max_deg": 45
+  },
+  "performance_targets": {
+    "hit_rate_pct": 92,
+    "SEP_m": 7,
+    "peak_ny_g": 20,
+    "pitch_PM_deg": [45, 70],
+    "pitch_BW_rads": [20, 85]
+  }
+}
+```
+
+**关键说明：**
+
+| 项目 | 值 | 来源 |
+|------|-----|------|
+| `w1,w2,w3` | 40, 35, 40 | `RL_PARAMS_BEGIN` 默认值 |
+| `zeta1,zeta2,zeta3` | 0.75, 0.75, 0.70 | 同上 |
+| `tao1,tao2` | 0.20, 0.20 | 同上（无 tao3） |
+| `N_pn` | 4 | 比例导引系数 |
+| T4 目标机动 | `T_Vz_amp=85, T_Vy=45` | 模板 `SC{4}` 内置（注意与 `conditions.md` 的 120/60 不同） |
+| `SUB_IDX=4` | 第4子工况（1-indexed） | 模板逻辑：`SC=SC(SUB_IDX)` |
+
+`ny_lim=20` 和 `gama_max_deg=45` 是约束上界，非优化变量。性能指标中的 PM∈[45°,70°], BW∈[20,85] rad/s 将在仿真后由 Layer3 判断智能体评估。🎉 Conversation completed after 3 OpenAI-compatible API call(s)
+  LLM param extraction also failed: Expecting value: line 1 column 1 (char 0)
+  Conditions: RUN_CASE='T';SUB_IDX=4;
+
+[Step 2.5] Hermes Content Generation (mode=MODIFY_LAW)...
+  [generate_matlab] Injected 1 analysis context block(s)
+  Running Hermes agent [strategy=single, subtasks=1]...
+💬 Starting conversation: 'System: You are a missile guidance system orchestrator. Your...'
+  📞 Tool 1: rag_query(['query', 'max_hops', 'top_k', 'detail_level']) - {"query": "APN增强比例导引 制导律设计 饱和限幅 过载限制 带宽控制 BW 制导律类型 PN APN BPN OGL 高频机动目标 T4", "max_hops": 2, "top_k"...
+2026-06-15 14:53:32 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 1 sub-queries: ['APN增强比例导引 制导律设计 饱和限幅 过载限制 带宽控制 BW 制导律类型 PN APN BPN OGL 高频机动目标 T4']
+2026-06-15 14:53:35 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 4 candidates → 4 kept (threshold=0.30)
+  ✅ Tool 1 completed in 13.80s - {"status": "success", "query": "APN增强比例导引 制导律设计 饱和限幅 过载限制 带宽控制 BW 制导律类型 PN APN BPN OGL 高频机动目标 T4", "...
+  📞 Tool 1: generate_matlab(['autopilot_params', 'mission_conditions', 'mode', 'script_name', 'task_description']) - {"autopilot_params": {"w1": 50, "zeta1": 0.6, "tao1": 0.15, "w2": 45, "zeta2": 0.6, "tao2": 0.15, "w...
+2026-06-15 14:54:12 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Using local KB template: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\knowledge_base\matlab\guidance\monte_carlo_single.m
+2026-06-15 14:54:12 - multi_agent.integration.script_seed_policy - INFO - [SeedPolicy] KB template → local:monte_carlo_single.m
+2026-06-15 14:54:12 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated 6108-char code analysis of retrieved model for LLM context.
+2026-06-15 14:54:12 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Injected 6967-char context into task_description (analysis=194, retrieved_code=6108).
+2026-06-15 14:54:12 - multi_agent.integration.t4_low_risk - INFO - [T4LowRisk] Applied deterministic minimal APN gf() for T4
+2026-06-15 14:54:12 - multi_agent.integration.model_generation_agent - INFO - [ModelGen] T4 low-risk: deterministic minimal APN gf() applied on KB seed (LLM skipped)
+2026-06-15 14:54:12 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Skip physics bounds (deterministic T4 minimal APN)
+2026-06-15 14:54:12 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Renamed function declaration 'monte_carlo_single' → 'guidance_T4_APN_sat_slewrate_1781506452' to match filename
+2026-06-15 14:54:12 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Stripped 18 annotation line(s) from script → sidecar: guidance_T4_APN_sat_slewrate_1781506452_interface_check.txt
+2026-06-15 14:54:12 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated script → guidance_output\scripts\guidance_T4_APN_sat_slewrate_1781506452.m  (source: local:monte_carlo_single.m)
+  ✅ Tool 1 completed in 0.06s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_APN_sat_slewrate_1781506...
+  📞 Tool 1: syntax_check_matlab(['auto_fix', 'max_fix_attempts', 'script_path']) - {"auto_fix": true, "max_fix_attempts": 3, "script_path": "guidance_output\\scripts\\guidance_T4_APN_...
+2026-06-15 14:54:15 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Sanitizer applied 16 fix(es) to 'guidance_T4_APN_sat_slewrate_1781506452.m'
+2026-06-15 14:54:15 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=2
+2026-06-15 14:56:56 - multi_agent.tools.syntax_check_tool - WARNING - [SyntaxCheck] LLM output not valid MATLAB (script too short (62 lines < 80 minimum) — likely LLM-truncated or incomplete template) — discarding.
+  ✅ Tool 1 completed in 160.43s - {"status": "success", "valid": true, "issues": ["第 19 行: RL 参数 'rl_ny_lim' 已声明但未注入 base=struct()（RL ...
+  📞 Tool 1: verify_guidance_compat(['script_path', 'task_description']) - {"script_path": "guidance_output\\scripts\\guidance_T4_APN_sat_slewrate_1781506452.m", "task_descrip...
+2026-06-15 14:57:04 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Found guidance function 'gf' (1623 chars)
+2026-06-15 14:57:04 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Interface check: pass=True issues=0 warnings=0
+2026-06-15 14:57:04 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Math derivation: law=unknown overall_pass=True
+2026-06-15 14:59:31 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Result: overall=PASS confidence=40 law=unknown
+  ✅ Tool 1 completed in 147.19s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_APN_sat_slewrate_1781506...
+  📞 Tool 1: run_simulation(['mission_conditions', 'nmc', 'script_path']) - {"mission_conditions": "RUN_CASE='T';SUB_IDX=4;", "nmc": 25, "script_path": "guidance_output\\script...
+2026-06-15 15:00:26 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=2609 chars
+  ✅ Tool 1 completed in 50.24s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_APN_sat_slewrate_1781506...
+  📞 Tool 1: judge_requirements(['metrics', 'script_path', 'task_prompt']) - {"metrics": {"hit_rate_pct": 96.0, "SEP_m": 4.09, "PeakNy_mean_g": 19.6, "PeakNy_max_g": 25.44, "PM_...
+2026-06-15 15:00:41 - multi_agent.tools.judge_requirements_tool - INFO - [JudgeRequirements] metrics overridden from run_simulation.last_metrics
+2026-06-15 15:00:41 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+2026-06-15 15:01:12 - multi_agent.tools.judge_requirements_tool - INFO - [JudgeRequirements] satisfied=False | 命中率 96.0% >= 要求 92.0% [OK]; SEP 11.32m > 要求 7.00m [NG]; PeakNy(平均值) 22.52g > 20.00g [NG]; PeakNy(最大值) 25.44g > 21.00g [N
+  ✅ Tool 1 completed in 31.04s - {"satisfied": false, "reason": "命中率 96.0% >= 要求 92.0% [OK]; SEP 11.32m > 要求 7.00m [NG]; PeakNy(平均值) ...
+  📞 Tool 1: agent_memory_remember(['key', 'value']) - {"key": "T4_MODIFY_LAW_result_20260615_v7_APN_sat_slewrate", "value": "{\"mode\":\"MODIFY_LAW\",\"ro...
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "message": "Remembered 'T4_MODIFY_LAW_result_20260615_v7_APN_sat_slewrate' = '...
+🎉 Conversation completed after 8 OpenAI-compatible API call(s)
+  [Hermes generated script] guidance_T4_APN_sat_slewrate_1781506452.m
+  [Hermes sim metrics] hit=96.0% SEP=11.32m PeakNy_avg=22.52g PeakNy_max=25.44g PM=69.2° BW=88.6r/s
+2026-06-15 15:01:52 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  Hermes response length: 1711 chars
+  No MATLAB code block found in Hermes response.
+  [Layer2→3] Rule-check: 4 metric(s) not met → entering RL
+
+[Layer 2 Gate] Validating script before Layer 3 (smoke nmc=25)…
+2026-06-15 15:01:52 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=2
+2026-06-15 15:04:15 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM returned identical content — stopping.
+2026-06-15 15:04:15 - multi_agent.integration.layer2_script_gate - INFO - [Layer2Gate] T4 MODIFY closed-loop gate nmc=10
+2026-06-15 15:04:54 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=1724 chars
+  [Layer 2 Gate] ✓ Layer2 gate passed (syntax + smoke)
+
+[Layer 3] Optimization Workflow | script=guidance_T4_APN_sat_slewrate_1781506452.m
+  [DEBUG Layer3] mission_conditions = {'T': [4]}
+2026-06-15 15:04:54 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Starting | directly_satisfied=False | script=guidance_T4_APN_sat_slewrate_1781506452.m
+2026-06-15 15:04:54 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Strategy from config: expert
+  [Layer 3] Strategy selected: EXPERT
+2026-06-15 15:04:54 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Optimization strategy: expert
+2026-06-15 15:05:25 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 1 params: w1=40.000 zeta1=0.800 tao1=0.150 w2=45.000 zeta2=0.900 tao2=0.100 w3=30.000 zeta3=1.000 N_pn=4.500 ny_lim=20.000 | 俯仰通道降低w1以减小BW至85以内，同时小幅度提高tao1防止PM因降w1而超过70°；偏航通道提高w2和zeta2以期压缩横向SEP；滚转通道显著降低w3并增大zeta3以抑制峰值过载至20g以下；N_pn适度增加至4.5来提升命中率至92%以上。
+2026-06-15 15:05:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission: RUN_CASE='T' SUB_IDX=4 nmc=25
+2026-06-15 15:05:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Engine diagnostic: engine=matlab  matlab_engine_backend=None  matlab_path='E:\\software\\MATLAB\\R2025a\\extern\\engines\\python\\..\\..\\..\\bin\\win64\\matlab.EXE'→E:\software\MATLAB\R2025a\extern\engines\python\..\..\..\bin\win64\matlab.EXE  octave_path='E:\\software\\Octave-11.1.0\\octave-launch.exe'→E:\software\Octave-11.1.0\octave-launch.exe
+2026-06-15 15:05:57 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:06:45 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 2 params: w1=55.000 zeta1=0.650 tao1=0.120 w2=45.000 zeta2=0.800 tao2=0.100 w3=50.000 zeta3=0.800 N_pn=4.000 ny_lim=20.000 | 当前PM=77.6°过高、BW=8.3rad/s过低，需大幅提高w1并适度降低zeta1、增大tao1以提升BW、降低PM至45~70°范围；同时峰值过载24.8g偏高，通过降低N_pn至4、优化滚转通道(w3=50)减弱过载峰值；SEP=8.17m偏高，通过增强偏航响应(w2=45)并配合N_pn适度降低横向脱靶量。
+  [Expert] Round 2/5: hit=100.0% SEP=8.54m PeakNy_avg=21.86g PeakNy_max=24.56g PM=68.0° BW=114.5r/s ★
+2026-06-15 15:07:17 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:08:20 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 3 params: w1=40.000 zeta1=0.600 tao1=0.180 w2=45.000 zeta2=0.700 tao2=0.120 w3=35.000 zeta3=1.000 N_pn=4.500 ny_lim=20.000 | 第2轮BW=114 rad/s过高，峰值过载21.9g略超限，SEP=8.54m需降至7m内。俯仰通道降低w1至40以大幅压低BW（预计降至约76 rad/s），同时为防PM因w1下降而突破70°，将tao1适度提至0.18、zeta1保持0.6安全下限，使PM稳定在60~70°。偏航通道提高w2至45、zeta2 0.7以加快横向响应，压缩SEP。滚转通道取w3=35、zeta3=1.0增强阻尼，抑制过载尖峰。导航比微降至4.5，在保持高命中率前提下减轻峰值过载压力。所有参数均在安全范围内。
+2026-06-15 15:08:51 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:09:25 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 4 params: w1=40.000 zeta1=0.800 tao1=0.100 w2=45.000 zeta2=0.800 tao2=0.100 w3=45.000 zeta3=0.900 N_pn=5.000 ny_lim=18.000 | BW过低(7.2),需提高w1至40以增大带宽;PM偏高(72.2°),提高w1可适度降低PM至70°以内;zeta1取0.8以保持稳定性;tao1保持低值0.1防止大幅降稳;SEP超标(8.86m),增大N_pn至5并提高偏航w2至45增强横向响应;Ny峰值超标(22.9g),降低ny_lim至18并提高滚转阻尼zeta3至0.9抑制过载尖峰;期望BW≈40,PM≈65°,SEP<7m,Ny≤20g
+2026-06-15 15:09:59 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:10:33 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 5 params: w1=42.000 zeta1=0.720 tao1=0.100 w2=45.000 zeta2=0.800 tao2=0.100 w3=45.000 zeta3=0.800 N_pn=3.800 ny_lim=20.000 | 降低w1以减小BW，降低zeta1以减小PM，同时小幅降低N_pn以减轻峰值过载，保持其他通道基本不变，预计可将BW和PM拉回要求范围内，且Ny降至20g以下。
+  [Expert] Round 5/5: hit=100.0% SEP=8.99m PeakNy_avg=22.84g PeakNy_max=25.84g PM=73.8° BW=94.8r/s
+2026-06-15 15:11:05 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:11:05 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Finished 5 rounds without meeting requirements. Best: hit=100.0% SEP=8.54m
+  [Layer 3/Expert] Done 5 rounds | status=needs_iteration | hit=100.0% SEP=8.54m
+  [Layer 3] Expert tuning insufficient → falling back to PPO
+2026-06-15 15:11:05 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Expert insufficient → PPO fallback
+2026-06-15 15:11:05 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 500.0m → 7.0m | HitRate: 10.0% → 92.0%
+2026-06-15 15:11:05 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['500.0', '253.5', '7.0']
+2026-06-15 15:11:05 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['10.0', '51.0', '92.0']
+2026-06-15 15:11:05 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 500→7m | HitRate 10→92% | phases=3 x 15 ep
+2026-06-15 15:11:05 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 12 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\1b18f8ca1cfc4a2f87f01756ebb95d6c\guidance_T4_APN_sat_slewrate_1781506452.m
+2026-06-15 15:11:05 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Baseline uses PE-retrieved initial params (10 values)
+2026-06-15 15:11:05 - multi_agent.rl.matlab_rl_optimizer - INFO - RL networks initialised: state_dim=17, action_dim=10, mode=contextual_bandit(gamma=0), batch=16, entropy_coef=0.02, pitch_std=0.50, other_std=0.20
+2026-06-15 15:11:05 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] JSONL episode log → logs\rl_episodes_20260615_151105.jsonl
+2026-06-15 15:11:05 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Contextual-bandit PPO | batch=16 | nmc=25 | gamma=0 | entropy_coef=0.02
+2026-06-15 15:11:05 - multi_agent.rl.matlab_rl_optimizer - INFO - Evaluating baseline (PE-retrieved / script params)…
+2026-06-15 15:11:29 - multi_agent.rl.matlab_rl_optimizer - INFO - Baseline reward=-10.000  metrics={'hit_rate': 100.0, 'SEP': 8.54, 'peak_ny': 21.86, 'pitch_PM': 68.0, 'pitch_BW': 114.45, 'pitch_GM': 6.0, 'miss_distance': 8.54, 'peak_n': 21.86, 'peak_ny_mean': 21.86, 'peak_ny_max': 24.56, 'peak_n_max': 24.56, '_parse_incomplete': False, '_sim_source': 'matlab'}
+2026-06-15 15:11:29 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Warm-start exploration shrink ×0.30 (pitch_std≈0.15)
+2026-06-15 15:11:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 1/50] reward=-10.00 hit=40% SEP=71.17m PeakN_max=25.74g
+2026-06-15 15:11:54 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 1/50] window=20 | mean_reward=-10.000 | mean_SEP=71.17m | mean_PeakN_max=25.74g | mean_hit=40.0% | diverge=100%
+2026-06-15 15:12:42 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:13:32 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 5/15 | Feasible: 5 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-15 15:13:56 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:15:08 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:15:33 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 10/15 | Feasible: 10 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-15 15:15:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 10/50] reward=-10.00 hit=60% SEP=33.24m PeakN_max=51.29g
+2026-06-15 15:15:33 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 10/50] window=20 | mean_reward=-10.000 | mean_SEP=41.49m | mean_PeakN_max=36.37g | mean_hit=50.4% | diverge=100%
+2026-06-15 15:15:33 - multi_agent.rl.ppo_checkpoint - INFO - [Checkpoint] Saved ep 10 → ./parameter_experience_base/checkpoints/ppo\ppo_20260615_151105_ep00010.json (best_SEP_ever=8.54m, best_reward=-10.000)
+2026-06-15 15:16:25 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:17:37 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:17:37 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 15/15 | Feasible: 15 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-15 15:17:37 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0 completed (15 episodes, 15 feasible). Advancing to phase 1...
+2026-06-15 15:17:37 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 1 constraints: SEP <= 253.5m, HitRate >= 51.0%
+2026-06-15 15:18:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Update] batch=16 actor_loss=0.1851  critic_loss=55.0232  entropy=-2.6774
+2026-06-15 15:18:50 - multi_agent.memory.parameter_experience - INFO - Stored memory 1322f0f52787600a with fitness 0.2775336547222952
+2026-06-15 15:18:50 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 15:18:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 18/50] reward=-2.75 hit=52% SEP=37.45m PeakN_max=28.38g ★
+2026-06-15 15:19:40 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 1/2 | Episodes: 5/15 | Feasible: 3 | SEP <= 253.5m, HitRate >= 51.0%
+2026-06-15 15:19:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 20/50] reward=-10.00 hit=28% SEP=53.76m PeakN_max=29.57g
+2026-06-15 15:19:40 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 20/50] window=20 | mean_reward=-9.638 | mean_SEP=42.75m | mean_PeakN_max=34.71g | mean_hit=46.4% | diverge=95%
+2026-06-15 15:19:40 - multi_agent.rl.ppo_checkpoint - INFO - [Checkpoint] Saved ep 20 → ./parameter_experience_base/checkpoints/ppo\ppo_20260615_151105_ep00020.json (best_SEP_ever=8.54m, best_reward=-2.753)
+2026-06-15 15:20:04 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:21:18 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:21:44 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 1/2 | Episodes: 10/15 | Feasible: 3 | SEP <= 253.5m, HitRate >= 51.0%
+2026-06-15 15:21:49 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:21:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 25] needs_optimization=True | 命中率 44.0% < 92.0% [NG]; SEP 37.39m > 7.00m [NG]; PeakNy(平均值) 20.55g > 20.00g [NG]; PeakNy(最大值) 23.50g > 21.00g [NG]; PM 
+2026-06-15 15:23:27 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:23:51 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 1/2 | Episodes: 15/15 | Feasible: 4 | SEP <= 253.5m, HitRate >= 51.0%
+2026-06-15 15:23:51 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 1 completed (15 episodes, 4 feasible). Advancing to phase 2...
+2026-06-15 15:23:51 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 2 constraints: SEP <= 7.0m, HitRate >= 92.0%
+2026-06-15 15:23:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 30/50] reward=-10.00 hit=24% SEP=71.25m PeakN_max=40.53g
+2026-06-15 15:23:51 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 30/50] window=20 | mean_reward=-9.422 | mean_SEP=45.85m | mean_PeakN_max=32.66g | mean_hit=41.4% | diverge=85%
+2026-06-15 15:23:51 - multi_agent.rl.ppo_checkpoint - INFO - [Checkpoint] Saved ep 30 → ./parameter_experience_base/checkpoints/ppo\ppo_20260615_151105_ep00030.json (best_SEP_ever=8.54m, best_reward=-2.753)
+2026-06-15 15:23:59 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:23:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 30] needs_optimization=True | 命中率 44.0% < 92.0% [NG]; SEP 37.39m > 7.00m [NG]; PeakNy(平均值) 20.55g > 20.00g [NG]; PeakNy(最大值) 23.50g > 21.00g [NG]; PM 
+2026-06-15 15:24:50 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:24:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Update] batch=16 actor_loss=0.5478  critic_loss=71.2154  entropy=-13.7865
+2026-06-15 15:26:06 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 15:26:06 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 2/2 | Episodes: 5/15 | Feasible: 0 | SEP <= 7.0m, HitRate >= 92.0%
+2026-06-15 15:26:11 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-15 15:26:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 35] needs_optimization=True | 命中率 44.0% < 92.0% [NG]; SEP 37.39m > 7.00m [NG]; PeakNy(平均值) 20.55g > 20.00g [NG]; PeakNy(最大值) 23.50g > 21.00g [NG]; PM 
+2026-06-15 15:27:03 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Patience early stop at episode 37 (no peak improvement for 25 ep)
+2026-06-15 15:27:03 - multi_agent.rl.ppo_checkpoint - INFO - [Checkpoint] Saved ep 37 → ./parameter_experience_base/checkpoints/ppo\ppo_20260615_151105_ep00037.json (best_SEP_ever=8.54m, best_reward=-2.753)
+2026-06-15 15:27:03 - multi_agent.memory.parameter_experience - INFO - Stored memory 4669509d73112a0a with fitness 0.2519968163312497
+2026-06-15 15:27:03 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 15:27:03 - multi_agent.rl.matlab_rl_optimizer - INFO - Best params stored → memory_id=4669509d73112a0a, fitness=0.2520, layer=SHORT_TERM | guidance={'N_pn': 3.0, 'ny_lim': 17.86137644946575} | autopilot_w1=20.0
+2026-06-15 15:27:03 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] PPO fallback done: status=success episodes=37
+  [Layer 3/CLS] Starting local search (50 steps, nmc=25)…
+2026-06-15 15:27:03 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 12 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\1b18f8ca1cfc4a2f87f01756ebb95d6c\guidance_T4_APN_sat_slewrate_1781506452.m
+2026-06-15 15:27:55 - multi_agent.rl.constraint_local_search - INFO -   [CLS 1/50] hit=100.0% SEP=7.21m PeakNy_avg=21.80g PeakNy_max=24.44g PM=68.8° BW=114.8r/s ★
+2026-06-15 15:28:19 - multi_agent.rl.constraint_local_search - INFO -   [CLS 2/50] hit=100.0% SEP=4.78m PeakNy_avg=21.37g PeakNy_max=24.42g PM=66.0° BW=112.7r/s ★
+2026-06-15 15:29:08 - multi_agent.rl.constraint_local_search - INFO -   [CLS 4/50] hit=100.0% SEP=6.45m PeakNy_avg=21.83g PeakNy_max=24.39g PM=65.7° BW=112.3r/s ★
+2026-06-15 15:30:20 - multi_agent.rl.constraint_local_search - INFO -   [CLS 7/50] hit=100.0% SEP=4.96m PeakNy_avg=20.41g PeakNy_max=22.15g PM=68.6° BW=120.4r/s ★
+2026-06-15 15:30:44 - multi_agent.rl.constraint_local_search - INFO -   [CLS 8/50] hit=100.0% SEP=4.90m PeakNy_avg=19.53g PeakNy_max=21.20g PM=67.2° BW=110.7r/s ★
+2026-06-15 15:31:34 - multi_agent.rl.constraint_local_search - INFO -   [CLS 10/50] hit=100.0% SEP=5.13m PeakNy_avg=21.00g PeakNy_max=23.41g PM=64.1° BW=108.9r/s ★
+2026-06-15 15:31:58 - multi_agent.rl.constraint_local_search - INFO -   [CLS 11/50] hit=100.0% SEP=4.97m PeakNy_avg=19.93g PeakNy_max=21.48g PM=66.1° BW=115.6r/s ★
+2026-06-15 15:32:23 - multi_agent.rl.constraint_local_search - INFO -   [CLS 12/50] hit=100.0% SEP=4.96m PeakNy_avg=19.25g PeakNy_max=20.92g PM=66.8° BW=113.2r/s ★
+2026-06-15 15:33:41 - multi_agent.rl.constraint_local_search - INFO -   [CLS 15/50] hit=100.0% SEP=5.11m PeakNy_avg=20.02g PeakNy_max=21.97g PM=66.6° BW=110.2r/s ★
+2026-06-15 15:34:55 - multi_agent.rl.constraint_local_search - INFO -   [CLS 18/50] hit=100.0% SEP=5.34m PeakNy_avg=20.25g PeakNy_max=22.21g PM=65.7° BW=108.7r/s ★
+2026-06-15 15:35:46 - multi_agent.rl.constraint_local_search - INFO -   [CLS 20/50] hit=100.0% SEP=6.01m PeakNy_avg=20.71g PeakNy_max=22.97g PM=64.2° BW=107.7r/s
+2026-06-15 15:36:12 - multi_agent.rl.constraint_local_search - INFO -   [CLS 21/50] hit=100.0% SEP=5.29m PeakNy_avg=19.95g PeakNy_max=21.94g PM=65.6° BW=106.3r/s ★
+2026-06-15 15:36:38 - multi_agent.rl.constraint_local_search - INFO -   [CLS 22/50] hit=100.0% SEP=5.13m PeakNy_avg=19.93g PeakNy_max=21.76g PM=66.1° BW=107.8r/s ★
+2026-06-15 15:38:18 - multi_agent.rl.constraint_local_search - INFO -   [CLS 26/50] hit=100.0% SEP=5.18m PeakNy_avg=19.54g PeakNy_max=21.52g PM=67.3° BW=108.4r/s ★
+2026-06-15 15:38:42 - multi_agent.rl.constraint_local_search - INFO -   [CLS 27/50] hit=100.0% SEP=5.00m PeakNy_avg=19.44g PeakNy_max=21.10g PM=67.9° BW=110.5r/s ★
+2026-06-15 15:39:31 - multi_agent.rl.constraint_local_search - INFO -   [CLS 29/50] hit=100.0% SEP=4.94m PeakNy_avg=19.12g PeakNy_max=21.01g PM=68.2° BW=112.9r/s ★
+2026-06-15 15:39:57 - multi_agent.rl.constraint_local_search - INFO -   [CLS 30/50] hit=100.0% SEP=4.95m PeakNy_avg=20.63g PeakNy_max=24.22g PM=68.5° BW=111.2r/s ★
+2026-06-15 15:40:23 - multi_agent.rl.constraint_local_search - INFO -   [CLS 31/50] hit=100.0% SEP=6.02m PeakNy_avg=19.57g PeakNy_max=21.97g PM=69.4° BW=108.8r/s ★
+2026-06-15 15:40:47 - multi_agent.rl.constraint_local_search - INFO -   [CLS 32/50] hit=100.0% SEP=5.38m PeakNy_avg=20.18g PeakNy_max=23.26g PM=68.7° BW=108.7r/s ★
+2026-06-15 15:41:11 - multi_agent.rl.constraint_local_search - INFO -   [CLS 33/50] hit=100.0% SEP=5.14m PeakNy_avg=20.16g PeakNy_max=23.01g PM=67.3° BW=109.1r/s ★
+2026-06-15 15:41:35 - multi_agent.rl.constraint_local_search - INFO -   [CLS 34/50] hit=100.0% SEP=4.98m PeakNy_avg=18.88g PeakNy_max=20.87g PM=67.8° BW=110.5r/s ★
+2026-06-15 15:42:23 - multi_agent.rl.constraint_local_search - INFO -   [CLS 36/50] hit=100.0% SEP=4.89m PeakNy_avg=19.49g PeakNy_max=21.90g PM=69.1° BW=109.6r/s ★
+2026-06-15 15:43:16 - multi_agent.rl.constraint_local_search - INFO -   [CLS 38/50] hit=100.0% SEP=5.16m PeakNy_avg=19.20g PeakNy_max=21.17g PM=69.0° BW=109.3r/s ★
+2026-06-15 15:44:04 - multi_agent.rl.constraint_local_search - INFO -   [CLS 40/50] hit=100.0% SEP=5.74m PeakNy_avg=20.91g PeakNy_max=24.02g PM=69.5° BW=113.4r/s
+2026-06-15 15:45:40 - multi_agent.rl.constraint_local_search - INFO -   [CLS 44/50] hit=100.0% SEP=4.86m PeakNy_avg=18.98g PeakNy_max=20.89g PM=68.6° BW=109.4r/s ★
+2026-06-15 15:46:31 - multi_agent.rl.constraint_local_search - INFO -   [CLS 46/50] hit=100.0% SEP=4.93m PeakNy_avg=18.94g PeakNy_max=21.00g PM=68.2° BW=106.6r/s ★
+2026-06-15 15:46:55 - multi_agent.rl.constraint_local_search - INFO -   [CLS 47/50] hit=100.0% SEP=5.64m PeakNy_avg=19.41g PeakNy_max=21.47g PM=67.2° BW=103.3r/s ★
+2026-06-15 15:47:19 - multi_agent.rl.constraint_local_search - INFO -   [CLS 48/50] hit=100.0% SEP=6.64m PeakNy_avg=20.34g PeakNy_max=22.70g PM=67.3° BW=100.7r/s ★
+2026-06-15 15:47:43 - multi_agent.rl.constraint_local_search - INFO -   [CLS 49/50] hit=100.0% SEP=6.51m PeakNy_avg=20.14g PeakNy_max=22.39g PM=68.4° BW=101.0r/s ★
+2026-06-15 15:48:07 - multi_agent.rl.constraint_local_search - INFO -   [CLS 50/50] hit=100.0% SEP=6.91m PeakNy_avg=20.63g PeakNy_max=23.14g PM=70.0° BW=100.4r/s
+2026-06-15 15:48:07 - multi_agent.rl.constraint_local_search - INFO - [CLS] Done 50 iterations | selection=borderline | PeakN_max=20.87g SEP=4.98m
+2026-06-15 15:48:07 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] CLS done | selection=borderline | iterations=50
+2026-06-15 15:48:07 - multi_agent.integration.reflection_agent - INFO - [Reflection] Extracted gf/cg source from guidance_T4_APN_sat_slewrate_1781506452.m (3016 chars)
+2026-06-15 15:48:07 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+2026-06-15 15:48:38 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Reflection: needs_optimization=False | BW超标（110.51 rad/s > 85 rad/s），PeakNy峰值超标（20.87 g > 20 g）。建议在下一轮tune_params中重点下调w1/w2/w3以降低闭环带宽，同时适当减小N_pn或目标加速度补偿系数以控制峰值过载，必要时微调ny_lim限幅值。
+  rl_hyperparams={}
+2026-06-15 15:48:38 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Design path: 当前制导律为T4 minimal APN，结构合理，但BW超标源于驾驶仪设计点参数（w1=54.6, w3=55.4等）设置过高，需降低w1/w2/w3；PeakNy超标可能因N_pn（4.43）和0.45倍目标加速度补偿在短时间内产生较大指令，应在下轮调低N_pn并尝试减小comp_scale或增强末段衰减，同时利用ny_lim硬限幅抑制峰值。整体无需修改制导律算法。
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Stored memory cb5b7f5961aa6665 with fitness 0.97012
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - WARNING - Failed to write experience file: could not convert string to float: 'matlab'
+2026-06-15 15:48:38 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Model saved → guidance_output\parameter_experience_base\models\success_1781509718_guidance_T4_APN_sat_slewrate_1781506452.m
+2026-06-15 15:48:38 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Report saved → guidance_output\reports\report_20260615_154838.json
+2026-06-15 15:48:38 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] DONE ✓ | hit=100.0% SEP=4.98m PM=67.8°
+  [Layer 3] Best params carried to next iteration: ['w1', 'zeta1', 'tao1', 'w2', 'zeta2', 'tao2', 'w3', 'zeta3', 'N_pn', 'ny_lim'] (10 values)
+
+  [Layer 3 Result] status=done
+  hit=100.0% SEP=4.98m PeakNy_avg=18.88g PeakNy_max=20.87g PM=67.8° BW=110.5r/s
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  ✓ Task requirements met!
+  JSON Report: guidance_output\reports\report_20260615_154838.json
+
+[Step 4] ParameterExperience Writeback & Model File Saving...
+  RL best params persisted (RL completed): miss=4.9800 m, hit=100.0%, PM=67.8 deg.
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Stored memory ae6f4c815fde21db with fitness 0.1688963210702341
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  Experience written (memory_id=ae6f4c815fde21db, layer=LONG_TERM).
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Promoted memory 674687e676bb245e to long-term
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Promoted memory cb5b7f5961aa6665 to long-term
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - auto_promote: 2 SHORT_TERM entries promoted to LONG_TERM (composite_score >= 0.400)
+  Auto-promoted 2 short-term entries to LONG_TERM.
+2026-06-15 15:48:38 - multi_agent.memory.parameter_experience - INFO - Saved successful model to: parameter_experience_base\models\long_term\ae6f4c815fde21db_guidance_T4_APN_sat_slewrate_1781506452.m
+  Successful MATLAB model saved to: parameter_experience_base\models\long_term\ae6f4c815fde21db_guidance_T4_APN_sat_slewrate_1781506452.m
+  MATLAB model already in model_output: guidance_output\scripts\guidance_T4_APN_sat_slewrate_1781506452.m
+
+[Step 5] Generating Report...
+  Report saved to: guidance_output\report_20260615_154838.md
+  Latest link  →  guidance_output\report_latest.md
+
+Workflow Complete!
+[0m
+================================================================================
+Finished    : 2026-06-15 15:48:38
+Exit code   : 0
+================================================================================

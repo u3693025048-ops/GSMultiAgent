@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — 架构文档索引</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --border:#2d3a4f; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#3fb950; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+    h1 { font-size: 2rem; margin-bottom: .5rem; text-align: center; }
+    .subtitle { color: var(--muted); margin-bottom: 1rem; text-align: center; max-width: 720px; }
+    .badge { display: inline-block; background: #21262d; border: 1px solid var(--border); color: var(--accent2); padding: .25rem .75rem; border-radius: 999px; font-size: .8rem; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; max-width: 960px; width: 100%; }
+    a.card { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; text-decoration: none; color: var(--text); transition: border-color .2s, transform .2s; }
+    a.card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    a.card h2 { font-size: 1.1rem; color: var(--accent); margin-bottom: .5rem; }
+    a.card p { color: var(--muted); font-size: .9rem; }
+    .num { display: inline-block; background: #21262d; color: var(--accent); width: 1.75rem; height: 1.75rem; border-radius: 50%; text-align: center; line-height: 1.75rem; font-size: .85rem; margin-bottom: .75rem; }
+    footer { margin-top: 2rem; color: var(--muted); font-size: .85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>GSMultiAgent 架构文档</h1>
+  <p class="subtitle">制导系统多智能体设计与优化框架 — 基于当前代码库（v0.4.1，2026-06-11）。含 Layer2 Gate 闭环快扫、Gate near-miss 同轮 TUNE、cli 指标复核、T4 低风险策略、peak_ny_max 判定口径、仿真超时与异步任务队列。</p>
+  <div class="badge">Layer2 Gate · Near-Miss TUNE · Metrics Reconcile · T4 Low-Risk · peak_ny_max</div>
+  <div class="grid">
+    <a class="card" href="01-overall-architecture.html">
+      <div class="num">1</div>
+      <h2>整体架构图</h2>
+      <p>三层智能体架构（Layer 1/2/3）、组件拓扑、存储与仿真引擎</p>
+    </a>
+    <a class="card" href="02-module-division.html">
+      <div class="num">2</div>
+      <h2>模块划分</h2>
+      <p>multi_agent 子包职责、目录映射、模块间调用关系</p>
+    </a>
+    <a class="card" href="03-core-business-flow.html">
+      <div class="num">3</div>
+      <h2>核心业务流程</h2>
+      <p>端到端泳道、Layer2 Gate、near-miss TUNE、MODIFY_LAW 链、Expert/PPO 策略、PE 晋升</p>
+    </a>
+    <a class="card" href="04-tech-stack.html">
+      <div class="num">4</div>
+      <h2>关键技术选型</h2>
+      <p>Python/NumPy PPO、自适应探索、ChromaDB、MATLAB Engine、LLM 与 t4_low_risk 配置</p>
+    </a>
+    <a class="card" href="05-design-patterns.html">
+      <div class="num">5</div>
+      <h2>核心设计模式</h2>
+      <p>策略、门面、工具注册、工作流、仓储、消融开关等</p>
+    </a>
+    <a class="card" href="06-security-design.html">
+      <div class="num">6</div>
+      <h2>安全设计</h2>
+      <p>密钥管理、子进程隔离、参数防火墙、gf() 物理限幅、任务沙箱、异步 HTTP</p>
+    </a>
+    <a class="card" href="PPO_intr.html">
+      <div class="num">7</div>
+      <h2>PPO 强化学习详解</h2>
+      <p>状态/动作空间、两阶段奖励、自适应 log_std、有界绝对寻优、PPO 更新机制</p>
+    </a>
+    <a class="card" href="LaysIntr.html">
+      <div class="num">8</div>
+      <h2>三层架构与 T4 路径</h2>
+      <p>Layer 1/2/3 职责、Layer2 Gate、near-miss 切 TUNE、T4 确定性 APN、设计路径时序</p>
+    </a>
+  </div>
+  <footer>GSMultiAgent · docsNew · 更新日期 2026-06-11</footer>
+</body>
+</html>

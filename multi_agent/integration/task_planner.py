@@ -129,6 +129,54 @@ class IntelligentTaskPlanner:
         self.rag_kb = rag_kb
         self.parameter_experience = parameter_experience
 
+    async def _direct_llm_call(
+        self,
+        system: str,
+        user: str,
+        timeout: float = 120.0,
+    ) -> str:
+        """
+        Single-shot LLM chat call that bypasses the Hermes agent loop.
+        Uses openai.AsyncOpenAI directly with stream=False.
+        Timeout is handled by the openai client's httpx layer (not asyncio.wait_for,
+        which can leave httpx connections in a broken state when cancelled).
+        """
+        import openai as _oai
+        try:
+            from multi_agent.config_loader import get_config as _get_config
+            _cfg = _get_config()
+            _llm = _cfg.llm
+            _base_url = getattr(_llm, "base_url", None) or "https://api.deepseek.com"
+            _api_key  = getattr(_llm, "api_key", "sk-xxx")
+            _model    = getattr(_llm, "model", "deepseek-chat")
+        except Exception:
+            _base_url = "https://api.deepseek.com"
+            _api_key  = "sk-xxx"
+            _model    = "deepseek-chat"
+
+        try:
+            _client = _oai.AsyncOpenAI(
+                base_url=_base_url,
+                api_key=_api_key,
+                timeout=_oai.Timeout(timeout, connect=15.0),
+                max_retries=3,
+            )
+            _resp = await _client.chat.completions.create(
+                model=_model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user",   "content": user},
+                ],
+                stream=False,
+            )
+            return _resp.choices[0].message.content or ""
+        except (_oai.APITimeoutError, _oai.APIConnectionError) as _exc:
+            logger.warning(f"[Planner] _direct_llm_call network error ({type(_exc).__name__}): {_exc}")
+            return ""
+        except Exception as _exc:
+            logger.warning(f"[Planner] _direct_llm_call failed ({type(_exc).__name__}: {_exc})")
+            return ""
+
     async def build_retrieval_context(self, task: str) -> str:
         """
         Retrieve relevant content from knowledge_base (RAG) and best historical
@@ -156,8 +204,8 @@ class IntelligentTaskPlanner:
                     for r in rag_results:
                         score = r.get("score", 0.0)
                         src   = r.get("metadata", {}).get("filename", "")
-                        snip  = r.get("content", "")[:400].replace("\n", " ")
-                        parts.append(f"  [score={score:.2f}, src={src}] {snip}")
+                        snip  = r.get("content", "")[:1200]
+                        parts.append(f"  [score={score:.2f}, src={src}]\n{snip}")
             except Exception as exc:
                 logger.debug(f"RAG retrieval in planner failed: {exc}")
 
@@ -318,34 +366,10 @@ class IntelligentTaskPlanner:
             "}"
         )
 
-        response_text = ""
-        try:
-            if hasattr(self.hermes, "run_with_tools"):
-                response_text = await self.hermes.run_with_tools(
-                    "System: 你是制导系统任务工况分析专家，输出严格 JSON。\n\n"
-                    f"User: {gk_prompt}",
-                    tools=[],
-                )
-            elif hasattr(self.llm_client, "generate"):
-                response_text = await self.llm_client.generate(
-                    prompt=gk_prompt,
-                    system_prompt="你是制导系统任务工况分析专家，输出严格 JSON。",
-                )
-            elif hasattr(self.llm_client, "run_conversation"):
-                import inspect
-                msg = (
-                    "System: 你是制导系统任务工况分析专家，输出严格 JSON。\n\n"
-                    f"User: {gk_prompt}"
-                )
-                if inspect.iscoroutinefunction(self.llm_client.run_conversation):
-                    response_text = await self.llm_client.run_conversation(msg)
-                else:
-                    response_text = self.llm_client.run_conversation(msg)
-                if isinstance(response_text, dict):
-                    response_text = response_text.get("final_response", "")
-        except Exception as exc:
-            logger.warning(f"[Planner] 工况 analysis LLM call failed: {exc}")
-            response_text = ""
+        response_text = await self._direct_llm_call(
+            system="你是制导系统任务工况分析专家，输出严格 JSON。",
+            user=gk_prompt,
+        )
 
         analysis_text = ""
         conditions: Dict[str, List[int]] = {}
@@ -362,6 +386,7 @@ class IntelligentTaskPlanner:
             blob = m.group(0) if m else text
             # Normalise common LLM quirks before parsing
             blob = _re.sub(r",\s*([}\]])", r"\1", blob)   # trailing commas
+            blob = blob.replace("\\'", "'")                 # invalid JSON escape \' → '
             blob = blob.replace("\u2022", "")               # bullet U+2022
             blob = blob.replace("\u2018", '"').replace("\u2019", '"')  # curly quotes
             blob = blob.replace("\u201c", '"').replace("\u201d", '"')
@@ -535,7 +560,142 @@ class IntelligentTaskPlanner:
         selected["llm_reason"] = reason
         return selected
 
-    async def analyze_and_plan(self, task: str, reflection_feedback: str = "") -> TaskPlan:
+    async def _analyze_with_hermes(
+        self,
+        task: str,
+        reflection_feedback: str = "",
+        prev_rl_best_params: Optional[Dict[str, Any]] = None,
+        mission_analysis_text: str = "",
+        mission_conditions_dict: Optional[Dict] = None,
+        conditions_md_ref: str = "",
+    ) -> Optional[str]:
+        """
+        Delegate task planning analysis to Hermes agent (with tool access).
+        Hermes will use rag_retrieve (KB + reports) and parameter_experience_best
+        before deciding the mode, giving it access to historical simulation reports
+        and experience memory — not just a static prompt.
+
+        Returns the raw response string (expected to contain a JSON block),
+        or None if Hermes fails.
+        """
+        import json as _j
+
+        _prev_block = (
+            "\n[上轮RL最优参数 — 优先级高于PE检索结果]\n"
+            f"{_j.dumps(prev_rl_best_params, ensure_ascii=False)}\n"
+        ) if prev_rl_best_params else ""
+
+        _fb_block = (
+            "\n[上轮设计反思建议 — 最高优先级]\n"
+            f"{reflection_feedback}\n"
+        ) if reflection_feedback else ""
+
+        _cond_block = (
+            f"\n[工况分析结论]\n{mission_analysis_text}\n"
+            f"工况映射: {mission_conditions_dict}\n"
+        ) if (mission_analysis_text or mission_conditions_dict) else ""
+
+        # ── Build PE-conditional planning steps ──────────────────────────────────
+        _pe_enabled = self.parameter_experience is not None
+        if _pe_enabled:
+            _step4_block = (
+                "步骤4 — parameter_experience_best\n"
+                "  → 获取历史最优参数记录。重点关注 objectives 字段中的实际指标值。\n"
+                f"  ⚠️ 只考虑 parameters 非空的记录（parameters 为空 {{{{}}}} 的记录无法复用，必须跳过）。\n"
+            )
+            _step5_block = (
+                "步骤5 — 逐项比对（必须完成后再输出JSON）：\n"
+                "  分别对 **两个数据源** 逐项比对：\n"
+                "  A) 步骤2的 RAG 历史指标（默认模板参数）\n"
+                "  B) 步骤4的 PE 最优记录的 objectives（优化后参数）\n\n"
+                "  对每个数据源，逐项对照：\n"
+                "    命中率:  值=?%  要求>=?%  → 达标/未达标\n"
+                "    SEP:     值=?m  要求<=?m  → 达标/未达标\n"
+                "    PeakNy:  值=?g  要求<=?g  → 达标/未达标\n"
+                "    PM:      值=?°  要求[?,?]° → 达标/未达标\n"
+                "    BW:      值=?   要求[?,?]  → 达标/未达标\n"
+            )
+            _step6_block = (
+                "步骤6 — mode 决策（严格规则，不得违反）：\n"
+                "  • PE 记录(B)中存在任意一条所有指标均达标 → mode = \"REUSE_HISTORY\"\n"
+                "    （PE 优化后的参数已经满足要求，直接复用）\n"
+                "  • PE 记录全部不达标，但 RAG 历史(A)所有指标均达标 → mode = \"REUSE_HISTORY\"\n"
+                "  • 两个数据源都有指标未达标 → mode = \"TUNE_PARAMS\"（不得选REUSE_HISTORY）\n"
+                "  • 需要修改制导律算法结构 → mode = \"MODIFY_LAW\"\n"
+            )
+        else:
+            # PE disabled by ablation — skip PE retrieval entirely
+            _step4_block = (
+                "步骤4 — 跳过（参数经验复用已被消融关闭，不检索 PE 历史记录）\n"
+            )
+            _step5_block = (
+                "步骤5 — 逐项比对（必须完成后再输出JSON）：\n"
+                "  仅对 **数据源A** 逐项比对（PE 已禁用，无数据源B）：\n"
+                "  A) 步骤2的 RAG 历史指标（默认模板参数）\n\n"
+                "  逐项对照：\n"
+                "    命中率:  值=?%  要求>=?%  → 达标/未达标\n"
+                "    SEP:     值=?m  要求<=?m  → 达标/未达标\n"
+                "    PeakNy:  值=?g  要求<=?g  → 达标/未达标\n"
+                "    PM:      值=?°  要求[?,?]° → 达标/未达标\n"
+                "    BW:      值=?   要求[?,?]  → 达标/未达标\n"
+            )
+            _step6_block = (
+                "步骤6 — mode 决策（严格规则，不得违反；PE已禁用，仅基于数据源A）：\n"
+                "  • RAG 历史(A)所有指标均达标 → mode = \"REUSE_HISTORY\"\n"
+                "  • RAG 历史(A)有指标未达标 → mode = \"TUNE_PARAMS\"\n"
+                "  • 需要修改制导律算法结构 → mode = \"MODIFY_LAW\"\n"
+            )
+
+        planning_msg = f"""[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]
+
+任务描述：
+{task}
+{_fb_block}{_prev_block}{_cond_block}
+━━━ 执行步骤（按序执行，不得跳过）━━━
+
+步骤1 — rag_retrieve: "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何"
+  → 从检索结果中提取本任务对应的工况类别和子工况编号
+
+步骤2 — rag_retrieve: "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result"
+  → 从检索结果中提取最近一次仿真的各项指标数值
+
+步骤3 — rag_retrieve: "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择"
+  → 获取专家路径规则
+
+{_step4_block}
+{_step5_block}
+{_step6_block}
+步骤7 — 在回复最末尾用 ```json 代码块 输出规划结果：
+字段说明（所有字段必填）：
+  should_split       : 是否拆分任务 (true/false)
+  strategy           : "single" / "sequential" / "parallel"
+  subagent_count     : 子任务数量 (整数)
+  subtasks           : 子任务描述列表
+  subtask_conditions : 各子任务工况条件 ["RUN_CASE='T';SUB_IDX=1;", ...]
+  reason             : 逐项比对结论 + mode 选择依据
+  mode               : "TUNE_PARAMS" 或 "MODIFY_LAW" 或 "REUSE_HISTORY"
+  mission_analysis   : 工况分析文字说明
+  mission_conditions : 工况映射 dict，如 {{"T": [1]}}
+
+⚠️ 禁止直接复用步骤描述中的示例值，必须基于实际检索结果填写。
+⚠️ 不要执行仿真，不要生成MATLAB/SysML文件，禁止调用 generate_matlab / run_simulation。"""
+
+        try:
+            response = await self.hermes.run_with_tools(planning_msg, verbose_thinking=True)
+            return response
+        except Exception as exc:
+            logger.warning(f"[Planner] Hermes planning analysis failed: {exc}")
+            return None
+
+    async def analyze_and_plan(
+        self,
+        task: str,
+        reflection_feedback: str = "",
+        prev_rl_best_params: Optional[Dict[str, Any]] = None,
+        script_path: str = "",
+        optimization_history: Optional[List[Dict[str, Any]]] = None,
+        last_metrics: Optional[Dict[str, Any]] = None,
+    ) -> TaskPlan:
         """
         使用LLM分析任务并制定执行计划
 
@@ -545,6 +705,11 @@ class IntelligentTaskPlanner:
         reflection_feedback: 上轮设计失败后反思智能体给出的优化建议 (空串=首轮)。
                              非空时优先级高于 expert_design_path.md；
                              首轮时 expert_design_path.md 优先级高于智能体独立分析。
+        prev_rl_best_params: 上轮 RL 全局最优参数 dict；非空时注入规划器提示，
+                             辅助判断本轮是否需要继续调参或切换设计路径。
+        script_path        : 当前待分析的 .m 脚本路径。首轮传入 KB 模板
+                             (monte_carlo_single.m)，后续轮次传入上轮生成的 .m 文件。
+                             用于提取 gf()/cg() 源码进行算法结构分析。
         """
         if not self.llm_client and not self.hermes:
             raise RuntimeError(
@@ -553,28 +718,38 @@ class IntelligentTaskPlanner:
 
         logger.info(f"[Planner] Analyzing task with LLM: {task[:50]}...")
 
-        # ── Step 0A: 任务工况分析 (BEFORE mode selection) ──
-        # The 工况 result is fed into the mode-selection prompt so the design
-        # path is chosen with explicit awareness of which categories/subcases
-        # the task requires.
-        logger.info("[Planner] Step 0A: 任务工况分析 (MC_gongkuang reference)…")
-        gk_result = await self.analyze_mission_conditions(task)
-        mission_analysis_text = gk_result.get("analysis", "")
-        mission_conditions_dict = gk_result.get("conditions", {}) or {}
-        if mission_analysis_text:
-            logger.info(
-                f"[Planner] 工况 analysis: {mission_analysis_text[:200]}"
-            )
-        if mission_conditions_dict:
-            logger.info(
-                f"[Planner] 工况 conditions: {mission_conditions_dict}"
-            )
+        # ── Step 0A: 任务工况分析 ──────────────────────────────────────────────
+        # When Hermes is available, skip this separate LLM call; Hermes will
+        # perform the 工况 analysis inline via rag_retrieve in _analyze_with_hermes().
+        # Fall back to the single-LLM path only when Hermes is NOT available.
+        mission_analysis_text = ""
+        mission_conditions_dict: Dict[str, Any] = {}
+        conditions_md_ref = ""
+        if not self.hermes:
+            logger.info("[Planner] Step 0A: 任务工况分析 (MC_gongkuang reference)…")
+            gk_result = await self.analyze_mission_conditions(task)
+            mission_analysis_text = gk_result.get("analysis", "")
+            mission_conditions_dict = gk_result.get("conditions", {}) or {}
+            conditions_md_ref = gk_result.get("conditions_md_ref", "")
+            if mission_analysis_text:
+                logger.info(f"[Planner] 工况 analysis: {mission_analysis_text[:200]}")
+            if mission_conditions_dict:
+                logger.info(f"[Planner] 工况 conditions: {mission_conditions_dict}")
 
         # Build retrieval context from RAG + ParameterExperience
         retrieval_ctx = await self.build_retrieval_context(task)
         ctx_block = f"\n\n[参考上下文]\n{retrieval_ctx}\n" if retrieval_ctx else ""
 
-        conditions_md_ref = gk_result.get("conditions_md_ref", "")
+        # Inject previous RL best params directly into the planner prompt so the
+        # mode-selection LLM can see what params were last validated and decide
+        # whether further tuning is needed or a design-path switch is warranted.
+        import json as _json_planner
+        _prev_params_block = (
+            "\n[上轮 RL 最优参数 — 设计路径决策参考，优先级高于 PE 检索结果]\n"
+            f"{_json_planner.dumps(prev_rl_best_params, ensure_ascii=False)}\n"
+            "  ► 请结合上轮优化建议和这组参数，判断是否仍需调参(TUNE_PARAMS)、"
+            "切换算法(MODIFY_LAW)或已可直接复用(REUSE_HISTORY)。\n"
+        ) if prev_rl_best_params else ""
 
         # 工况 analysis block — injected into the mode-selection prompt so that
         # the LLM's mode decision is conditioned on the retrieved working conditions.
@@ -752,9 +927,29 @@ class IntelligentTaskPlanner:
         # (b) a log note if LLM chose differently.  It is NOT put in the prompt.
         heuristic_mode = _heuristic_mode(task)
 
+        # ── Step 0E: Extract gf()/cg() source from .m script for structural analysis ──
+        from multi_agent.integration.reflection_agent import extract_guidance_functions
+        from multi_agent.integration.t4_low_risk import PLANNER_T4_LOW_RISK_BLOCK
+        _gf_source = ""
+        if script_path:
+            _gf_source = extract_guidance_functions(script_path)
+            if _gf_source:
+                import os as _os_planner
+                logger.info(
+                    f"[Planner] Extracted gf/cg source from {_os_planner.path.basename(script_path)} "
+                    f"({len(_gf_source)} chars) for structural analysis"
+                )
+        _gf_block = (
+            "\n\n[当前制导律/驾驶仪源码 — 算法结构分析依据]\n"
+            f"{_gf_source}\n"
+            "\n⚠ 请阅读上述 gf()/cg() 源码，识别当前制导律算法类型（PN/APN/滑模/最优等）。\n"
+            "  若算法结构本身有缺陷且调参无法弥补，才选择 MODIFY_LAW。\n"
+            "  若算法结构合理但参数未优化，应选 TUNE_PARAMS。\n"
+        ) if _gf_source else ""
+
         prompt = f"""分析以下制导系统任务，制定最优执行计划：
 
-任务：{task}{ctx_block}{gk_block}{expert_path_block}
+任务：{task}{ctx_block}{gk_block}{expert_path_block}{_prev_params_block}{_gf_block}
 
 三种执行模式 (必须从中选一个)：
 
@@ -778,16 +973,22 @@ class IntelligentTaskPlanner:
   • 任务要求设计/实现一种不同于现有比例导引的**新**制导算法
   • 任务要求改变制导律数学结构（如改用滑模、预测等）
   • 现有模板的算法结构无法满足任务需求
+  • T4 工况 Layer2 为 4/5（仅 PeakNy_max 超标）→ 必须 MODIFY_LAW（系统内置克制版 APN）
   执行方式：修改制导律算法本身，生成新 MATLAB 文件
   ⚠️ 只是调整参数值或工况开关，不属于 MODIFY_LAW。
 
+{PLANNER_T4_LOW_RISK_BLOCK}
 默认偏好：**除非任务内容明确要求调参或改算法，否则选 REUSE_HISTORY**。
 
 拆分决策原则（先读完再填 JSON）：
-- **子任务 = 工具调用步骤**：拆分粒度为工具调用级别，例如 [检索, 生成脚本, 语法检测, 运行仿真]。
-- **sequential**：步骤之间有前后依赖（前步输出是后步输入），如检索结果→生成脚本→检测→运行。大多数 TUNE_PARAMS / MODIFY_LAW 任务均为 sequential。
-- **parallel**：步骤之间完全独立、可同时执行，如同时检索多个不相关子库。
-- **single**：任务足够简单，由单个 Agent 一步完成，无需拆分。
+- **single（默认选择）**：一个 Agent 执行完整工作流（检索→生成→仿真→判定），
+  工具调用顺序由 Agent 自己决定。**TUNE_PARAMS / REUSE_HISTORY / MODIFY_LAW 均应选 single**。
+  ⚠️ 不要把「检索、生成、仿真、判定」拆成多个 sequential 子任务——这会导致每个子任务
+     重复执行完整工作流。
+- **sequential**：仅用于有 ≥2 个**完全独立的工况分析任务**，且每项任务本身就是一个完整工作流。
+  例如：同时分析 T1 工况 AND G1 工况（两个独立目标，结果不互相依赖）。
+  ❌ 禁止用于：把单一工况的「检索→生成→仿真→判定」流程拆成步骤。
+- **parallel**：步骤之间完全独立、可同时执行，无前后依赖，如同时检索多个不相关子库。
 - subagent_count 与 subtasks 数组长度相等（1-5）。
 
 请返回 JSON（subtask_conditions 为可选，能填尽量填）：
@@ -812,16 +1013,24 @@ subtask_conditions 填写规则（简单映射，照抄即可）：
         import re
 
         def _default_plan(reason: str = "fallback") -> TaskPlan:
-            """Return a safe single-agent plan.  Always defaults to REUSE_HISTORY:
-            direct KB template execution is the safest no-side-effect fallback."""
-            default_mode = "REUSE_HISTORY"
+            """Rule-based fallback when LLM JSON is missing (never silent REUSE_HISTORY on T4)."""
+            from multi_agent.integration.design_path_policy import (
+                resolve_planner_fallback_mode,
+            )
+
+            default_mode = resolve_planner_fallback_mode(
+                task_prompt=task,
+                reflection_feedback=reflection_feedback,
+                optimization_history=optimization_history,
+                last_metrics=last_metrics,
+            )
             return TaskPlan(
                 original_task=task,
                 strategy=ExecutionStrategy.SINGLE,
                 should_split=False,
                 subagent_count=1,
                 subtasks=[task],
-                reason=reason,
+                reason=f"{reason}; policy fallback mode={default_mode}",
                 mode=default_mode,
                 retrieval_context=retrieval_ctx,
                 mission_analysis=mission_analysis_text,
@@ -852,53 +1061,65 @@ subtask_conditions 填写规则（简单映射，照抄即可）：
                 stripped = stripped[:-3]
             candidates.append(stripped.strip())
 
-            # Regex: first { ... } block (greedy, handles nested braces)
-            m = re.search(r'\{[\s\S]*\}', text)
-            if m:
-                candidates.append(m.group(0))
+            # Find ALL ```json ... ``` fenced blocks, try last first
+            # (Hermes places its final output at the end, not the beginning)
+            fenced_blocks = re.findall(r'```json\s*(\{[\s\S]*?\})\s*```', text)
+            if fenced_blocks:
+                for blk in reversed(fenced_blocks):
+                    candidates.append(blk)
+            else:
+                # Fallback: last { ... } block using finditer
+                all_braces = list(re.finditer(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', text))
+                if all_braces:
+                    for m in reversed(all_braces):
+                        candidates.append(m.group(0))
 
             for candidate in candidates:
                 if not candidate:
                     continue
+                # Sanitise common LLM JSON quirks
+                candidate = candidate.replace("\\'", "'")   # invalid \' escape
+                candidate = re.sub(r",\s*([}\]])", r"\1", candidate)  # trailing commas
                 # Direct parse
                 try:
                     return json.loads(candidate)
                 except json.JSONDecodeError:
                     pass
-                # Remove trailing commas
+                # Fallback: replace Python-style single-quoted keys/values
                 try:
-                    fixed = re.sub(r',\s*([}\]])', r'\1', candidate)
+                    fixed = re.sub(r"(?<![\w])'", '"', candidate)
                     return json.loads(fixed)
                 except json.JSONDecodeError:
                     pass
 
             return None
 
-        response = ""
+        # ── Mode selection: Hermes with tools (preferred) or direct LLM ──────
+        # When Hermes is available, delegate to _analyze_with_hermes() so the
+        # planner can call rag_retrieve (KB + historical reports) and
+        # parameter_experience_best before making its decision.
+        if self.hermes:
+            logger.info("[Planner] Using Hermes agent with tools for planning analysis...")
+            response = await self._analyze_with_hermes(
+                task=task,
+                reflection_feedback=reflection_feedback,
+                prev_rl_best_params=prev_rl_best_params,
+                mission_analysis_text=mission_analysis_text,
+                mission_conditions_dict=mission_conditions_dict,
+                conditions_md_ref=conditions_md_ref,
+            )
+            if not response:
+                logger.warning("[Planner] Hermes planning returned empty; falling back to direct LLM.")
+                response = await self._direct_llm_call(
+                    system="你是一个任务规划专家，擅长分析任务复杂度并制定最优执行策略。",
+                    user=prompt,
+                )
+        else:
+            response = await self._direct_llm_call(
+                system="你是一个任务规划专家，擅长分析任务复杂度并制定最优执行策略。",
+                user=prompt,
+            )
         try:
-            if hasattr(self.hermes, "run_with_tools"):
-                response = await self.hermes.run_with_tools(
-                    f"System: 你是一个任务规划专家，擅长分析任务复杂度并制定最优执行策略。\n\nUser: {prompt}",
-                    tools=[]
-                )
-            elif hasattr(self.llm_client, "generate"):
-                response = await self.llm_client.generate(
-                    prompt=prompt,
-                    system_prompt="你是一个任务规划专家，擅长分析任务复杂度并制定最优执行策略。",
-                )
-            elif hasattr(self.llm_client, "run_conversation"):
-                import inspect
-                msg = f"System: 你是一个任务规划专家，擅长分析任务复杂度并制定最优执行策略。\n\nUser: {prompt}"
-                if inspect.iscoroutinefunction(self.llm_client.run_conversation):
-                    response = await self.llm_client.run_conversation(msg)
-                else:
-                    response = self.llm_client.run_conversation(msg)
-                if isinstance(response, dict):
-                    response = response.get("final_response", str(response))
-            else:
-                logger.warning("[Planner] No LLM method available; using default plan.")
-                return _default_plan("no LLM client")
-
             if not response:
                 logger.warning("[Planner] LLM returned empty response; using default plan.")
                 return _default_plan("empty LLM response")
@@ -917,9 +1138,38 @@ subtask_conditions 填写规则（简单映射，照抄即可）：
             except ValueError:
                 strategy = ExecutionStrategy.SINGLE
 
-            llm_mode = data.get("mode", "REUSE_HISTORY")
-            final_mode = llm_mode
+            from multi_agent.integration.design_path_policy import normalize_planner_mode
+
+            llm_mode = data.get("mode", "TUNE_PARAMS")
+            final_mode = normalize_planner_mode(
+                llm_mode,
+                task_prompt=task,
+                reflection_feedback=reflection_feedback,
+                optimization_history=optimization_history,
+                last_metrics=last_metrics,
+            )
             final_reason = data.get("reason", "")
+            if final_mode != llm_mode:
+                final_reason = (
+                    f"{final_reason} [policy override: {llm_mode}→{final_mode}]"
+                ).strip()
+                logger.info(
+                    "[Planner] Mode override %s → %s (peak_ny / optimization task policy)",
+                    llm_mode,
+                    final_mode,
+                )
+
+            # When Hermes did the analysis, extract mission_analysis and
+            # mission_conditions from the JSON it produced (they were folded in).
+            if self.hermes:
+                _hermes_ma = data.get("mission_analysis", "")
+                _hermes_mc = data.get("mission_conditions")
+                if _hermes_ma:
+                    mission_analysis_text = _hermes_ma
+                    logger.info(f"[Planner] Hermes 工况 analysis: {_hermes_ma[:200]}")
+                if isinstance(_hermes_mc, dict) and _hermes_mc:
+                    mission_conditions_dict = _hermes_mc
+                    logger.info(f"[Planner] Hermes 工况 conditions: {_hermes_mc}")
 
             # LLM task analysis is authoritative — mode is determined by what
             # the task REQUIRES, not by user-prompt keywords.  The keyword
@@ -1055,20 +1305,3 @@ subtask_conditions 填写规则（简单映射，照抄即可）：
             "plan_reason": plan.reason,
         }
 
-
-async def smart_execute(
-    task: str,
-    hermes: Any = None,
-    llm_client: Any = None,
-) -> Dict[str, Any]:
-    """
-    智能任务执行
-
-    使用LLM自动决策：
-    - 任务复杂度分析
-    - 是否需要拆分
-    - 执行策略选择
-    - 子Agent调度
-    """
-    planner = IntelligentTaskPlanner(hermes=hermes, llm_client=llm_client)
-    return await planner.execute(task)

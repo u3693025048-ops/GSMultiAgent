@@ -1,0 +1,21 @@
+GSMultiAgent13 — 接收方快速上手（与发件方共用 API Key）
+======================================================
+
+1. 解压到工作目录，直接覆盖同名文件即可（含 config.yaml）。
+
+2. 安装依赖
+   pip install -r requirements.txt
+
+3. MATLAB 路径（通常唯一需要改的地方）
+   config.yaml 中默认为:
+     simulation:
+       matlab_path: matlab
+   若 MATLAB 已加入系统 PATH → 无需修改。
+   若 python run_preflight.py 报找不到 matlab → 改为本机绝对路径，例如:
+     matlab_path: "D:/Program Files/MATLAB/R2025a/bin/matlab.exe"
+
+4. 预检与运行
+   python run_preflight.py
+   python cli_agent.py --file prompt.txt
+
+详细说明见 RUNBOOK.md

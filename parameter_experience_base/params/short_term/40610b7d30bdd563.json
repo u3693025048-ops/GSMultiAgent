@@ -1,0 +1,57 @@
+{
+  "memory_id": "40610b7d30bdd563",
+  "memory_type": "short_term",
+  "task_context": {
+    "task": "guidance_rl_optimization",
+    "algorithm": "PPO",
+    "best_reward": -10.0
+  },
+  "parameters": {
+    "dp_w1": 21.13282322883606,
+    "dp_zeta1": 1.048540937900543,
+    "dp_tao1": 0.30374808609485626,
+    "dp_w2": 60.0,
+    "dp_zeta2": 1.0357541173696516,
+    "dp_tao2": 0.307793653011322,
+    "dp_w3": 30.958694219589233,
+    "dp_zeta3": 0.35,
+    "dp_N_pn": 4.85515134036541,
+    "dp_ny_lim": 19.306291937828064,
+    "phys_m": 231.0,
+    "phys_P": 5000.0
+  },
+  "objectives": {
+    "hit_rate": 96.0,
+    "SEP": 22.54,
+    "miss_distance": 22.54,
+    "control_energy": 50.0,
+    "pitch_PM": -76.8,
+    "pitch_BW": 2.25,
+    "pitch_GM": 13.7,
+    "peak_ny": 27.98,
+    "peak_n": 27.98,
+    "peak_ny_max": 27.98
+  },
+  "fitness": 0.4336888712997995,
+  "timestamp": 1781685443.2880697,
+  "metadata": {
+    "optimizer": "MatlabRLOptimizer",
+    "episode_count": 53,
+    "timestamp": 1781685443.2880697,
+    "final_status": "success",
+    "guidance_params": {
+      "N_pn": 4.85515134036541,
+      "ny_lim": 19.306291937828064
+    },
+    "autopilot_params": {
+      "w1": 21.13282322883606,
+      "zeta1": 1.048540937900543,
+      "tao1": 0.30374808609485626,
+      "w2": 60.0,
+      "zeta2": 1.0357541173696516,
+      "tao2": 0.307793653011322,
+      "w3": 30.958694219589233,
+      "zeta3": 0.35
+    }
+  }
+}

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — 安全设计</title>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --border:#2d3a4f; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#3fb950; --danger:#f85149; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    header { background: linear-gradient(135deg, #161b22 0%, #21262d 100%); border-bottom: 1px solid var(--border); padding: 2rem 2.5rem; }
+    header h1 { font-size: 1.75rem; margin-bottom: .5rem; }
+    header p { color: var(--muted); }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 2.5rem; background: #161b22; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    nav a { color: var(--accent); text-decoration: none; padding: .35rem .75rem; border-radius: 6px; font-size: .875rem; }
+    nav a:hover, nav a.active { background: var(--card); border: 1px solid var(--border); }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.35rem; margin-bottom: 1rem; color: var(--accent); border-left: 4px solid var(--accent); padding-left: .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .75rem; color: var(--accent2); }
+    p, li { color: #c9d1d9; margin-bottom: .5rem; }
+    ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .875rem; }
+    th, td { border: 1px solid var(--border); padding: .6rem .8rem; text-align: left; vertical-align: top; }
+    th { background: #21262d; color: var(--accent); }
+    code { background: #21262d; padding: .15rem .4rem; border-radius: 4px; font-size: .85em; }
+    .warn { background: #2d1f1f; border-left: 4px solid var(--danger); padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 1rem 0; }
+    .ok { background: #1a2e1a; border-left: 4px solid var(--accent2); padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 1rem 0; }
+    footer { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GSMultiAgent — 安全设计</h1>
+    <p>密钥、子进程、路径、Prompt 注入、LLM 毒药参数、并发沙箱与智能体职责边界</p>
+  </header>
+  <nav>
+    <a href="index.html">索引</a>
+    <a href="01-overall-architecture.html">整体架构</a>
+    <a href="02-module-division.html">模块划分</a>
+    <a href="03-core-business-flow.html">业务流程</a>
+    <a href="04-tech-stack.html">技术选型</a>
+    <a href="05-design-patterns.html">设计模式</a>
+    <a href="06-security-design.html" class="active">安全设计</a>
+    <a href="LaysIntr.html">三层与 T4 路径</a>
+    <a href="PPO_intr.html">PPO 详解</a>
+  </nav>
+  <main>
+    <section>
+      <h2>1. 密钥与凭证管理</h2>
+      <table>
+        <thead><tr><th>项</th><th>实现</th><th>建议</th></tr></thead>
+        <tbody>
+          <tr><td>LLM API Key</td><td><code>config.yaml llm.api_key</code> 或 <code>OPENAI_API_KEY</code> / <code>OPENROUTER_API_KEY</code></td><td>生产环境仅用 <code>.env</code>，config 留空占位</td></tr>
+          <tr><td>Embedding Key</td><td><code>rag.embedding_api_key</code></td><td>与 LLM 分离管理</td></tr>
+          <tr><td>加载顺序</td><td><code>load_dotenv</code> + <code>LLMConfig.from_env()</code></td><td><code>setdefault</code> 不覆盖已有环境变量</td></tr>
+        </tbody>
+      </table>
+      <div class="warn"><strong>警告：</strong>切勿将含真实 API Key 的 <code>config.yaml</code> 提交公开仓库。</div>
+    </section>
+
+    <section>
+      <h2>2. 子进程与命令执行</h2>
+      <ul>
+        <li>MATLAB/Octave 通过 <code>subprocess.Popen</code>，非 <code>shell=True</code></li>
+        <li>脚本路径绝对化；工作目录限定为脚本所在目录（沙箱内则为 UUID 目录）</li>
+        <li>超时：<code>MATLAB_TIMEOUT_SEC</code>（默认 1200s）</li>
+        <li>RL 临时脚本 <code>rltmp_*.m</code> 在 finally 删除；启动 sweep stale</li>
+        <li>Python 3.13+ 跳过 MATLAB Engine API</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>3. 文件路径与写入边界</h2>
+      <table>
+        <thead><tr><th>目录</th><th>用途</th><th>约束</th></tr></thead>
+        <tbody>
+          <tr><td><code>guidance_output/scripts/</code></td><td>Hermes 持久化脚本</td><td>共享区；Layer 3 执行前拷贝至 tasks 沙箱</td></tr>
+          <tr><td><code>guidance_output/tasks/{uuid}/</code></td><td>TaskWorkspace 临时沙箱</td><td>迭代结束自动删除；24h stale sweep</td></tr>
+          <tr><td><code>parameter_experience_base/</code></td><td>PE JSON + 模型副本</td><td>跨会话持久化</td></tr>
+          <tr><td><code>chroma_db/</code></td><td>向量索引</td><td>本地 SQLite</td></tr>
+          <tr><td><code>logs/</code></td><td>运行日志</td><td>可能含 prompt，共享前脱敏</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. Prompt 注入与 LLM 安全</h2>
+      <ul>
+        <li>用户 prompt 进入 Hermes 上下文 — 可能诱导工具误调用</li>
+        <li>缓解：Tool schema 限定参数；仿真仅接受 .m 路径；不执行任意 shell</li>
+        <li>MATLAB 脚本经 <code>_sanitize_matlab_guidance_script</code> 静态清理</li>
+        <li>Reflection / Judgment 输出不直接 <code>eval</code> 代码</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. 参数防火墙（ParameterFirewall）</h2>
+      <p>模块：<code>multi_agent/security/parameter_firewall.py</code></p>
+      <table>
+        <thead><tr><th>函数</th><th>调用点</th><th>行为</th></tr></thead>
+        <tbody>
+          <tr><td><code>clamp_tunable_params</code></td><td>Expert Tuning（<code>optimization_workflow.py</code>）</td><td>9 维白名单；每维 <code>ALL_TUNABLE_PARAM_SPECS</code> min/max clamp；拒绝 <code>air_density</code> 等物理键</td></tr>
+          <tr><td><code>sanitize_rl_hyperparams</code></td><td>Reflection 后处理、cli_agent 存储 override</td><td>14 个 RL 超参/奖励权重有界；未知键丢弃；非有限数跳过</td></tr>
+          <tr><td><code>apply_rl_hyperparams_to_optimizer</code></td><td>cli_agent Layer 3 入口</td><td>校验后写入 <code>MatlabRLOptimizer</code></td></tr>
+          <tr><td><code>ParameterFirewallViolation</code></td><td><code>strict=True</code> 模式</td><td>毒药参数抛异常（Expert 默认 warn+clamp）</td></tr>
+        </tbody>
+      </table>
+      <h3>RL 超参合法范围（与 Reflection prompt 一致）</h3>
+      <ul>
+        <li><code>lr_actor</code> 1e-5~1e-2 · <code>lr_critic</code> 1e-5~3e-2 · <code>clip_ratio</code> 0.05~0.4 · <code>gamma</code> 0.90~0.999</li>
+        <li><code>max_episodes</code> 10~150 · <code>nmc_per_eval</code> 5~50</li>
+        <li>奖励权重：<code>hit_rate_weight</code> 0.5~10；<code>sep_*</code> 0~8/0~5；<code>pm/bw_*</code> 0~4/0~8；<code>peak_ny_penalty</code> 0~8</li>
+      </ul>
+      <div class="ok"><strong>已实现：</strong>PPO 动作空间本身有界（<code>_action_to_params</code>）；防火墙覆盖 Expert/Reflection 的 JSON 路径，形成双保险。</div>
+      <div class="warn"><strong>MODIFY_LAW 缓解（v0.4.1）：</strong><code>physics_bounds.py</code> 桩探测；T4 内置 APN（tanh+20g）；<code>layer2_script_gate</code> 闭环 PeakNy Gate（<code>modify_gate_peak_g</code>）；near-miss 时同轮 TUNE 而非盲目重跑 MODIFY。Judge/cli 以 stdout 解析指标为准。</div>
+    </section>
+
+    <section>
+      <h2>5b. gf() 物理限幅探测（Physics Bounds）</h2>
+      <p>模块：<code>multi_agent/simulation/physics_bounds.py</code></p>
+      <table>
+        <thead><tr><th>函数</th><th>调用点</th><th>行为</th></tr></thead>
+        <tbody>
+          <tr><td><code>verify_physics_bounds_text</code></td><td><code>simulation_tool</code>、<code>TaskWorkspace</code></td><td>提取 gf()，生成桩脚本，MATLAB 跑 3 组极端几何</td></tr>
+          <tr><td><code>build_probe_script</code></td><td>内部</td><td>输出 <code>PHYS_BOUNDS peak_cmd_g=… pass=0/1</code></td></tr>
+          <tr><td>配置</td><td><code>simulation.physics_bounds_enabled</code></td><td>默认 true；limit 来自 <code>physics_bounds_ny_limit_g</code>（20g）</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>5c. T4 低风险策略（业务安全）</h2>
+      <p>模块：<code>multi_agent/integration/t4_low_risk.py</code>，配置 <code>t4_low_risk.*</code></p>
+      <ul>
+        <li>MODIFY_LAW：确定性 <code>GF_APN_T4_MINIMAL</code>（PN + 0.45 前馈 + LPF + 20g 限幅），跳过 LLM 自由重写</li>
+        <li>保守 autopilot：w1/w2/w3≈35、N_pn≈3.5；上限 w≤45、N_pn≤4.5</li>
+        <li>MODIFY 后 peak&gt;30g 或 hit&lt;85% → 禁止 TUNE，强制重做 MODIFY</li>
+        <li>post-MODIFY 首轮 Layer3 强制 Expert，PPO episode ≤50</li>
+        <li>Planner / Reflection prompt 注入硬约束，覆盖 LLM 与历史失败冲突的建议</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. 任务沙箱（TaskWorkspace）</h2>
+      <p>模块：<code>multi_agent/simulation/task_workspace.py</code></p>
+      <ul>
+        <li>每轮 Layer 3：<code>with TaskWorkspace() as ws:</code> 创建 <code>guidance_output/tasks/{uuid}/</code></li>
+        <li><code>prepare_script(src.m)</code> 拷贝脚本至沙箱；RL 在该目录生成 <code>rltmp_{hex}.m</code></li>
+        <li>上下文退出时 <code>cleanup()</code> 删除整个 UUID 目录</li>
+        <li>启动时 <code>TaskWorkspace.sweep_stale(max_age_hours=24)</code> 清理遗留沙箱</li>
+      </ul>
+      <div class="ok"><strong>目的：</strong>避免多任务/多迭代并发时 MATLAB 临时文件与编译缓存在同一目录相互覆盖。</div>
+    </section>
+
+    <section>
+      <h2>7. 智能体职责边界（星型拓扑）</h2>
+      <table>
+        <thead><tr><th>角色</th><th>输出</th><th>不得持有</th></tr></thead>
+        <tbody>
+          <tr><td>ReflectionAgent</td><td>JSON：<code>needs_optimization</code>, <code>next_action</code>, <code>rl_hyperparams</code></td><td>Hermes 工具、仿真 API</td></tr>
+          <tr><td>JudgmentAgent</td><td>JSON：<code>satisfied</code>, <code>reasons</code></td><td>改参、跑仿真</td></tr>
+          <tr><td>cli_agent（编排 hub）</td><td>根据 <code>next_action</code> 驱动 Hermes 或 Layer 3</td><td>—</td></tr>
+          <tr><td>OptimizationWorkflow</td><td>Expert/PPO 仿真与最优参数</td><td>对外隐藏于 Layer 3；Expert 内 LLM→clamp→仿真属 AgentA 职责</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>8. 异步任务与 HTTP 集成（已实现）</h2>
+      <p>模块：<code>multi_agent/async/task_queue.py</code>、<code>http_server.py</code></p>
+      <table>
+        <thead><tr><th>CLI 参数</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td><code>--async-run</code></td><td>后台启动子进程 <code>cli_agent</code>，立即返回 <code>task_id</code></td></tr>
+          <tr><td><code>--task-status ID</code></td><td>轮询任务状态、PPO episode 进度、最终结果路径</td></tr>
+          <tr><td><code>--serve-tasks</code></td><td>启动 HTTP 服务（默认端口 8765），<code>POST/GET /tasks</code></td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>子进程通过环境变量 <code>GSMULTI_TASK_ID</code> 回写进度；PPO <code>progress_callback</code> 更新队列</li>
+        <li>解决外部编排器 60~300s HTTP 超时与长 PPO（100 ep × batch 64）阻塞问题</li>
+        <li>消融开关仍可禁用 RL 等扩大攻击面组件</li>
+      </ul>
+      <div class="ok"><strong>已实现：</strong>单机 CLI + 可选 HTTP 轮询；Webhook 推送可在外部网关层扩展。</div>
+    </section>
+
+    <section>
+      <h2>9. 日志与隐私</h2>
+      <ul>
+        <li><code>run_logger.py</code> Tee stdout/stderr → <code>logs/logMMDDHHMM.txt</code></li>
+        <li>防火墙告警以 <code>[ParameterFirewall]</code> 前缀写入日志</li>
+        <li>默认关闭 LangSmith tracing</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>10. 测试覆盖</h2>
+      <ul>
+        <li><code>tests/test_parameter_firewall.py</code> — clamp、超参边界、沙箱 lifecycle</li>
+        <li><code>tests/test_matlab_rl_optimizer.py</code> — PPO 奖励、参数规格</li>
+        <li><code>tests/test_t4_low_risk.py</code> — T4 策略、clamp、block tune</li>
+        <li><code>tests/test_physics_bounds.py</code> — gf 探测脚本构建</li>
+        <li><code>tests/test_adaptive_exploration.py</code> — 自适应 log_std</li>
+      </ul>
+    </section>
+  </main>
+  <footer>GSMultiAgent · 安全设计 · docsNew/06-security-design.html · 2026-06-11</footer>
+</body>
+</html>

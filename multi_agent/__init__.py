@@ -20,9 +20,7 @@ logging.getLogger("model_tools").setLevel(logging.ERROR)
 from .memory.parameter_experience import ParameterExperience, MemoryType
 from .memory.rag_knowledge_base import RAGKnowledgeBase, EmbeddingConfig
 
-# RL (internal RL module)
-from .rl.reinforcement_learner import ReinforcementLearner, RLConfig as RLModuleConfig, RLAlgorithm
-from .rl.experience_buffer import ExperienceBuffer
+# RL
 from .rl.matlab_rl_optimizer import (
     MatlabRLOptimizer,
     parse_mission_conditions,
@@ -41,23 +39,15 @@ from .simulation import (
     SysMLModelGenerator,
     MATLABScriptGenerator,
     SimulationExecutor,
-    GuidanceOptimizationWorkflow,
-    OptimizationObjectives,
 )
 
 # Integration
 from .integration import (
     HermesIntegration,
     HERMES_AVAILABLE,
-    SubagentManager,
-    SubagentConfig,
-    SubagentResult,
-    parallel_optimization,
-    grid_search,
     IntelligentTaskPlanner,
     TaskPlan,
     ExecutionStrategy,
-    smart_execute,
 )
 
 # Configuration (unified from config_loader.py)
@@ -80,11 +70,8 @@ from .tools import (
     RAGIndexTool,
     ParameterExperienceSearchTool,
     ParameterExperienceStoreTool,
-    GenerateSysMLTool,
     GenerateMATLABTool,
     RunSimulationTool,
-    MatlabRLOptimizationTool,
-    ExtractMatlabParamsTool,
 )
 
 __all__ = [
@@ -101,13 +88,7 @@ __all__ = [
     "SysMLModelGenerator",
     "MATLABScriptGenerator",
     "SimulationExecutor",
-    "GuidanceOptimizationWorkflow",
-    "OptimizationObjectives",
     # RL
-    "ReinforcementLearner",
-    "RLModuleConfig",
-    "RLAlgorithm",
-    "ExperienceBuffer",
     "MatlabRLOptimizer",
     "parse_mission_conditions",
     "extract_matlab_params",
@@ -118,15 +99,9 @@ __all__ = [
     # Integration
     "HermesIntegration",
     "HERMES_AVAILABLE",
-    "SubagentManager",
-    "SubagentConfig",
-    "SubagentResult",
-    "parallel_optimization",
-    "grid_search",
     "IntelligentTaskPlanner",
     "TaskPlan",
     "ExecutionStrategy",
-    "smart_execute",
     # Config
     "load_config",
     "get_config",
@@ -143,10 +118,6 @@ __all__ = [
     "RAGIndexTool",
     "ParameterExperienceSearchTool",
     "ParameterExperienceStoreTool",
-    "GenerateSysMLTool",
     "GenerateMATLABTool",
     "RunSimulationTool",
-    # MATLAB RL Tools
-    "MatlabRLOptimizationTool",
-    "ExtractMatlabParamsTool",
 ]

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — 核心设计模式</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --border:#2d3a4f; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#3fb950; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    header { background: linear-gradient(135deg, #161b22 0%, #21262d 100%); border-bottom: 1px solid var(--border); padding: 2rem 2.5rem; }
+    header h1 { font-size: 1.75rem; margin-bottom: .5rem; }
+    header p { color: var(--muted); }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 2.5rem; background: #161b22; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    nav a { color: var(--accent); text-decoration: none; padding: .35rem .75rem; border-radius: 6px; font-size: .875rem; }
+    nav a:hover, nav a.active { background: var(--card); border: 1px solid var(--border); }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.35rem; margin-bottom: 1rem; color: var(--accent); border-left: 4px solid var(--accent); padding-left: .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .75rem; color: var(--accent2); }
+    p, li { color: #c9d1d9; margin-bottom: .5rem; }
+    ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .875rem; }
+    th, td { border: 1px solid var(--border); padding: .6rem .8rem; text-align: left; vertical-align: top; }
+    th { background: #21262d; color: var(--accent); }
+    code { background: #21262d; padding: .15rem .4rem; border-radius: 4px; font-size: .85em; }
+    footer { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GSMultiAgent — 核心设计模式</h1>
+    <p>代码库中反复出现的架构模式及典型落点</p>
+  </header>
+  <nav>
+    <a href="index.html">索引</a>
+    <a href="01-overall-architecture.html">整体架构</a>
+    <a href="02-module-division.html">模块划分</a>
+    <a href="03-core-business-flow.html">业务流程</a>
+    <a href="04-tech-stack.html">技术选型</a>
+    <a href="05-design-patterns.html" class="active">设计模式</a>
+    <a href="06-security-design.html">安全设计</a>
+    <a href="LaysIntr.html">三层与 T4 路径</a>
+    <a href="PPO_intr.html">PPO 详解</a>
+  </nav>
+  <main>
+    <section>
+      <h2>1. 模式一览</h2>
+      <table>
+        <thead><tr><th>模式</th><th>落点</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td>分层架构</td><td>Layer 1/2/3</td><td>交互、编排、优化职责分离</td></tr>
+          <tr><td>门面 Facade</td><td><code>HermesIntegration</code></td><td>统一 Agent + 工具注册入口</td></tr>
+          <tr><td>策略 Strategy</td><td><code>layer3_strategy</code>、<code>design_path_policy</code>、<code>t4_low_risk</code></td><td>运行时切换优化算法与设计路径；T4 硬约束覆盖 LLM 反思</td></tr>
+          <tr><td>模板方法 Template</td><td><code>GF_APN_T4_MINIMAL</code></td><td>确定性 MODIFY_LAW 替换 LLM 自由 gf 重写</td></tr>
+          <tr><td>工具命令 Tool</td><td><code>tools/*.py</code></td><td>每个 Tool：name、description、input_schema、execute</td></tr>
+          <tr><td>注册表 Registry</td><td>Hermes <code>tools.registry</code></td><td>动态注册 async handler</td></tr>
+          <tr><td>依赖注入</td><td><code>set_simulator</code> / <code>set_rag_kb</code></td><td>工具运行时绑定共享实例</td></tr>
+          <tr><td>工作流 Workflow</td><td><code>OptimizationWorkflow</code></td><td>编排 Expert→PPO→Reflection 状态机</td></tr>
+          <tr><td>仓储 Repository</td><td><code>ParameterExperience</code></td><td>JSON 持久化 + fitness 排序检索</td></tr>
+          <tr><td>适配器 Adapter</td><td><code>engine_resolver</code></td><td>统一 matlab/octave/python 仿真接口</td></tr>
+          <tr><td>单例 Singleton</td><td><code>get_config()</code></td><td>全局配置访问点</td></tr>
+          <tr><td>特性开关 Feature Flag</td><td><code>AblationConfig</code></td><td>六维消融实验</td></tr>
+          <tr><td>委托 Delegate</td><td><code>call_specialist</code></td><td>子智能体专责 RAG/MATLAB/仿真</td></tr>
+          <tr><td>模板方法</td><td><code>monte_carlo_single.m</code></td><td>固定仿真骨架 + RL_PARAMS 注入点</td></tr>
+          <tr><td>防火墙 Firewall</td><td><code>parameter_firewall.py</code></td><td>LLM JSON → 白名单键 + 数值边界 → 仿真/PPO</td></tr>
+          <tr><td>沙箱 Workspace</td><td><code>TaskWorkspace</code></td><td>上下文管理器：创建 UUID 目录、拷贝脚本、退出清理</td></tr>
+          <tr><td>星型编排 Star</td><td><code>cli_agent</code> 主循环</td><td>Reflection 只出 JSON；由 L1 递回 Hermes/Layer3，无 Agent 间隐式闭环</td></tr>
+          <tr><td>门禁 Gate</td><td><code>layer2_script_gate</code>、<code>physics_bounds</code>、<code>should_gate_near_miss_tune</code></td><td>MODIFY 脚本进 Layer3 前校验；PeakNy 闭环 + near-miss 同轮 TUNE</td></tr>
+          <tr><td>后台任务 Worker</td><td><code>async/task_queue</code></td><td>子进程 CLI + 共享 task 状态文件/HTTP</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 工具模式（Hermes Tool）</h2>
+      <div class="mermaid">
+classDiagram
+    class BaseTool {
+        +name: str
+        +description: str
+        +input_schema: dict
+        +execute(args) async
+    }
+    class SimulationTool {
+        +run_simulation
+    }
+    class RAGTool {
+        +rag_retrieve
+    }
+    BaseTool <|-- SimulationTool
+    BaseTool <|-- RAGTool
+      </div>
+      <p>工具通过闭包捕获 <code>simulator</code>、<code>pe</code>、<code>task_prompt</code> 等上下文，避免全局变量。</p>
+    </section>
+
+    <section>
+      <h2>3. 配置 Dataclass 模式</h2>
+      <p><code>config_loader.AppConfig</code> 聚合：</p>
+      <ul>
+        <li><code>AblationConfig</code> — 消融开关</li>
+        <li><code>MatlabRLOptimizerConfig</code> + <code>RLRewardConfig</code></li>
+        <li><code>LLMConfig</code> / <code>RAGConfig</code> / <code>SimulationConfig</code></li>
+        <li><code>T4LowRiskConfig</code> — T4 低风险 playbook（<code>config.yaml → t4_low_risk</code>）</li>
+        <li><code>RLExplorationConfig</code> — PPO 探索 + <code>adaptive_*</code> 自适应缩放</li>
+      </ul>
+      <p><code>RLRewardConfig.to_dict()</code> 传入 <code>MatlabRLOptimizer(reward_weights=...)</code>；顶层 <code>peak_n_penalty</code> 覆盖 reward 权重。</p>
+    </section>
+
+    <section>
+      <h2>4. RL 中的模式</h2>
+      <ul>
+        <li><strong>Contextual Bandit</strong>：无环境状态转移，每步独立 (s,a,R)</li>
+        <li><strong>Experience Replay（批内）</strong>：64 episode 缓冲后 PPO 更新</li>
+        <li><strong>Reward Shaping</strong>：Phase A/B 分阶段 + 硬截断</li>
+        <li><strong>Early Stopping</strong>：Reflection 观察者模式介入主循环</li>
+        <li><strong>Adaptive Exploration</strong>：奖励平台/发散时动态收缩 log_std（与 episode 衰减叠加）</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. 安全防护模式</h2>
+      <ul>
+        <li><strong>纵深防御</strong>：PPO 有界动作 + Expert clamp + gf physics_bounds + T4 确定性 APN + Reflection 超参 sanitize</li>
+        <li><strong>最小权限</strong>：诊断智能体无 Tool Schema；RL 不在 Hermes 工具集</li>
+        <li><strong>失败安全</strong>：非法键丢弃并日志告警；strict 模式可抛 <code>ParameterFirewallViolation</code></li>
+      </ul>
+    </section>
+  </main>
+  <footer>GSMultiAgent · 设计模式 · docsNew/05-design-patterns.html · 2026-06-11</footer>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });</script>
+</body>
+</html>

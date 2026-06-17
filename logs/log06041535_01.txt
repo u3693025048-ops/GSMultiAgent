@@ -1,0 +1,70 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-04 15:35:48
+Command     : cli_agent.py --prompt test
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06041535_01.txt
+================================================================================
+
+2026-06-04 15:35:48 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06041535_01.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06041535_01.txt
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-04 15:35:48
+Task: test
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-04 15:35:59 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-04 15:35:59 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-04 15:36:00 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+E:\PythonProject\GSMultiAgent13\.venv\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-04 15:36:00 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-04 15:36:00 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-04 15:36:00 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_135731.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:00 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_142254.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:00 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_144411.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:00 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 3/3 documents
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 3 docs from 'guidance_output\reports'
+  Indexed 3 report file(s) from ./guidance_output/reports (source_tag=reports)
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:01 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 4/4 documents
+2026-06-04 15:36:01 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 4 docs from 'guidance_output'
+  Indexed 4 report file(s) from ./guidance_output (source_tag=reports)
+2026-06-04 15:36:02 - multi_agent.memory.rag_knowledge_base - INFO - purge_stale_pe_docs: removed 7 non-KB doc(s) from collection.
+  [RAG Purge] Removed 7 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+Traceback (most recent call last):
+  File "E:\PythonProject\GSMultiAgent13\cli_agent.py", line 3487, in <module>
+    asyncio.run(main(args))
+    ~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "E:\PythonProject\GSMultiAgent13\cli_agent.py", line 247, in main
+    print("  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\PythonProject\GSMultiAgent13\multi_agent\logging\run_logger.py", line 62, in write
+    self._original.write(data)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^
+UnicodeEncodeError: 'gbk' codec can't encode character '\u2713' in position 18: illegal multibyte sequence
+
+================================================================================
+Finished    : 2026-06-04 15:36:02
+Exit code   : 0
+================================================================================

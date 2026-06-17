@@ -113,6 +113,18 @@ class MatlabEngineBackend:
             if me is None:
                 return False
 
+            # MATLAB Engine API for Python officially supports 3.9-3.12.
+            # On Python 3.13+ the C extension may crash or hang silently.
+            # Log a warning but still attempt — some patch levels work.
+            import sys
+            if sys.version_info >= (3, 13):
+                logger.warning(
+                    "Python %d.%d detected — MATLAB Engine API officially "
+                    "supports 3.9-3.12.  In-process engine may be unstable; "
+                    "subprocess fallback ('matlab -batch') is recommended.",
+                    sys.version_info.major, sys.version_info.minor,
+                )
+
             # ── Attempt 1: connect to an already-running shared MATLAB session.
             # Start MATLAB manually and run  matlab.engine.shareEngine  (or
             # matlab.engine.shareEngine('mySession')) in the MATLAB Command
@@ -250,21 +262,28 @@ class MatlabEngineBackend:
                 # Make sure the script's directory is on the MATLAB path
                 # — needed for both script-files and function-files when
                 # they reference helpers in the same folder.
+                self._engine.cd(script_dir, nargout=0)
                 self._engine.addpath(script_dir, nargout=0)
 
                 if call_name:
-                    fn = getattr(self._engine, call_name, None)
-                    if fn is None:
-                        # Try eval as a fallback (e.g. function lives in
-                        # a sub-folder that wasn't on path until now).
-                        self._engine.eval(
-                            f"{call_name}();",
-                            nargout=0,
-                            stdout=out_buf,
-                            stderr=err_buf,
-                        )
-                    elif timeout_sec is not None and timeout_sec > 0:
-                        future = fn(
+                    # For dynamically created temp files (e.g. _rltmp_*),
+                    # MATLAB's function resolver cache is stale. We MUST
+                    # cd + clear functions + rehash + call in ONE eval
+                    # statement to guarantee the function is discoverable
+                    # in the same workspace.  'clear functions' invalidates
+                    # ALL JIT-compiled function caches (not just path cache)
+                    # which is essential when running many unique temp
+                    # function files in rapid succession (RL loop).
+                    eval_cmd = (
+                        f"cd('{script_dir}'); "
+                        f"addpath('{script_dir}'); "
+                        f"clear functions; "
+                        f"rehash; "
+                        f"{call_name}();"
+                    )
+                    if timeout_sec is not None and timeout_sec > 0:
+                        future = self._engine.eval(
+                            eval_cmd,
                             background=True,
                             nargout=0,
                             stdout=out_buf,
@@ -272,7 +291,12 @@ class MatlabEngineBackend:
                         )
                         future.result(timeout=timeout_sec)
                     else:
-                        fn(nargout=0, stdout=out_buf, stderr=err_buf)
+                        self._engine.eval(
+                            eval_cmd,
+                            nargout=0,
+                            stdout=out_buf,
+                            stderr=err_buf,
+                        )
                 else:
                     # Script-style: run('/abs/path.m')
                     if timeout_sec is not None and timeout_sec > 0:

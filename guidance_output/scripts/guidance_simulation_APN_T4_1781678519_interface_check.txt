@@ -1,0 +1,18 @@
+[fix_mixed_end] Inserted closing end after line 121 (function at original line 48)
+[fix_mixed_end] Inserted closing end after line 139 (function at original line 137)
+[fix_mixed_end] Inserted closing end after line 188 (function at original line 155)
+[fix_mixed_end] Inserted closing end after line 192 (function at original line 189)
+[fix_mixed_end] Inserted closing end after line 196 (function at original line 190)
+[fix_mixed_end] Inserted closing end after line 221 (function at original line 194)
+[fix_mixed_end] Inserted closing end after line 262 (function at original line 218)
+[fix_mixed_end] Inserted closing end after line 345 (function at original line 300)
+[strip_spurious_end] Removed function-closing end at line 122 for function "run_category" (excess function-closing end)
+[strip_spurious_end] Removed function-closing end at line 139 for function "tf2str" (excess function-closing end)
+[strip_spurious_end] Removed function-closing end at line 187 for function "plot_results" (excess function-closing end)
+[strip_spurious_end] Removed function-closing end at line 190 for function "mst" (excess function-closing end)
+[strip_spurious_end] Removed function-closing end at line 193 for function "anoise" (excess function-closing end)
+[strip_spurious_end] Removed function-closing end at line 217 for function "sim_s" (excess function-closing end)
+[strip_spurious_end] Removed function-closing end at line 257 for function "cg" (excess function-closing end)
+[strip_spurious_end] Removed function-closing end at line 339 for function "gf" (excess function-closing end)
+[gf_limiter] Injected N1 hard limiter ±20g
+[gf_limiter] Injected N2 hard limiter ±20g

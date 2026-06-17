@@ -70,6 +70,7 @@ knowledge_base:
   matlab_dir: "./knowledge_base/matlab"
 
 # Simulation Engine
+<<<<<<< HEAD
 #
 # engine options (auto-detection priority: matlab_engine > matlab > octave > python):
 #   "auto"           — pick the best available backend on this host (recommended)
@@ -112,3 +113,9 @@ simulation:
   #
   octave_path: "octave"     # bare name → resolved via PATH
   matlab_path: "matlab"     # bare name → resolved via PATH
+=======
+simulation:
+  engine: "octave"  # "python" | "octave" | "matlab"
+  octave_path: "octave"  # or full path like "C:/Program Files/GNU Octave/octave.bat"
+  matlab_path: "matlab"
+>>>>>>> f1605d099b926698d233a834f07c35eb6948bcd1

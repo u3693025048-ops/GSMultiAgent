@@ -7,10 +7,10 @@
     
     <block name="GuidanceController" isAbstract="false">
       <ownedAttribute name="navigationCoefficient" type="Real" multiplicity="1">
-        <defaultValue value="nan"/>
+        <defaultValue value="4.0"/>
       </ownedAttribute>
       <ownedAttribute name="dampingRatio" type="Real" multiplicity="1">
-        <defaultValue value="nan"/>
+        <defaultValue value="0.6"/>
       </ownedAttribute>
     </block>
     

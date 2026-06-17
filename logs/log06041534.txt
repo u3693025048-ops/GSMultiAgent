@@ -1,0 +1,23 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-04 15:34:47
+Command     : cli_agent.py --help
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06041534.txt
+================================================================================
+
+2026-06-04 15:34:47 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06041534.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06041534.txt
+usage: cli_agent.py [-h] (--prompt PROMPT | --file FILE)
+
+Multi-Agent Guidance CLI Agent
+
+options:
+  -h, --help       show this help message and exit
+  --prompt PROMPT  User task description as string
+  --file FILE      Path to a text file containing the user task description
+
+================================================================================
+Finished    : 2026-06-04 15:34:47
+Exit code   : 0
+================================================================================

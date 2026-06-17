@@ -1,7 +1,6 @@
 # Core Dependencies
 numpy>=1.24.0
 python-dotenv>=1.0.0
-# hermes-agent>=1.0.0
 PyYAML>=6.0
 
 # RL Dependencies
@@ -26,26 +25,23 @@ pytest-asyncio>=0.21.0
 black>=23.0.0
 ruff>=0.1.0
 
-# 需要在当前虚拟环境下的终端导入matlab安装路径，再安装matlabengine
-matlabengine
+# ─── Optional: Layer 2 (Hermes orchestration) ─────────────────────────────
+# Not required for imports, Step 1 init, RL optimizer, or unit tests.
+# Install only if you need full Hermes tool-calling orchestration:
+#   pip install git+https://github.com/NousResearch/hermes-agent.git
+# Provides the `run_agent` module used by multi_agent.integration.hermes_integration.
 
-# pip install git+https://github.com/NousResearch/hermes-agent.git
-
-# ─── Simulation Engine (Optional) ───────────────────────────────────────
-# At least one of the following is recommended for high-fidelity sim;
-# the framework auto-detects which is available and falls back to a
-# pure-Python simulator if none is installed.
+# ─── Optional: Simulation engines ───────────────────────────────────────────
+# At least one is recommended for high-fidelity sim; the framework falls back
+# to a pure-Python simulator when none is available.
 #
-#   GNU Octave (system package — not pip-installable)
-#       Windows: https://www.gnu.org/software/octave/download.html
-#       Ubuntu : sudo apt install octave octave-control
+# GNU Octave (system package, not pip-installable)
+#   Windows: https://www.gnu.org/software/octave/download.html
+#   Ubuntu : sudo apt install octave octave-control
 #
-#   MATLAB Engine API for Python (in-process, fastest)
-#       Requires a local MATLAB installation + valid licence.
-#       Install with:
-#           cd <matlabroot>/extern/engines/python
-#           python -m pip install .
-#       Or, on R2022b+, just:
-#           pip install matlabengine
-#       (PyPI version must match your MATLAB release; see
-#        https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html)
+# MATLAB Engine API for Python (requires local MATLAB + license)
+#   cd <matlabroot>/extern/engines/python && python -m pip install .
+#   Or on R2022b+: pip install matlabengine  (must match MATLAB release)
+#   https://www.mathworks.com/help/matlab/matlab_external/install-the-matlab-engine-for-python.html
+#
+# matlabengine

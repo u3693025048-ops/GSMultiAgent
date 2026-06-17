@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — 三层架构与 T4 MODIFY_LAW 路径</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --border: #2d3a4f;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --warn: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+    header {
+      background: linear-gradient(135deg, #161b22 0%, #21262d 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+    }
+    header h1 { font-size: 1.75rem; margin-bottom: .5rem; }
+    header p { color: var(--muted); max-width: 960px; }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      padding: 1rem 2.5rem;
+      background: #161b22;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    nav a {
+      color: var(--accent);
+      text-decoration: none;
+      padding: .35rem .75rem;
+      border-radius: 6px;
+      font-size: .875rem;
+      border: 1px solid transparent;
+    }
+    nav a:hover, nav a.active {
+      background: var(--card);
+      border-color: var(--border);
+    }
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem 4rem;
+    }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+    }
+    h2 {
+      font-size: 1.35rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+      border-left: 4px solid var(--accent);
+      padding-left: .75rem;
+    }
+    h3 {
+      font-size: 1.05rem;
+      margin: 1.25rem 0 .75rem;
+      color: var(--accent2);
+    }
+    h4 {
+      font-size: .95rem;
+      margin: 1rem 0 .5rem;
+      color: #79c0ff;
+    }
+    p, li { color: #c9d1d9; margin-bottom: .6rem; }
+    ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+    .mermaid {
+      background: #0d1117;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: .9rem;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: .65rem .85rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #21262d; color: var(--accent); }
+    code {
+      background: #21262d;
+      padding: .12rem .35rem;
+      border-radius: 4px;
+      font-size: .85em;
+    }
+    .note {
+      background: #21262d;
+      border-left: 4px solid var(--warn);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+      font-size: .9rem;
+    }
+    .summary-box {
+      background: #21262d;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+    }
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: .85rem;
+      border-top: 1px solid var(--border);
+    }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GSMultiAgent — 三层架构说明 &amp; T4 MODIFY_LAW 路径</h1>
+    <p>
+      本文档说明项目的 Layer 1 / 2 / 3 职责与层间数据流，并给出
+      <strong>T4 高频大幅度机动</strong>工况下
+      <strong>MODIFY_LAW</strong>（修改 <code>gf()</code> 制导律）的典型时序。
+      基于当前代码库（v0.4.1：<code>layer2_script_gate.py</code>、<code>t4_low_risk.py</code>、<code>design_path_policy.py</code>、<code>physics_bounds.py</code>、指标复核与异步任务）。
+    </p>
+  </header>
+
+  <nav>
+    <a href="index.html">索引</a>
+    <a href="01-overall-architecture.html">整体架构</a>
+    <a href="02-module-division.html">模块划分</a>
+    <a href="03-core-business-flow.html">业务流程</a>
+    <a href="04-tech-stack.html">技术选型</a>
+    <a href="05-design-patterns.html">设计模式</a>
+    <a href="06-security-design.html">安全设计</a>
+    <a href="LaysIntr.html" class="active">三层与 T4 路径</a>
+    <a href="PPO_intr.html">PPO 详解</a>
+  </nav>
+
+  <main>
+    <section class="toc">
+      <h2>目录</h2>
+      <ol>
+        <li><a href="#overview">总览：三层 + 支撑设施</a></li>
+        <li><a href="#layer1">Layer 1 — 任务编排</a></li>
+        <li><a href="#layer2">Layer 2 — 内容生成与仿真</a></li>
+        <li><a href="#layer3">Layer 3 — 优化与反思</a></li>
+        <li><a href="#connect">层与层之间如何联系</a></li>
+        <li><a href="#steps">Step 编号与层级对应</a></li>
+        <li><a href="#infra">横切支撑模块</a></li>
+        <li><a href="#t4-seq">T4 + MODIFY_LAW 时序图</a></li>
+        <li><a href="#t4-log">T4 路径日志关键字</a></li>
+        <li><a href="#t4-diff">与纯 TUNE_PARAMS 路径的区别</a></li>
+        <li><a href="#t4-low-risk">T4 低风险与 Gate 策略（v0.4.1）</a></li>
+        <li><a href="#metrics-trust">指标可信链（judge / cli / Gate）</a></li>
+        <li><a href="#glossary">术语速查：PN / APN / gf() 等</a></li>
+      </ol>
+    </section>
+
+    <section id="overview">
+      <h2>1. 总览：三层 + 支撑</h2>
+      <p>
+        项目在架构上明确分为 <strong>3 层</strong>（Layer 1 / 2 / 3），
+        另有 RAG、参数经验库、MATLAB 仿真引擎等<strong>横切支撑</strong>，它们不是独立业务层，而为三层服务。
+      </p>
+      <div class="mermaid">
+flowchart TB
+    subgraph L1["Layer 1 — 任务编排"]
+        CLI["cli_agent.py"]
+    end
+
+    subgraph L2["Layer 2 — 内容生成与仿真"]
+        PLAN["TaskPlanner"]
+        HERMES["Hermes Agent + 工具"]
+        GEN["generate_matlab"]
+        SIM["run_simulation"]
+        JUDGE["judge_requirements"]
+    end
+
+    subgraph L3["Layer 3 — 优化与反思"]
+        OWF["OptimizationWorkflow"]
+        EXP["Expert 调参"]
+        PPO["PPO / RL"]
+        CLS["CLS 局部搜索"]
+        REF["ReflectionAgent"]
+    end
+
+    subgraph INFRA["支撑设施"]
+        RAG["RAG 知识库"]
+        PE["ParameterExperience"]
+        MC["monte_carlo_single.m"]
+    end
+
+    CLI --> PLAN --> HERMES
+    HERMES --> GEN --> SIM --> JUDGE
+    JUDGE -->|未达标| OWF
+    JUDGE -->|已达标| REF
+    OWF --> EXP --> PPO --> CLS --> REF
+    REF -->|next_action| CLI
+    GEN & SIM & PPO --> MC
+    PLAN & HERMES --> RAG
+    CLI & REF --> PE
+      </div>
+    </section>
+
+    <section id="layer1">
+      <h2>2. Layer 1 — 任务输入与总控</h2>
+      <p><strong>入口：</strong><code>cli_agent.py</code></p>
+      <p><strong>作用：</strong>整个系统的「大脑」和主循环，不直接实现制导算法，只负责编排。</p>
+      <table>
+        <thead>
+          <tr><th>职责</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>解析任务</td>
+            <td>从自然语言 / <code>prompt.txt</code> 解析工况（如 <code>RUN_CASE='T'; SUB_IDX=4</code>）和五项指标（命中率、SEP、PeakNy、PM、BW）</td>
+          </tr>
+          <tr>
+            <td>初始化组件</td>
+            <td>LLM、RAG、Hermes、RL 优化器、Layer3 工作流、参数经验库</td>
+          </tr>
+          <tr>
+            <td>驱动外层迭代</td>
+            <td><code>max_iterations</code>（默认 4）轮「规划 → 生成 → 优化 → 反思」</td>
+          </tr>
+          <tr>
+            <td>层间衔接</td>
+            <td>把 Layer3 的 <code>suggestion</code>、<code>next_action</code> 喂回下一轮 Layer2；进 Layer3 前跑 Layer2 Gate 与 <code>_rule_check</code> 指标复核</td>
+          </tr>
+          <tr>
+            <td>收尾</td>
+            <td>经验回写、模型保存、生成报告（Step 4 / 5）</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="note">日志关键字：<code>[Step 1]</code>、<code>Iteration N/M</code>、<code>Feeding back to Layer 2</code></p>
+    </section>
+
+    <section id="layer2">
+      <h2>3. Layer 2 — Hermes 内容生成与仿真</h2>
+      <p><strong>入口：</strong><code>hermes_integration.py</code> + <code>multi_agent/tools/</code> 工具链</p>
+      <p><strong>作用：</strong>用 LLM + 工具<strong>生成/修改 MATLAB 脚本并跑蒙特卡洛仿真</strong>，不做 PPO 参数搜索。</p>
+      <table>
+        <thead>
+          <tr><th>子步骤</th><th>核心模块</th><th>做什么</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Step 2 规划</td>
+            <td><code>IntelligentTaskPlanner</code></td>
+            <td>RAG 检索、对比历史指标，选 <code>TUNE_PARAMS</code> / <code>MODIFY_LAW</code> / <code>REUSE_HISTORY</code></td>
+          </tr>
+          <tr>
+            <td>Step 2.5 生成</td>
+            <td><code>generate_matlab</code></td>
+            <td>基于 <code>monte_carlo_single.m</code> 生成或修改脚本（改参数 or 改 <code>gf()</code> 制导律）</td>
+          </tr>
+          <tr>
+            <td>语法/兼容</td>
+            <td><code>syntax_check_matlab</code>、<code>verify_guidance_compat</code></td>
+            <td>校正语法、检查制导律数学适配性</td>
+          </tr>
+          <tr>
+            <td>仿真</td>
+            <td><code>run_simulation</code></td>
+            <td>跑 N_MC 次蒙特卡洛，得到 hit / SEP / PeakNy / PM / BW</td>
+          </tr>
+          <tr>
+            <td>判定</td>
+            <td><code>judge_requirements</code></td>
+            <td>规则 + LLM 判断五项指标；<strong>PeakNy 以 peak_ny_max 为准</strong>；cli 进 Layer3 前再复核</td>
+          </tr>
+          <tr>
+            <td>Layer2 Gate</td>
+            <td><code>layer2_script_gate</code></td>
+            <td>syntax/smoke → T4 MODIFY 闭环快扫；失败时 near-miss 可同轮切 <code>TUNE_PARAMS</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>两条出口</h3>
+      <ul>
+        <li><code>satisfied=True</code> → 跳过 Layer3 的 RL，直接反思 + 写经验</li>
+        <li><code>satisfied=False</code> → 把 <code>script_path</code> + <code>initial_metrics</code> 交给 Layer3</li>
+      </ul>
+      <p class="note">Layer2 <strong>不包含</strong> PPO / Expert 工具，避免 Hermes 与 RL 混在一起。</p>
+    </section>
+
+    <section id="layer3">
+      <h2>4. Layer 3 — 优化工作流</h2>
+      <p><strong>入口：</strong><code>optimization_workflow.py</code></p>
+      <p><strong>作用：</strong>在 Layer2 给出的脚本和初值上，<strong>系统搜索驾驶仪 9 维参数</strong>（<code>w1,zeta1,tao1,w2,zeta2,tao2,w3,zeta3,N_pn</code>），直到达标或给出下一轮建议。</p>
+      <table>
+        <thead>
+          <tr><th>阶段</th><th>模块</th><th>做什么</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>策略选择</td>
+            <td><code>_select_strategy</code> + <code>t4_low_risk</code></td>
+            <td>Expert 或 PPO；T4 post-MODIFY 强制 Expert；4/5 仅 peak 时可跳过搜参</td>
+          </tr>
+          <tr>
+            <td>初值注入</td>
+            <td><code>resolve_initial_auto_params</code></td>
+            <td>T4 / post-MODIFY 使用保守 w、N_pn 并 clamp 至上限</td>
+          </tr>
+          <tr>
+            <td>MODIFY 失败门控</td>
+            <td><code>should_block_tune_after_bad_modify</code></td>
+            <td>peak&gt;30g 或 hit&lt;85% 时返回 <code>next_action=modify_law</code>，禁止 TUNE</td>
+          </tr>
+          <tr>
+            <td>Expert</td>
+            <td><code>_run_expert_tuning</code></td>
+            <td>最多 5 轮：LLM 建议参数 → 仿真 → 评估</td>
+          </tr>
+          <tr>
+            <td>PPO</td>
+            <td><code>MatlabRLOptimizer</code></td>
+            <td>每 episode 跑 N_MC 次 MC，PPO 更新策略</td>
+          </tr>
+          <tr>
+            <td>CLS</td>
+            <td><code>constraint_local_search</code></td>
+            <td>PPO 后在约束邻域做局部精修</td>
+          </tr>
+          <tr>
+            <td>反思</td>
+            <td><code>ReflectionAgent</code> + <code>design_path_policy</code></td>
+            <td>分析是否达标；输出 <code>next_action</code> 和优化建议</td>
+          </tr>
+          <tr>
+            <td>判断</td>
+            <td><code>JudgmentAgent</code></td>
+            <td>规则检查指标；辅助 Expert/PPO 早停</td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>两条出口</h3>
+      <ul>
+        <li>五项全达标 → 写 ParameterExperience、生成报告，<code>status=done</code></li>
+        <li>未达标 → <code>status=needs_iteration</code>，<code>next_action=tune_params</code> 或 <code>modify_law</code> → <strong>回到 Layer1 下一轮</strong></li>
+      </ul>
+    </section>
+
+    <section id="connect">
+      <h2>5. 层与层之间如何联系</h2>
+      <p>一次完整迭代的数据流：</p>
+      <pre style="background:#0d1117;padding:1rem;border-radius:8px;overflow-x:auto;color:#c9d1d9;font-size:.85rem;line-height:1.6;">
+用户 prompt
+    ↓
+[Layer 1] 解析工况 + 启动第 N 轮迭代
+    ↓
+[Layer 2] Planner → mode=TUNE_PARAMS / MODIFY_LAW
+    ↓
+[Layer 2] Hermes: generate_matlab → run_simulation → judge_requirements
+    ↓  cli: _rule_check(hermes_sim_metrics)
+[Layer 2 Gate] ensure_script_ready_for_layer3 (smoke + MODIFY 闭环)
+    ↓  near-miss? → task_mode=TUNE_PARAMS（同轮）| blocked → 下轮 MODIFY
+[Layer 3] OptimizationWorkflow (Expert / PPO / CLS / Reflection)
+    ↓  best_params, best_metrics, next_action, suggestion
+[Layer 1] 写入 _optim_history，若未达标且 iteration &lt; max_iterations
+    ↓
+回到 [Layer 2]（带上 prev_suggestion、next_action、历史指标）
+      </pre>
+      <h3>关键传递物</h3>
+      <table>
+        <thead>
+          <tr><th>从 → 到</th><th>传递内容</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>L1 → L2</td>
+            <td><code>current_prompt</code>、上一轮 <code>suggestion</code>、<code>task_mode</code>（可强制 MODIFY_LAW）</td>
+          </tr>
+          <tr>
+            <td>L2 → L3</td>
+            <td><code>.m</code> 脚本路径、<code>initial_metrics</code>、<code>mission_conditions</code>、是否 <code>directly_satisfied</code></td>
+          </tr>
+          <tr>
+            <td>L3 → L1</td>
+            <td><code>best_params</code>、<code>best_metrics</code>、<code>next_action</code>、<code>suggestion</code>、<code>rl_hyperparams</code></td>
+          </tr>
+          <tr>
+            <td>L1 → L2（下轮）</td>
+            <td><code>_optim_history</code>、<code>_prev_rl_best_params</code>、<code>_forced_next_action</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="summary-box">
+        <strong>一句话：</strong>L1 总控迭代 → L2 生成脚本并仿真判指标 → L3 自动调参并反思 → L3 建议回到 L1 → L1 驱动下一轮 L2（改参或改制导律）。
+      </div>
+    </section>
+
+    <section id="steps">
+      <h2>6. Step 编号与层级对应</h2>
+      <p>日志里的 Step 是 <strong>Layer1 内部的执行顺序</strong>，不是第四层。</p>
+      <table>
+        <thead>
+          <tr><th>Step</th><th>所属层</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Step 1</td><td>L1</td><td>初始化组件</td></tr>
+          <tr><td>Step 2</td><td>L2</td><td>Task Planner</td></tr>
+          <tr><td>Step 2.5</td><td>L2</td><td>Hermes 生成 MATLAB</td></tr>
+          <tr><td>Step 3</td><td>L3</td><td>Optimization Workflow</td></tr>
+          <tr><td>Step 4</td><td>L1</td><td>参数经验回写、模型保存</td></tr>
+          <tr><td>Step 5</td><td>L1</td><td>生成 Markdown 报告</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="infra">
+      <h2>7. 横切支撑（不算独立业务层）</h2>
+      <table>
+        <thead>
+          <tr><th>模块</th><th>作用</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>knowledge_base/</code> + RAG</td><td>工况说明、设计路径、历史报告检索</td></tr>
+          <tr><td><code>ParameterExperience</code></td><td>跨轮次保存最优参数和 <code>.m</code> 模型</td></tr>
+          <tr><td><code>GuidanceSimulator</code> + <code>monte_carlo_single.m</code></td><td>Layer2 / Layer3 共用的 MATLAB 蒙特卡洛引擎</td></tr>
+          <tr><td><code>config.yaml</code></td><td>LLM、RL、<code>t4_low_risk</code>、<code>physics_bounds</code>、迭代次数等</td></tr>
+          <tr><td><code>t4_low_risk.py</code></td><td>T4 识别、确定性 APN gf()、保守调参、Layer3 门控</td></tr>
+          <tr><td><code>physics_bounds.py</code></td><td>MODIFY_LAW 后进 RL 前的 gf() 极值桩探测</td></tr>
+          <tr><td><code>layer2_script_gate.py</code></td><td>进 Layer3 前 syntax/smoke + T4 MODIFY 闭环 PeakNy Gate；near-miss 同轮 TUNE</td></tr>
+          <tr><td><code>multi_agent/async/</code></td><td>长 PPO 异步执行与 HTTP 状态查询</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="t4-seq">
+      <h2>8. T4 + MODIFY_LAW 路径时序图</h2>
+      <p>
+        <strong>典型场景：</strong>T4 子工况，Layer2 仿真 <strong>4/5 达标</strong>
+        （命中率 / SEP / PM / BW OK，<strong>PeakNy_max &gt; 20g</strong>），
+        系统走 <strong>MODIFY_LAW</strong> 改 <code>gf()</code>，再微调参数。
+      </p>
+      <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant L1 as Layer 1<br/>cli_agent
+    participant Plan as TaskPlanner<br/>(Step 2)
+    participant H as Hermes<br/>(Step 2.5)
+    participant Tools as Layer2 工具链
+    participant MC as monte_carlo_single.m<br/>(N_MC=25)
+    participant L3 as Layer 3<br/>OptimizationWorkflow
+    participant Policy as design_path_policy
+    participant Ref as ReflectionAgent
+    participant PE as ParameterExperience
+
+    User->>L1: prompt T4 + 五项指标要求
+    L1->>L1: 解析 RUN_CASE='T', SUB_IDX=4
+
+    rect rgb(40, 50, 70)
+    Note over L1,MC: Iteration 1：Layer2 初评（多为 TUNE_PARAMS）
+    L1->>Plan: analyze_and_plan(T4, 无历史)
+    Plan->>Plan: RAG + PE 检索
+    Plan-->>L1: mode=TUNE_PARAMS
+
+    L1->>H: Hermes generate + simulate
+    H->>Tools: generate_matlab(TUNE_PARAMS)
+    Tools->>Tools: 改 RL_PARAMS
+    H->>Tools: syntax_check → run_simulation(nmc=25)
+    Tools->>MC: N_MC=25, SUB_IDX=4
+    MC-->>Tools: hit=100%, SEP≈4.7m<br/>PeakNy_max≈27g
+    Tools->>Tools: judge_requirements
+    Tools-->>H: satisfied=False
+    H-->>L1: script_path + initial_metrics
+
+    L1->>L3: run(metrics, directly_satisfied=False)
+    L3->>Policy: should_skip_layer3_param_search?
+    Policy-->>L3: True（4/5，仅 peak 超标）
+    Note over L3: 跳过 Expert / PPO / CLS
+    L3->>Ref: reflect
+    Ref->>Policy: apply_reflection_policy
+    Policy-->>L3: next_action=modify_law
+    L3-->>L1: needs_iteration + suggestion
+    end
+
+    rect rgb(40, 60, 50)
+    Note over L1,MC: Iteration 2：MODIFY_LAW 改制导律
+    L1->>Plan: analyze_and_plan + 上轮 suggestion
+    Plan->>Policy: normalize_planner_mode
+    Policy-->>Plan: MODIFY_LAW
+    Plan-->>L1: mode=MODIFY_LAW
+
+    L1->>H: Hermes(mode=MODIFY_LAW)
+    H->>Tools: generate_matlab(MODIFY_LAW)
+    alt T4 + deterministic_apn
+        Tools->>Tools: ModelGen 写入 GF_APN_T4_MINIMAL<br/>跳过 LLM
+    else 非 T4
+        Tools->>Tools: LLM 改写 gf()
+    end
+    Tools->>Tools: physics_bounds 桩探测
+    Tools->>Tools: verify_modify_law_result
+    H->>Tools: run_simulation(nmc=25)
+    Tools->>MC: 新 gf() + 驾驶仪参数
+    MC-->>Tools: PeakNy_max 期望下降
+    Tools-->>L1: initial_metrics
+
+    L1->>L3: run(MODIFY_LAW 脚本)
+    L3->>L3: should_force_expert_after_modify → Expert
+    Note over L3: post-MODIFY 首轮不用 PPO 100 ep<br/>max_episodes ≤ 50
+    L3->>L3: Expert / PPO / CLS
+    L3->>Ref: reflect
+    L3-->>L1: best_params + metrics
+    end
+
+    rect rgb(60, 50, 40)
+    Note over L1,MC: Iteration 3~4：微调收尾
+    alt PeakNy_max 略超且律已 OK
+        L1->>H: 同脚本微调 autopilot
+        L1->>L3: Expert/PPO/CLS
+        Policy-->>L3: near_miss → tune_params
+    else 律仍无效
+        L1->>H: 再次 MODIFY_LAW
+    end
+    end
+
+    alt 五项全达标
+        L3->>PE: 回写 params + .m
+        L1-->>User: report_latest.md 5/5
+    else 未达标
+        L3-->>L1: next_action + suggestion
+    end
+      </div>
+    </section>
+
+    <section id="t4-log">
+      <h2>9. T4 路径日志关键字</h2>
+      <table>
+        <thead>
+          <tr><th>阶段</th><th>关键动作</th><th>期望 LOG 关键字</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Iter1 Layer2</td>
+            <td>TUNE 摸底，发现 peak 瓶颈</td>
+            <td><code>PeakNy_max=27.37g</code>，<code>judge satisfied=False</code></td>
+          </tr>
+          <tr>
+            <td>Iter1 Layer3</td>
+            <td>跳过 Expert/PPO</td>
+            <td><code>skip Expert/PPO/CLS → modify_law</code></td>
+          </tr>
+          <tr>
+            <td>Iter2 Layer2</td>
+            <td>改 <code>gf()</code></td>
+            <td><code>mode=MODIFY_LAW</code>、<code>[T4LowRisk] deterministic minimal APN</code>、<code>PHYS_BOUNDS pass=1</code></td>
+          </tr>
+          <tr>
+            <td>Iter2 Layer3</td>
+            <td>Expert 首轮（非 PPO 猛搜）</td>
+            <td><code>Strategy selected: EXPERT</code>、<code>post_modify_max_episodes=50</code></td>
+          </tr>
+          <tr>
+            <td>Iter2 Gate 近失配</td>
+            <td>peak 25–30g，hit/SEP OK</td>
+            <td><code>[Layer 2 Gate] Near-miss →</code>、<code>task_mode=TUNE_PARAMS</code>、同轮进 Layer3</td>
+          </tr>
+          <tr>
+            <td>Iter2 Gate 硬拦</td>
+            <td>peak&gt;30g 或 hit/SEP 失败</td>
+            <td><code>Layer 2 Gate ✗ BLOCKED</code>、<code>layer2_gate_blocked</code> → 下轮 MODIFY</td>
+          </tr>
+          <tr>
+            <td>Iter3~4</td>
+            <td>近失配微调</td>
+            <td><code>PeakNy=20.99g</code>，<code>next_action=tune_params</code></td>
+          </tr>
+          <tr>
+            <td>成功</td>
+            <td>写经验 + 报告</td>
+            <td><code>status=done</code> 或 <code>task_requirements_met</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="t4-diff">
+      <h2>10. 与纯 TUNE_PARAMS 路径的区别</h2>
+      <div class="mermaid">
+flowchart LR
+    A[T4 Layer2 仿真] --> B{PeakNy_max ≤ 20g?}
+    B -->|是，5/5| C[Layer3 跳过 RL<br/>直接反思写经验]
+    B -->|否，其余达标| D[Layer3 跳过 Expert/PPO<br/>next_action=modify_law]
+    B -->|否，多项不达标| E[Layer3 Expert/PPO<br/>先 TUNE_PARAMS]
+    D --> F[Iter2 MODIFY_LAW<br/>改 gf]
+    F --> G[Layer3 在新律上调参]
+    G --> H{5/5?}
+    H -->|否，差一点点| I[Iter3~4 tune_params]
+    H -->|是| C
+      </div>
+      <p>
+        T4 的典型瓶颈是 <strong>PeakNy_max</strong>，因此在当前策略下，
+        多数会先 <strong>TUNE 摸底 → 发现 4/5 → MODIFY_LAW（T4 用内置克制 APN）→ Expert 小步调参收尾</strong>，
+        而不是在纯 PN 律上直接 PPO 100 ep，或让 LLM 自由写激进 APN。
+      </p>
+    </section>
+
+    <section id="t4-low-risk">
+      <h2>11. T4 低风险与 Gate 策略（v0.4.1）</h2>
+      <p>配置：<code>config.yaml → t4_low_risk</code> + <code>simulation</code>；实现：<code>t4_low_risk.py</code>、<code>layer2_script_gate.py</code></p>
+      <table>
+        <thead><tr><th>规则</th><th>实现</th></tr></thead>
+        <tbody>
+          <tr><td>T4 识别</td><td><code>RUN_CASE='T' + SUB_IDX=4</code>，或 prompt 含 T4/工况4</td></tr>
+          <tr><td>4/5 仅 PeakNy_max 超标</td><td>Planner / Reflection / design_path → <code>MODIFY_LAW</code></td></tr>
+          <tr><td>确定性 gf()</td><td><code>GF_APN_T4_MINIMAL</code>：PN + 0.45 前馈 + 低通 + t_go 关断 + tanh/clip 20g</td></tr>
+          <tr><td>Layer2 Gate 闭环</td><td>MODIFY 后以 <code>modify_gate_nmc</code>（默认 10）快扫；<code>modify_gate_peak_g=30</code> 为 Gate 上限</td></tr>
+          <tr><td>near-miss TUNE</td><td><code>should_gate_near_miss_tune</code>：20g&lt;max≤30g 且 hit/SEP OK → 同轮 <code>TUNE_PARAMS</code> 进 Layer3</td></tr>
+          <tr><td>MODIFY 灾难失败</td><td>peak&gt;30g 或 hit&lt;85% → <code>should_block_tune_after_bad_modify</code> 禁止 TUNE</td></tr>
+          <tr><td>post-MODIFY Layer3</td><td><code>should_force_expert_after_modify</code>；episode 上限 50</td></tr>
+          <tr><td>判定口径</td><td>任务验收与 RL 奖励看 <code>peak_ny_max</code>；cli <code>_rule_check</code> 与 Gate metrics 为可信来源</td></tr>
+        </tbody>
+      </table>
+      <div class="note">
+        <strong>两层 Peak 阈值：</strong>任务指标 PeakNy≤20g；Gate 闭环允许到 30g 才硬拦——介于二者之间且其余指标 OK 时走 near-miss TUNE，避免在已可用律上空转 MODIFY。
+      </div>
+    </section>
+
+    <section id="metrics-trust">
+      <h2>12. 指标可信链（judge / cli / Gate）</h2>
+      <p>历史上曾出现 Hermes <code>judge_requirements</code> 手填指标（如 SEP=4.01）与 stdout 解析（SEP=9.13m）不一致，导致误跳过 RL。v0.4.1 采用多层校验：</p>
+      <table>
+        <thead><tr><th>环节</th><th>数据来源</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td><code>run_simulation</code></td><td><code>parse_sim_stdout</code> → <code>last_metrics</code></td><td>仿真 stdout 解析为权威数值</td></tr>
+          <tr><td><code>judge_requirements</code></td><td>LLM 传入 metrics + 规则层</td><td>快速判 satisfied；硬约束失败时 LLM 不可翻案</td></tr>
+          <tr><td><code>cli_agent</code></td><td><code>hermes_sim_metrics</code></td><td>进 Layer3 前 <code>_rule_check</code> 复核；纠正误跳过 RL</td></tr>
+          <tr><td>Layer2 Gate</td><td>smoke / MODIFY 闭环重跑</td><td>更新 <code>hermes_sim_metrics</code>；闭环 PeakNy 决定是否 BLOCK 或 near-miss</td></tr>
+          <tr><td><code>optimization_workflow</code></td><td><code>constraints_satisfied</code></td><td>反思后终态再校验；未全过则不标 done</td></tr>
+        </tbody>
+      </table>
+      <p class="note">日志对照：Hermes 侧 <code>[Hermes sim metrics]</code> 与 cli <code>[Layer2→3] Rule-check</code>、<code>[Layer 2 Gate]</code> 应使用同一套解析字段（含 <code>PeakNy_max</code>）。</p>
+    </section>
+
+    <section id="glossary">
+      <h2>13. 术语速查</h2>
+      <table>
+        <thead><tr><th>术语</th><th>含义（本项目语境）</th></tr></thead>
+        <tbody>
+          <tr><td><strong>PN</strong></td><td>比例导引：法向加速度 ∝ 视线角速率 × N × Vc；模板默认 gf() 结构</td></tr>
+          <tr><td><strong>APN</strong></td><td>增广比例导引：PN + 目标机动补偿（<code>a_T_perp</code> 前馈）；T4 低风险模板含 0.45 增益</td></tr>
+          <tr><td><strong>gf()</strong></td><td>MATLAB 制导律函数，输出过载指令 N1/N2；MODIFY_LAW 改此函数</td></tr>
+          <tr><td><strong>cf()</strong></td><td>驾驶仪函数，跟踪 N1/N2；TUNE_PARAMS 主要调 w1…N_pn</td></tr>
+          <tr><td><strong>PeakNy_max</strong></td><td>蒙特卡洛各样本过载的最大值；安全硬约束看此项</td></tr>
+          <tr><td><strong>4/5</strong></td><td>五项指标中四项达标、一项未达标；T4 常见为仅 peak 超标</td></tr>
+          <tr><td><strong>MODIFY_LAW</strong></td><td>修改 gf() 算法结构（非单纯改参数值）</td></tr>
+          <tr><td><strong>TUNE_PARAMS</strong></td><td>在固定 gf 结构下优化驾驶仪 9 维参数</td></tr>
+          <tr><td><strong>Layer2 Gate</strong></td><td>进 Layer3 前 syntax/smoke + T4 MODIFY 闭环 PeakNy 校验；配置 <code>modify_gate_peak_g</code></td></tr>
+          <tr><td><strong>near-miss</strong></td><td>Gate 因 peak 拦截但 20–30g 且 hit/SEP OK → 同轮 TUNE 而非继续 MODIFY</td></tr>
+          <tr><td><strong>Expert</strong></td><td>Layer3 LLM 引导小步调参；T4 post-MODIFY 首轮强制使用</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer>
+    GSMultiAgent · docsNew/LaysIntr.html · 更新 2026-06-11
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "dark",
+      securityLevel: "loose",
+      sequence: { useMaxWidth: true, wrap: true },
+      flowchart: { useMaxWidth: true, htmlLabels: true }
+    });
+  </script>
+</body>
+</html>

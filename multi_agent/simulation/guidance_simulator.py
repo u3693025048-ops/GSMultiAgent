@@ -8,6 +8,7 @@ import math
 import os
 import re
 import json
+import locale
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
@@ -274,7 +275,7 @@ class MATLABScriptGenerator:
         # 尝试读取知识库中的原始 6-DOF 模型
         base_script_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            "knowledge_base", "matlab", "robust_analysis", "chengxu_robust_analysis_singlefile.m"
+            "knowledge_base", "matlab", "guidance", "monte_carlo_single.m"
         )
         
         try:
@@ -810,7 +811,11 @@ class SimulationExecutor:
             # keeps a warm MATLAB session for subsequent calls in the
             # same Python process — particularly valuable for RL training
             # and parameter studies.
-            if self.engine == "matlab_engine":
+            # Skip matlab_engine on Python 3.13+ (unsupported by MATLAB R2025a)
+            import sys as _sys
+            _use_engine = self.engine == "matlab_engine" and _sys.version_info < (3, 13)
+
+            if _use_engine:
                 backend = self.matlab_engine_backend
                 if backend is not None:
                     # run_script() is synchronous (blocks on future.result()).
@@ -847,28 +852,35 @@ class SimulationExecutor:
                     build_octave_eval_string(script_path_fwd),
                 ]
                 exe_name = "Octave"
-            elif self.engine == "matlab":
+            elif self.engine in ("matlab", "matlab_engine"):
+                # "matlab_engine" reaches here when engine API is skipped
+                # (Python 3.13+) or backend failed to start.
                 cmd = [self.matlab_path, "-batch", f"run('{script_path_fwd}')"]
                 exe_name = "MATLAB"
             else:
                 return _failure_result(f"Unsupported engine: {self.engine}")
 
-            _aio_proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            try:
-                _stdout_b, _stderr_b = await asyncio.wait_for(
-                    _aio_proc.communicate(), timeout=DEFAULT_SUBPROCESS_TIMEOUT_SEC
-                )
-            except asyncio.TimeoutError:
-                _aio_proc.kill()
-                raise subprocess.TimeoutExpired(cmd, DEFAULT_SUBPROCESS_TIMEOUT_SEC)
-            _stdout = _stdout_b.decode("utf-8", errors="replace")
-            _stderr = _stderr_b.decode("utf-8", errors="replace")
+            # Use Popen + async poll instead of blocking subprocess.run() so
+            # KeyboardInterrupt can be delivered between polls.  Python 3.13
+            # on Windows has a ProactorEventLoop bug with asyncio subprocess
+            # pipes, so we stay with synchronous Popen.
+            _poll_sec = 2.0
+            from multi_agent.simulation.sim_timeout import get_matlab_timeout_sec
 
-            if _aio_proc.returncode != 0:
+            _timeout = get_matlab_timeout_sec(None)
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            import time as _time_gs
+            _t0 = _time_gs.monotonic()
+            while proc.poll() is None:
+                if _time_gs.monotonic() - _t0 > _timeout:
+                    proc.kill(); proc.wait(timeout=5)
+                    return _failure_result(f"{exe_name} timed out after {_timeout}s")
+                await asyncio.sleep(_poll_sec)
+            _enc = locale.getpreferredencoding(False) or "utf-8"
+            _stdout = (proc.stdout.read() or b"").decode(_enc, errors="replace")
+            _stderr = (proc.stderr.read() or b"").decode(_enc, errors="replace")
+
+            if proc.returncode != 0:
                 return _failure_result(f"{exe_name} error: {_stderr[:500]}")
 
             # Parse output for metrics
@@ -877,8 +889,22 @@ class SimulationExecutor:
         except FileNotFoundError:
             logger.warning(f"{self.engine} not found, falling back to Python")
             return await self._python_simulation(GuidanceParameters(), 100.0, 0.01)
+        except (asyncio.CancelledError, KeyboardInterrupt):
+            try:
+                proc.kill(); proc.wait(timeout=5)
+            except Exception:
+                pass
+            raise
         except Exception as e:
-            logger.error(f"{self.engine} execution failed: {e}")
+            import traceback as _tb
+            try:
+                proc.kill(); proc.wait(timeout=5)
+            except Exception:
+                pass
+            logger.error(
+                f"{self.engine} execution failed: {type(e).__name__}: {e}\n"
+                f"  traceback: {_tb.format_exc()[-800:]}"
+            )
             return _failure_result(str(e))
 
     def _parse_external_output(self, stdout: str) -> SimulationResult:
@@ -1055,239 +1081,3 @@ class GuidanceSimulator:
             )
 
         return results
-
-    async def rl_optimize(
-        self,
-        initial_params: GuidanceParameters,
-        param_bounds: Dict[str, Tuple[float, float]],
-        episodes: int = 50,
-        max_steps_per_episode: int = 20,
-        duration: float = 100.0,
-        dt: float = 0.01,
-        energy_constraint: float = 0.2,
-        target_miss_distance: float = 1.0,
-    ) -> Dict[str, Any]:
-        """
-        使用强化学习优化导引系统参数
-
-        Args:
-            initial_params: 初始参数
-            param_bounds: 参数边界 {param_name: (min, max)}
-            episodes: 训练回合数
-            max_steps_per_episode: 每回合最大步数
-            duration: 仿真时长
-            dt: 时间步长
-            energy_constraint: 控制能量约束
-            target_miss_distance: 目标脱靶量
-
-        Returns:
-            优化结果，包含最优参数和训练历史
-        """
-        from ..rl.reinforcement_learner import ReinforcementLearner, RLConfig, RLAlgorithm
-
-        rl_config = RLConfig(
-            algorithm=RLAlgorithm.DQN,
-            learning_rate=0.001,
-            discount_factor=0.95,
-            epsilon=0.3,
-            epsilon_decay=0.98,
-            epsilon_min=0.01,
-            batch_size=16,
-            target_update_freq=10,
-            memory_capacity=5000,
-        )
-
-        learner = ReinforcementLearner(rl_config)
-        learner.initialize(state_dim=6, action_dim=3)
-
-        state_dim = 6
-        action_dim = 3
-        param_names = list(param_bounds.keys())
-        param_dims = [
-            len(param_bounds[k][0]) if isinstance(param_bounds[k][0], list) else 1
-            for k in param_names
-        ]
-
-        all_rewards = []
-        best_result = None
-        best_reward = float("-inf")
-
-        history = []
-
-        for episode in range(episodes):
-            episode_reward = 0.0
-            episode_history = []
-
-            current_params = GuidanceParameters(
-                navigation_coefficient=initial_params.navigation_coefficient,
-                damping_ratio=initial_params.damping_ratio,
-                control_gain=initial_params.control_gain,
-                target_position=initial_params.target_position.copy(),
-                initial_position=initial_params.initial_position.copy(),
-                initial_velocity=initial_params.initial_velocity.copy(),
-            )
-
-            state = self._params_to_state(current_params, best_result)
-
-            for step in range(max_steps_per_episode):
-                action_dict = await learner.select_action(state, iteration=episode)
-
-                new_params, action_applied = self._apply_rl_action(
-                    current_params, action_dict, param_bounds, param_names
-                )
-
-                sim_result = await self.executor.run_simulation(new_params, duration, dt)
-                metrics = {
-                    "miss_distance": sim_result.miss_distance,
-                    "control_energy": sim_result.control_energy,
-                    "max_overshoot": sim_result.max_overshoot,
-                    "settling_time": sim_result.settling_time,
-                }
-
-                reward = self._compute_reward(metrics, energy_constraint, target_miss_distance)
-
-                next_state = self._params_to_state(new_params, best_result)
-
-                done = step == max_steps_per_episode - 1
-
-                await learner.store_experience(
-                    state=state,
-                    action=action_dict,
-                    reward=reward,
-                    next_state=next_state,
-                    done=done,
-                )
-
-                try:
-                    train_result = await learner.train_step()
-                    if train_result:
-                        logger.debug(
-                            f"Episode {episode}, Step {step}: loss={train_result['loss']:.4f}, epsilon={train_result['epsilon']:.3f}"
-                        )
-                except Exception as e:
-                    logger.debug(f"Training step skipped: {e}")
-
-                episode_reward += reward
-                episode_history.append(
-                    {
-                        "step": step,
-                        "params": new_params.to_dict(),
-                        "metrics": metrics,
-                        "reward": reward,
-                    }
-                )
-
-                state = next_state
-                current_params = new_params
-
-                if reward > best_reward:
-                    best_reward = reward
-                    best_result = {
-                        "parameters": new_params.to_dict(),
-                        "metrics": metrics,
-                        "episode": episode,
-                        "step": step,
-                    }
-
-            all_rewards.append(episode_reward)
-            history.append(
-                {
-                    "episode": episode,
-                    "total_reward": episode_reward,
-                    "best_params": current_params.to_dict(),
-                    "best_metrics": episode_history[-1]["metrics"] if episode_history else None,
-                }
-            )
-
-            logger.info(
-                f"RL Episode {episode}/{episodes}: reward={episode_reward:.4f}, "
-                f"best_reward={best_reward:.4f}, epsilon={learner._epsilon:.3f}"
-            )
-
-        return {
-            "best_parameters": best_result["parameters"]
-            if best_result
-            else initial_params.to_dict(),
-            "best_metrics": best_result["metrics"] if best_result else {},
-            "training_history": history,
-            "learner_stats": learner.get_statistics(),
-        }
-
-    def _params_to_state(
-        self,
-        params: GuidanceParameters,
-        best_result: Optional[Dict[str, Any]],
-    ) -> List[float]:
-        """将参数转换为RL状态"""
-        state = [
-            params.navigation_coefficient,
-            params.damping_ratio,
-            params.control_gain,
-            params.target_position[0]
-            if best_result is None
-            else best_result["metrics"].get("miss_distance", 5.0),
-            params.target_position[1]
-            if best_result is None
-            else best_result["metrics"].get("control_energy", 0.15),
-            0.0,
-        ]
-        return state
-
-    def _apply_rl_action(
-        self,
-        params: GuidanceParameters,
-        action_dict: Dict[str, float],
-        param_bounds: Dict[str, Tuple[float, float]],
-        param_names: List[str],
-    ) -> Tuple[GuidanceParameters, str]:
-        """应用RL动作到参数"""
-        adjustments = {
-            "navigation_coefficient": action_dict.get("param_0", 0.0),
-            "damping_ratio": action_dict.get("param_1", 0.0),
-            "control_gain": action_dict.get("param_2", 0.0),
-        }
-
-        nav_coeff = params.navigation_coefficient + adjustments["navigation_coefficient"] * 0.1
-        nav_coeff = max(
-            param_bounds["navigation_coefficient"][0],
-            min(param_bounds["navigation_coefficient"][1], nav_coeff),
-        )
-
-        damping = params.damping_ratio + adjustments["damping_ratio"] * 0.05
-        damping = max(
-            param_bounds["damping_ratio"][0], min(param_bounds["damping_ratio"][1], damping)
-        )
-
-        control_gain = params.control_gain + adjustments["control_gain"] * 0.1
-        control_gain = max(
-            param_bounds["control_gain"][0], min(param_bounds["control_gain"][1], control_gain)
-        )
-
-        new_params = GuidanceParameters(
-            navigation_coefficient=nav_coeff,
-            damping_ratio=damping,
-            control_gain=control_gain,
-            target_position=params.target_position.copy(),
-            initial_position=params.initial_position.copy(),
-            initial_velocity=params.initial_velocity.copy(),
-        )
-
-        return new_params, f"nav={nav_coeff:.3f}, damp={damping:.3f}"
-
-    def _compute_reward(
-        self,
-        metrics: Dict[str, float],
-        energy_constraint: float,
-        target_miss_distance: float,
-    ) -> float:
-        """计算奖励函数"""
-        miss_distance = metrics["miss_distance"]
-        control_energy = metrics["control_energy"]
-
-        miss_reward = 10.0 / (1.0 + miss_distance)
-        energy_penalty = 5.0 if control_energy > energy_constraint else 0.0
-        target_reward = 20.0 if miss_distance < target_miss_distance else 0.0
-
-        reward = miss_reward - energy_penalty + target_reward
-
-        return reward

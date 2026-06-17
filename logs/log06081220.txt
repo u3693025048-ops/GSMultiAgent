@@ -1,0 +1,930 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-08 12:20:46
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06081220.txt
+================================================================================
+
+2026-06-08 12:20:46 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06081220.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06081220.txt
+2026-06-08 12:20:47 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-08 12:20:49 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-08 12:20:51 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-08 12:20:51 - multi_agent.rl.matlab_rl_optimizer - WARNING - [parse_sim_stdout] hit_rate/SEP at sentinel defaults (0%% / 50m) with no MC evidence in stdout — metrics unreliable for RL
+
+========================================================================
+  GSMultiAgent 启动前检查 (Preflight)
+========================================================================
+  [OK] python_version: Python 3.12.13
+  [OK] imports: 核心依赖 numpy / yaml / torch 可用
+  [OK] config_file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\config.yaml
+  [OK] llm_api_key: LLM 已配置 model=deepseek-v4-pro
+  [OK] ablation_workflow: optimization_workflow / rl_optimization 已启用
+  [OK] layer2_gate_config: layer2_script_gate=true
+  [OK] simulation_engine: engine=matlab  matlab_exe=True  matlab_engine=True  octave=True
+  [OK] knowledge_base: knowledge_base 存在 (4 md, 1 m)
+  [OK] kb_template: monte_carlo_single.m 可用 (338 行)
+  [OK] layer2_gate_code: Layer2 Gate 模块与 force_kb_template 可用
+  [OK] parser: parse_sim_stdout 自检通过（含占位值检测）
+  [OK] guidance_scripts: 已扫描 3 个历史脚本，RL 校验均通过
+  [OK] hermes: Hermes run_agent 可用
+  [OK] cli_agent_gate: cli_agent 已集成 Gate + Preflight
+------------------------------------------------------------------------
+  结论: 全部通过，可以启动主流程。
+========================================================================
+
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-08 12:20:51
+Task: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+运行工况：RUN_CASE='T'; SUB_IDX=4;
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+命中率     >= 92%
+SEP脱靶量  <= 7 m
+PeakNy峰值法向过载 <= 20 g
+PM相位裕度 在 45°~ 70° 范围内
+BW带宽     在 20 ~ 85 rad/s 范围内
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+设计约束
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 模板要求: 以 monte_carlo_single.m 为基础模板
+   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）
+   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数
+   - rl_N_pn对应制导律参数
+   - base=struct(...) 中引用上述 rl_* 变量
+
+2. 不可大变动的部分（接口与变量可改）:
+   - 六自由度弹道模型（df/rk4f 函数）
+   - 驾驶仪设计函数（cg 函数）
+   - 气动力计算（af 函数）
+   - 控制律（cf 函数）
+
+3. 可选修改:
+   - 制导律（gf 函数）：可修改导引律结构，但接口不变
+   - 初始交战参数（base struct 中的目标/导弹参数）
+
+4.MATLAB代码要求：
+- 要符合matlab语法规范
+- 变量定义完整，且整体一致
+- 不出现未定义变量
+- 保持原有接口兼容
+- 对关键参数和新增项加注释
+
+4. 仿真输出格式要求（RL优化器解析依赖）:
+   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm
+   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg
+   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB
+
+注意：
+若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-08 12:22:08 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-08 12:22:08 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-08 12:22:09 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+C:\Users\Lenovo\anaconda3\envs\GS312\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_164604.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_174034.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_184439.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_000409.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_204045.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_013916.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:10 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-08 12:22:11 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-08 12:22:12 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 10/10 documents
+2026-06-08 12:22:12 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 10 docs from 'guidance_output'
+  Indexed 10 report file(s) from ./guidance_output (source_tag=reports)
+2026-06-08 12:22:13 - multi_agent.memory.rag_knowledge_base - INFO - purge_stale_pe_docs: removed 10 non-KB doc(s) from collection.
+  [RAG Purge] Removed 10 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.
+2026-06-08 12:22:13 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-08 12:22:13 - multi_agent.memory.parameter_experience - INFO - Successfully loaded Parameter Experience memory from parameter_experience_memory.json
+2026-06-08 12:22:13 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-08 12:22:13 - langchain_openai.chat_models._client_utils - INFO - langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+
+[Pre-Step] Parsing mission conditions from prompt…
+  [DEBUG] args.prompt = "制导系统设计任务（三层架构系统输入示例）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n运行工况：RUN_CASE='T'; SUB_IDX=4;\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n命中率     >= 92%\nSEP脱靶量  <= 7 m\nPeakNy峰值法向过载 <= 20 g\nPM相位裕度 在 45°~ 70° 范围内\nBW带宽     在 20 ~ 85 rad/s 范围内\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n设计约束\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n1. 模板要求: 以 monte_carlo_single.m 为基础模板\n   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）\n   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数\n   - rl_N_pn对应制导律参数\n   - base=struct(...) 中引用上述 rl_* 变量\n\n2. 不可大变动的部分（接口与变量可改）:\n   - 六自由度弹道模型（df/rk4f 函数）\n   - 驾驶仪设计函数（cg 函数）\n   - 气动力计算（af 函数）\n   - 控制律（cf 函数）\n\n3. 可选修改:\n   - 制导律（gf 函数）：可修改导引律结构，但接口不变\n   - 初始交战参数（base struct 中的目标/导弹参数）\n\n4.MATLAB代码要求：\n- 要符合matlab语法规范\n- 变量定义完整，且整体一致\n- 不出现未定义变量\n- 保持原有接口兼容\n- 对关键参数和新增项加注释\n\n4. 仿真输出格式要求（RL优化器解析依赖）:\n   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm\n   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg\n   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB\n\n注意：\n若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明"
+  [DEBUG] parse_mission_conditions → {'T': [4]}
+  Category T (目标机动 (Target Maneuver)): ['4']
+  Initializing Hermes persistent memory...
+2026-06-08 12:22:13 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 12 entries from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+  Loaded 12 long-term memories from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+2026-06-08 12:22:13 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:508 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (14 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 14 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:15 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:15.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+2026-06-08 12:22:16 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-08 12:22:16 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] rag_agent → tools: ['rag_query', 'rag_retrieve', 'rag_expand']
+2026-06-08 12:22:16 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] matlab_agent → tools: ['generate_matlab', 'syntax_check_matlab', 'verify_guidance_compat']
+2026-06-08 12:22:16 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] sim_agent → tools: ['run_simulation', 'syntax_check_matlab']
+2026-06-08 12:22:16 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] analysis_agent → tools: ['judge_requirements', 'parameter_experience_best', 'parameter_experience_search']
+2026-06-08 12:22:16 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] memory_agent → tools: ['agent_memory_remember', 'agent_memory_recall', 'agent_memory_list', 'agent_memory_forget']
+2026-06-08 12:22:16 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] Specialized agents registered: ['rag_agent', 'matlab_agent', 'sim_agent', 'analysis_agent', 'memory_agent']
+2026-06-08 12:22:16 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:508 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (15 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 15 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-08 12:22:16 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:16.
+2026-06-08 12:22:16 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:16 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:16.
+2026-06-08 12:22:16 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:16.
+2026-06-08 12:22:16 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:16 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:16.
+2026-06-08 12:22:17 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:17.
+2026-06-08 12:22:17 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:17 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:17.
+2026-06-08 12:22:17 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:17.
+2026-06-08 12:22:17 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-08 12:22:17 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 12:23:17.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+2026-06-08 12:22:17 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+  Hermes initialized with tools (task_prompt auto-injected).
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-08 12:22:17 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-08 12:22:17 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-08 12:22:17 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-08 12:22:17 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-08 12:22:17 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-08 12:22:17 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-08 12:22:17 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 100→7m | HitRate 50→92% | phases=3 x 20 ep
+2026-06-08 12:22:17 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+  [Startup] Loaded previous RL best params from PE (9 values, fitness=0.7307)
+
+  [Miss Hint] Detected user requirement: miss distance ≤ 7.00 m
+  Note: only the reflection agent's evaluation of ALL stated
+        requirements (PM/GM/hit rate/miss/etc.) will trigger early exit.
+
+========================================
+Iteration 1/3
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+2026-06-08 12:22:17 - multi_agent.integration.task_planner - INFO - [Planner] Analyzing task with LLM: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━...
+2026-06-08 12:22:18 - multi_agent.integration.task_planner - INFO - [Planner] expert_design_path.md read directly from knowledge_base\expert design path.md (80 chars, full document)
+2026-06-08 12:22:18 - multi_agent.integration.task_planner - INFO - [Planner] monte_mean_2.md read directly from knowledge_base\monte mean results.md (1982 chars)
+2026-06-08 12:22:18 - multi_agent.integration.task_planner - INFO - [Planner] Extracted gf/cg source from monte_carlo_single.m (2391 chars) for structural analysis
+2026-06-08 12:22:18 - multi_agent.integration.task_planner - INFO - [Planner] Using Hermes agent with tools for planning analysis...
+2026-06-08 12:22:18 - agent.conversation_loop - INFO - conversation turn: session=20260608_122217_56450c model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]  任务描述： 制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━...'
+💬 Starting conversation: '[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]
+
+任务描述：
+制导系统设计任务（三层架构系...'
+2026-06-08 12:22:19 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-7 (_call):43672 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+Starting the analysis. Steps 1-3 are independent RAG retrievals — running them in parallel.2026-06-08 12:22:24 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-7 (_call):43672 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:22:24 - agent.conversation_loop - INFO - API call #1: model=deepseek-v4-pro provider=custom in=6641 out=387 total=7028 latency=4.9s cache=6528/6641 (98%)
+  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "top_k": 5, "detail_level": "snippet"}
+  [Tool →] call_00_aXfacd7w0DYQL6gLmJPQ2255
+2026-06-08 12:22:25 - agent.tool_executor - INFO - tool rag_retrieve completed (0.34s, 4252 chars)
+  [Tool ✓] call_00_aXfacd7w0DYQL6gLmJPQ2255
+  ✅ Tool 1 completed in 0.34s - {"status": "success", "query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "detail_level": "snippet...
+  📞 Tool 2: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "top_k": 5, "detail_level": "snipp...
+  [Tool →] call_01_1nlNpJA75ib6X7zlB1EU5546
+2026-06-08 12:22:27 - agent.tool_executor - INFO - tool rag_retrieve completed (0.23s, 4154 chars)
+  [Tool ✓] call_01_1nlNpJA75ib6X7zlB1EU5546
+  ✅ Tool 2 completed in 0.23s - {"status": "success", "query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "detail_level...
+  📞 Tool 3: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "top_k": 5, "detail_leve...
+  [Tool →] call_02_re8YIhaqyW67ul2CK9P94957
+2026-06-08 12:22:28 - agent.tool_executor - INFO - tool rag_retrieve completed (0.12s, 4301 chars)
+  [Tool ✓] call_02_re8YIhaqyW67ul2CK9P94957
+  ✅ Tool 3 completed in 0.12s - {"status": "success", "query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "de...
+2026-06-08 12:22:28 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-11 (_call):53924 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+Good — Steps 1-3 retrieved. Now I need full content from `conditions.md` (for T4 mapping) and `monte mean results.md` (for the full T-category results table). Expanding both:2026-06-08 12:22:35 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-11 (_call):53924 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:22:35 - agent.conversation_loop - INFO - API call #2: model=deepseek-v4-pro provider=custom in=11738 out=441 total=12179 latency=7.6s cache=6528/11738 (56%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\conditions.md", "max_chars": 6000}
+  [Tool →] call_00_e8Sh9VXbqGDYDWuzKSos2981
+2026-06-08 12:22:35 - agent.tool_executor - INFO - tool rag_expand completed (0.19s, 2311 chars)
+  [Tool ✓] call_00_e8Sh9VXbqGDYDWuzKSos2981
+  ✅ Tool 1 completed in 0.19s - {"status": "success", "doc_id": "file:knowledge_base\\conditions.md", "metadata": {"filename": "cond...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\monte mean results.md", "max_chars": 6000}
+  [Tool →] call_01_gi3nmf4Rd0UqEmEV4cLq5501
+2026-06-08 12:22:37 - agent.tool_executor - INFO - tool rag_expand completed (0.03s, 2365 chars)
+  [Tool ✓] call_01_gi3nmf4Rd0UqEmEV4cLq5501
+  ✅ Tool 2 completed in 0.03s - {"status": "success", "doc_id": "file:knowledge_base\\monte mean results.md", "metadata": {"filename...
+2026-06-08 12:22:37 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-12 (_call):20512 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+Steps 1-3 data collected. Now **Step 4** — retrieve parameter experience best records:2026-06-08 12:22:49 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-12 (_call):20512 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:22:49 - agent.conversation_loop - INFO - API call #3: model=deepseek-v4-pro provider=custom in=14494 out=938 total=15432 latency=12.1s cache=12160/14494 (84%)
+  📞 Tool 1: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"run_case": "T", "sub_idx": 4, "condition": "T4", "category": "目标机动", "sub_conditi...
+  [Tool →] call_00_1Xh0tfe8diqu2f5edtoF1999
+2026-06-08 12:22:49 - agent.tool_executor - INFO - tool parameter_experience_best completed (0.01s, 4539 chars)
+  [Tool ✓] call_00_1Xh0tfe8diqu2f5edtoF1999
+  ✅ Tool 1 completed in 0.01s - {"status": "success", "task_context": {"run_case": "T", "sub_idx": 4, "condition": "T4", "category":...
+2026-06-08 12:22:49 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-13 (_call):32932 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+All data collected. Now performing **Steps 5-6** — the critical comparison.
+
+---
+
+## Step 5: 逐项比对
+
+### Source A — RAG 历史指标（默认模板参数，monte mean results.md，T4）
+
+| 指标 | 实际值 | 要求 | 判定 |
+|------|--------|------|------|
+| 命中率 | **94.0%** | ≥92% | ✅ 达标 |
+| SEP | **4.22 m** | ≤7 m | ✅ 达标 |
+| PeakNy | **51.53 g** | ≤20 g | ❌ 未达标 |
+| PM | **77.1°** | [45°, 70°] | ❌ 未达标 (超上限) |
+| BW | **6.31 rad/s** | [20, 85] | ❌ 未达标 (低下限) |
+
+**→ RAG默认参数: 3/5 未达标**
+
+---
+
+### Source B — PE 最优记录 objectives
+
+| PE记录 | 命中率 | SEP | PeakNy | PM | BW | 全部达标? |
+|--------|--------|-----|--------|-----|-----|-----------|
+| `1e42f7` (dp默认) | 48.15% ❌ | 5.56m ✅ | 6.55g ✅ | 57.81° ✅ | 33.75 ✅ | **❌ 命中率** |
+| `57c2ec` / `58a97a` | 39.03% ❌ | 8.29m ❌ | 7.28g ✅ | 55.56° ✅ | 39.25 ✅ | **❌ 命中率+SEP** |
+| `b54fed` / `bac58d` | 100% ✅ | 4.99m ✅ | 22.43g ❌ | 87.3° ❌ | 2.9 ❌ | **❌ PeakNy+PM+BW** |
+
+**→ 全部PE记录都有至少1项未达标，无全通过记录**
+
+---
+
+## Step 6: Mode 决策
+
+| 规则 | 匹配? |
+|------|-------|
+| PE中存在全达标记录 → REUSE_HISTORY | ❌ 不存在 |
+| PE全不达标但RAG全达标 → REUSE_HISTORY | ❌ RAG也有3项不达标 |
+| **两个数据源均有指标未达标 → TUNE_PARAMS** | ✅ **命中** |
+| 需修改制导律算法结构 → MODIFY_LAW | ❌ 尚不需（先尝试调参） |
+
+**决策: TUNE_PARAMS**（上轮RL已产出优化参数待注入验证）
+
+---
+
+## Step 7: 输出 JSON
+
+```json
+{
+  "should_split": false,
+  "strategy": "single",
+  "subagent_count": 1,
+  "subtasks": [
+    "T4高频大幅度机动工况调参优化：注入RL最优参数(w1=46.25,zeta1=0.35,tao1=0.086,w2=35.78,zeta2=1.2,tao2=0.105,w3=39.38,zeta3=1.2,N_pn=4.62)，运行monte_carlo_single.m仿真验证，目标：命中率≥92%、SEP≤7m、PeakNy≤20g、PM∈[45,70]°、BW∈[20,85]rad/s"
+  ],
+  "subtask_conditions": [
+    "RUN_CASE='T';SUB_IDX=4;"
+  ],
+  "reason": "逐项比对结论：\n"
+    + "【RAG默认参数-T4】命中率94%✓ / SEP4.22m✓ / PeakNy51.53g✗(超限2.6倍) / PM77.1°✗(超上限) / BW6.31✗(远低下限) → 3/5未达标\n"
+    + "【PE最优记录】3组有效记录均存在未达标指标：\n"
+    + "  - 默认参数记录(hit_rate仅48.15%→命中率不达标)\n"
+    + "  - 中等优化记录(hit_rate=39%/SEP=8.29m→命中率+SEP双不达标)\n"
+    + "  - 激进优化记录(hit_rate=100%/SEP=4.99m达标，但PeakNy=22.43g/PM=87.3°/BW=2.9→三指标超标)\n"
+    + "→ 无PE记录全指标达标，RAG默认参数亦不达标，满足'两个数据源均有未达标指标'规则 → mode=TUNE_PARAMS。\n"
+    + "上轮RL已产出优化参数(w1↑/zeta1↓/tao1↓/N_pn↑)，需注入模板试算验证。若调参仍不达标，后续按专家路径规则考虑MODIFY_LAW。",
+  "mode": "TUNE_PARAMS",
+  "mission_analysis": "工况T4(SUB_IDX=4)为'高频大幅度机动'——目标z向机动幅度120m/s、y向横移60m/s、机动频率1.2rad/s，属T系列中最严苛的子工况。默认参数下命中率94%勉强度过，但峰值过载飙至51.53g(超限157%)、带宽仅6.31rad/s(远低于20下限)、相位裕度77.1°偏高，表明驾驶仪响应过慢导致过载堆积。RL优化方向(w1↑提升带宽、zeta1↓加速响应、N_pn↑增强导引)有望压低过载峰值并提升带宽。",
+  "mission_conditions": {
+    "T": [4]
+  }
+}
+```2026-06-08 12:23:33 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-13 (_call):32932 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:23:33 - agent.conversation_loop - INFO - API call #4: model=deepseek-v4-pro provider=custom in=17465 out=3308 total=20773 latency=44.5s cache=14464/17465 (83%)
+🎉 Conversation completed after 4 OpenAI-compatible API call(s)
+2026-06-08 12:23:33 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=4/20 budget=4/20 tool_turns=3 last_msg_role=assistant response_len=2383 session=20260608_122217_56450c
+2026-06-08 12:23:33 - multi_agent.integration.task_planner - WARNING - [Planner] Could not extract JSON from LLM response (first 200 chars): 'All data collected. Now performing **Steps 5-6** — the critical comparison.\n\n---\n\n## Step 5: 逐项比对\n\n### Source A — RAG 历史指标（默认模板参数，monte mean results.md，T4）\n\n| 指标 | 实际值 | 要求 | 判定 |\n|------|--------|---' — using default plan.
+  Plan   : single | mode=REUSE_HISTORY | subtasks=1
+  Reason : unparseable LLM response
+  Context (5135 chars total, preview):
+[知识库检索结果]
+  [score=0.62, src=monte_carlo_single.m]
+function monte_carlo_single()
+% 单文件蒙特卡洛仿真 | 修改 RUN_CASE 选择工况
+% 'T'目标机动(T0-T3)  'G'交战几何(G0-G4)  'AP'驾驶仪(AP0-AP4)  'R'综合鲁棒(R0-R2)
+clc; close all; rng(42);
+RUN_CASE='ALL'; SUB_IDX=0; N_MC=100; KILL_R=10;
+% RUN_CASE: 'T'|'G'|'AP'|'R' 单类别, 'ALL' 全部类别
+% SUB_IDX:  0=全部子工况, 1=仅第1子工况, 2=仅第2子工况, ...
+
+%% ── RL_PARAMS_BEGIN (auto-patched by RL optimizer, do not edit manually) ──
+rl_w1          = 40;
+rl_zeta1       = 0.75;
+rl_tao1        = 0.20;
+rl_w2          = 35;
+rl_zeta2       = 0.75;
+rl_tao2        = 0.20;
+rl_w3          = 40;
+rl_zeta3       = 0.70;
+r
+2026-06-08 12:23:33 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-08 12:23:33 - agent.conversation_loop - INFO - conversation turn: session=20260608_122217_56450c model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='从以下提示词中提取制导系统的初始参数，返回JSON格式。 任务：制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━━━━━━━━━━━━━━━...'
+💬 Starting conversation: '从以下提示词中提取制导系统的初始参数，返回JSON格式。
+任务：制导系统设计任务（三层架构系统输入示例）
+━━━━━━━...'
+2026-06-08 12:23:33 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-14 (_call):21220 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:23:47 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-14 (_call):21220 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:23:47 - agent.conversation_loop - INFO - API call #5: model=deepseek-v4-pro provider=custom in=6059 out=973 total=7032 latency=13.8s cache=6016/6059 (99%)
+  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "monte_carlo_single.m RL_PARAMS_BEGIN 默认参数 rl_w1 rl_zeta1 rl_tao1 rl_w2 rl_w3 rl_N_pn 初始值"...
+  [Tool →] call_00_8ZZW1UFtHpeFwmSq5Bsi8227
+2026-06-08 12:23:47 - agent.tool_executor - INFO - tool rag_retrieve completed (0.37s, 7097 chars)
+  [Tool ✓] call_00_8ZZW1UFtHpeFwmSq5Bsi8227
+  ✅ Tool 1 completed in 0.37s - {"status": "success", "query": "monte_carlo_single.m RL_PARAMS_BEGIN 默认参数 rl_w1 rl_zeta1 rl_tao1 rl_...
+2026-06-08 12:23:47 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-16 (_call):36240 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+根据用户提供的提示词及知识库检索结果，提取到以下初始参数 JSON：
+
+```json
+{
+  "mission_conditions": "RUN_CASE='T'; SUB_IDX=4;",
+  "run_case": "T",
+  "sub_idx": 4,
+  "nmc": 100,
+  "kill_radius_m": 10,
+
+  "autopilot_params": {
+    "w1": 40,
+    "zeta1": 0.75,
+    "tao1": 0.20,
+    "w2": 35,
+    "zeta2": 0.75,
+    "tao2": 0.20,
+    "w3": 40,
+    "zeta3": 0.70,
+    "gama_max_deg": 45
+  },
+
+  "guidance_params": {
+    "N_pn": 4
+  },
+
+  "performance_targets": {
+    "hit_rate_pct": 92,
+    "SEP_max_m": 7,
+    "PeakNy_max_g": 20,
+    "PM_deg_min": 45,
+    "PM_deg_max": 70,
+    "BW_rads_min": 20,
+    "BW_rads_max": 85
+  }
+}
+```
+
+**数据来源说明：**
+
+| 参数 | 值 | 来源 |
+|------|-----|------|
+| `w1=40, zeta1=0.75, tao1=0.20` | ✅ | **提示词中明确可见**（RL_PARAMS_BEGIN 块未截断部分） |
+| `w2=35, zeta2=0.75, tao2=0.20` | 🔍 | 知识库 `monte_carlo_single.m` 模板默认值（提示词被截断） |
+| `w3=40, zeta3=0.70` | 🔍 | 同上 |
+| `N_pn=4` | 🔍 | 同上 |
+| `gama_max_deg=45` | 🔍 | 同上 |
+| 性能指标 | — | 提示词明确列出 |
+| 运行工况 | `T/4` | 提示词明确给出 |
+
+提示词中的 `RL_PARAMS_BEGIN` 块在 `rl_w2` 处被截断（`rl_w2       ` 后无值），其余 7 个参数（`w2~gama_max_deg`）均从知识库模板默认值补全。2026-06-08 12:24:05 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-16 (_call):36240 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:24:05 - agent.conversation_loop - INFO - API call #6: model=deepseek-v4-pro provider=custom in=10528 out=1312 total=11840 latency=17.7s cache=6912/10528 (66%)
+🎉 Conversation completed after 2 OpenAI-compatible API call(s)
+2026-06-08 12:24:05 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=2/20 budget=2/20 tool_turns=1 last_msg_role=assistant response_len=1045 session=20260608_122217_56450c
+  LLM param extraction also failed: Expecting value: line 1 column 1 (char 0)
+  [DEBUG] mission_conditions before build = {'T': [4]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=4;
+
+[Step 2.5] Hermes Content Generation (mode=REUSE_HISTORY)...
+  [generate_matlab] Injected 1 analysis context block(s)
+  Running Hermes agent [strategy=single, subtasks=1]...
+2026-06-08 12:24:06 - agent.conversation_loop - INFO - conversation turn: session=20260608_122217_56450c model=deepseek-v4-pro provider=custom platform=unknown history=11 msg='System: You are a missile guidance system orchestrator. Your PRIMARY tool is:   ...'
+💬 Starting conversation: 'System: You are a missile guidance system orchestrator. Your...'
+2026-06-08 12:24:06 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-17 (_call):39684 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+分析完毕。当前模式 **REUSE_HISTORY**，持久记忆中已有大量 T4 历史迭代数据。按照 REUSE_HISTORY 流程执行。
+
+**Step 1+2 并行** — rag_query 获取参数范围 + parameter_experience_best 获取历史最优参数：2026-06-08 12:24:22 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-17 (_call):39684 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:24:22 - agent.conversation_loop - INFO - API call #7: model=deepseek-v4-pro provider=custom in=31165 out=1066 total=32231 latency=15.6s cache=20736/31165 (67%)
+  📞 Tool 1: rag_query(['query', 'max_hops', 'top_k']) - {"query": "T4 高频大幅度机动 目标机动 驾驶仪参数范围 w1 zeta1 tao1 w2 zeta2 w3 zeta3 N_pn 合理范围", "max_hops": 2, "top_k...
+  [Tool →] call_00_DqA6nLPCQnXDQMO6emTr4858
+2026-06-08 12:24:26 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 4 sub-queries: ['T4 高频大幅度机动目标运动特性', '驾驶仪参数 w1 zeta1 tao1 w2 zeta2 w3 zeta3 定义与典型值范围', '比例导引系数 N_pn 合理取值范围', '高频机动目标下驾驶仪参数设计准则']
+2026-06-08 12:24:30 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 6 candidates → 6 kept (threshold=0.30)
+2026-06-08 12:24:34 - agent.tool_executor - INFO - tool rag_query completed (11.78s, 5473 chars)
+  [Tool ✓] call_00_DqA6nLPCQnXDQMO6emTr4858
+  ✅ Tool 1 completed in 11.78s - {"status": "success", "query": "T4 高频大幅度机动 目标机动 驾驶仪参数范围 w1 zeta1 tao1 w2 zeta2 w3 zeta3 N_pn 合理范围", ...
+  📞 Tool 2: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"task": "guidance_rl_optimization", "RUN_CASE": "T", "SUB_IDX": 4, "condition": "T...
+  [Tool →] call_01_8TPqUQuI9y3Daff1aEdb5678
+2026-06-08 12:24:35 - agent.tool_executor - INFO - tool parameter_experience_best completed (0.00s, 2713 chars)
+  [Tool ✓] call_01_8TPqUQuI9y3Daff1aEdb5678
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "task_context": {"task": "guidance_rl_optimization", "RUN_CASE": "T", "SUB_IDX...
+2026-06-08 12:24:35 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-19 (_call):45040 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+分析PE最佳记录：#1（fitness=0.7307，高可信）参数与迭代上下文RL最优参数一致。但PE记录的objectives中 peak_ny=24.53g 超20g限，而持久记忆iter6显示同样参数下 peak_ny均值17.23g 且 satisfied=true。需实际仿真验证。
+
+**Step 3** — 直接运行仿真（REUSE_HISTORY模式，不传script_path，工具自动选择最佳历史脚本）：2026-06-08 12:24:53 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-19 (_call):45040 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:24:53 - agent.conversation_loop - INFO - API call #8: model=deepseek-v4-pro provider=custom in=35626 out=1087 total=36713 latency=18.3s cache=31104/35626 (87%)
+  📞 Tool 1: run_simulation(['dp_params', 'mission_conditions', 'nmc']) - {"dp_params": {"w1": 46.254403591156006, "zeta1": 0.35, "tao1": 0.08571106493473052, "w2": 35.784554...
+  [Tool →] call_00_UqMpcfjbjpXqgx28YOpJ6059
+2026-06-08 12:24:53 - multi_agent.tools.simulation_tool - INFO - [run_simulation] No script_path given; using latest Hermes-generated script: guidance_simulation_T4_MODIFY_LAW_APN_v2_1780891862.m
+2026-06-08 12:25:55 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=2338 chars
+2026-06-08 12:25:56 - agent.tool_executor - INFO - tool run_simulation completed (62.60s, 5267 chars)
+  [Tool ✓] call_00_UqMpcfjbjpXqgx28YOpJ6059
+  ✅ Tool 1 completed in 62.60s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_simulation_T4_MODIFY_LAW_AP...
+2026-06-08 12:25:56 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-20 (_call):36828 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+❌ **灾难性错误** — REUSE_HISTORY自动选择了已损坏的 `T4_MODIFY_LAW_APN_v2` 脚本（持久记忆已记录：APN修改导致制导完全失效，20/20 MISS，SEP≈24km）。必须手动指定正确的历史成功脚本。
+
+重新运行，指定 iter6 成功的 TUNE_PARAMS 脚本：2026-06-08 12:26:04 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-20 (_call):36828 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:26:04 - agent.conversation_loop - INFO - API call #9: model=deepseek-v4-pro provider=custom in=40723 out=544 total=41267 latency=8.7s cache=35584/40723 (87%)
+  📞 Tool 1: run_simulation(['script_path', 'mission_conditions', 'nmc']) - {"script_path": "guidance_output/scripts/guidance_simulation_T4_tune_iter6_1780831704.m", "mission_c...
+  [Tool →] call_00_SX4hNz0EkJ6HK81ziWXs9655
+2026-06-08 12:26:04 - agent.tool_executor - WARNING - Tool run_simulation returned error (0.00s): {"status": "error", "message": "Script not found: guidance_output/scripts/guidance_simulation_T4_tune_iter6_1780831704.m"}
+  [Tool ✓] call_00_SX4hNz0EkJ6HK81ziWXs9655
+  ✅ Tool 1 completed in 0.00s - {"status": "error", "message": "Script not found: guidance_output/scripts/guidance_simulation_T4_tun...
+2026-06-08 12:26:04 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-21 (_call):25828 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+iter6脚本不存在。尝试 iter7（持久记忆记录：hit=100%, SEP=4.42, PeakNy=19.70, PM=67.5, BW=84.5）：2026-06-08 12:26:08 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-21 (_call):25828 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:26:08 - agent.conversation_loop - INFO - API call #10: model=deepseek-v4-pro provider=custom in=41315 out=169 total=41484 latency=3.5s cache=40704/41315 (99%)
+  📞 Tool 1: run_simulation(['mission_conditions', 'nmc', 'script_path']) - {"mission_conditions": "RUN_CASE='T';SUB_IDX=4;", "nmc": 20, "script_path": "guidance_output/scripts...
+  [Tool →] call_00_IdZhWUXHcObBNBtwj4925940
+2026-06-08 12:26:08 - agent.tool_executor - WARNING - Tool run_simulation returned error (0.01s): {"status": "error", "message": "Script not found: guidance_output/scripts/guidance_simulation_T4_tune_iter7_1780832086.m"}
+  [Tool ✓] call_00_IdZhWUXHcObBNBtwj4925940
+  ✅ Tool 1 completed in 0.01s - {"status": "error", "message": "Script not found: guidance_output/scripts/guidance_simulation_T4_tun...
+2026-06-08 12:26:08 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-22 (_call):36284 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+历史脚本均不存在。检查可用脚本和KB模板：2026-06-08 12:26:11 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-22 (_call):36284 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:26:11 - agent.conversation_loop - INFO - API call #11: model=deepseek-v4-pro provider=custom in=41532 out=152 total=41684 latency=2.8s cache=41472/41532 (100%)
+2026-06-08 12:26:11 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-23 (_call):22732 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+使用KB模板 `monte_carlo_single.m`，直接注入RL最优参数运行：2026-06-08 12:26:16 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-23 (_call):22732 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:26:16 - agent.conversation_loop - INFO - API call #12: model=deepseek-v4-pro provider=custom in=41783 out=325 total=42108 latency=4.9s cache=41600/41783 (100%)
+  📞 Tool 1: run_simulation(['dp_params', 'mission_conditions', 'nmc', 'script_path']) - {"dp_params": {"N_pn": 4.619368202984333, "tao1": 0.08571106493473052, "tao2": 0.10527681410312652, ...
+  [Tool →] call_00_EvURCyiiQr4PA21L50sI8822
+2026-06-08 12:26:16 - multi_agent.tools.simulation_tool - INFO - [run_simulation] No script_path given; using latest Hermes-generated script: guidance_simulation_T4_MODIFY_LAW_APN_v2_1780891862.m
+2026-06-08 12:27:18 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=2338 chars
+2026-06-08 12:27:18 - agent.tool_executor - INFO - tool run_simulation completed (62.43s, 5267 chars)
+  [Tool ✓] call_00_EvURCyiiQr4PA21L50sI8822
+  ✅ Tool 1 completed in 62.43s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_simulation_T4_MODIFY_LAW_AP...
+2026-06-08 12:27:19 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-24 (_call):53236 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+🚨 **关键问题**：系统强制自动选择已损坏的 `T4_MODIFY_LAW_APN_v2` 脚本（gf()函数破坏性修改→制导完全失效），无法绕过。持久记忆显示同样RL最优参数在iter6纯PN模板下5/5全达标。必须通过 `generate_matlab` 生成**干净的纯PN模板**来绕过损坏脚本。2026-06-08 12:27:38 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-24 (_call):53236 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:27:38 - agent.conversation_loop - INFO - API call #13: model=deepseek-v4-pro provider=custom in=46135 out=1151 total=47286 latency=20.1s cache=41984/46135 (91%)
+  📞 Tool 1: generate_matlab(['script_name', 'mode', 'autopilot_params', 'mission_conditions', 'task_description', 'nmc']) - {"script_name": "guidance_simulation_T4_reuse_clean", "mode": "TUNE_PARAMS", "autopilot_params": {"N...
+  [Tool →] call_00_zG8D9Nwx1mOWhW76oiJV2157
+2026-06-08 12:27:39 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Using local KB template: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\knowledge_base\matlab\guidance\monte_carlo_single.m
+2026-06-08 12:27:39 - multi_agent.tools.simulation_tool - INFO - [MATLAB] TUNE_PARAMS: prefer_kb_template — using KB template (src=local:monte_carlo_single.m)
+2026-06-08 12:27:39 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated 6108-char code analysis of retrieved model for LLM context.
+2026-06-08 12:27:39 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Injected 6521-char context into task_description (analysis=213, retrieved_code=6108).
+2026-06-08 12:27:39 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Renamed function declaration 'monte_carlo_single' → 'guidance_simulation_T4_reuse_clean_1780892859' to match filename
+2026-06-08 12:27:39 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Stripped 14 annotation line(s) from script → sidecar: guidance_simulation_T4_reuse_clean_1780892859_interface_check.txt
+2026-06-08 12:27:39 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated script → guidance_output\scripts\guidance_simulation_T4_reuse_clean_1780892859.m  (source: local:monte_carlo_single.m)
+2026-06-08 12:27:39 - agent.tool_executor - INFO - tool generate_matlab completed (0.05s, 318 chars)
+  [Tool ✓] call_00_zG8D9Nwx1mOWhW76oiJV2157
+  ✅ Tool 1 completed in 0.05s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_simulation_T4_reuse_clean_1...
+2026-06-08 12:27:39 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-25 (_call):44128 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+✅ 干净模板生成成功（`rewrite_applied=false` → 纯PN模板，仅RL_PARAMS注入）。语法检查：2026-06-08 12:27:43 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-25 (_call):44128 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:27:43 - agent.conversation_loop - INFO - API call #14: model=deepseek-v4-pro provider=custom in=47399 out=158 total=47557 latency=4.1s cache=46080/47399 (97%)
+  📞 Tool 1: syntax_check_matlab(['script_path']) - {"script_path": "guidance_output\\scripts\\guidance_simulation_T4_reuse_clean_1780892859.m"}
+  [Tool →] call_00_4adlehji2wIxgVx4KjFI1163
+2026-06-08 12:27:44 - agent.tool_executor - INFO - tool syntax_check_matlab completed (0.73s, 201 chars)
+  [Tool ✓] call_00_4adlehji2wIxgVx4KjFI1163
+  ✅ Tool 1 completed in 0.73s - {"status": "success", "valid": true, "issues": ["脚本检查通过，无问题"], "fixed_path": "guidance_output\\scrip...
+2026-06-08 12:27:45 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-26 (_call):30164 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+语法通过。运行仿真：2026-06-08 12:27:47 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-26 (_call):30164 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:27:47 - agent.conversation_loop - INFO - API call #15: model=deepseek-v4-pro provider=custom in=47636 out=130 total=47766 latency=3.3s cache=47488/47636 (100%)
+  📞 Tool 1: run_simulation(['script_path', 'mission_conditions', 'nmc']) - {"script_path": "guidance_output\\scripts\\guidance_simulation_T4_reuse_clean_1780892859.m", "missio...
+  [Tool →] call_00_GPFNigo7szERXV0S7yKp2193
+2026-06-08 12:30:11 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=2315 chars
+2026-06-08 12:30:11 - agent.tool_executor - INFO - tool run_simulation completed (143.25s, 5207 chars)
+  [Tool ✓] call_00_GPFNigo7szERXV0S7yKp2193
+  ✅ Tool 1 completed in 143.25s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_simulation_T4_reuse_clean_1...
+2026-06-08 12:30:11 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-27 (_call):15004 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+🎯 **仿真成功！** 指标显著恢复。提取指标并调用 judge_requirements：2026-06-08 12:30:30 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-27 (_call):15004 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:30:30 - agent.conversation_loop - INFO - API call #16: model=deepseek-v4-pro provider=custom in=51776 out=1295 total=53071 latency=18.9s cache=47616/51776 (92%)
+  📞 Tool 1: judge_requirements(['metrics', 'script_path', 'task_prompt']) - {"metrics": {"hit_rate_pct": 100.0, "SEP_m": 4.66, "PeakNy_g": 17.23, "PeakNy_max_g": 27.37, "PM_deg...
+  [Tool →] call_00_s7IZ3Ex4vO8Yok0PgbcP0619
+2026-06-08 12:30:30 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+2026-06-08 12:30:48 - multi_agent.tools.judge_requirements_tool - INFO - [JudgeRequirements] satisfied=False | 命中率 100.0% >= 要求 92.0% [OK]; SEP 4.66m <= 要求 7.00m [OK]; PeakNy(平均值) 17.23g <= 要求 20.00g [OK] (⚠️ 缺少 peak_ny_max，建议检查 MC
+2026-06-08 12:30:48 - agent.tool_executor - INFO - tool judge_requirements completed (18.52s, 649 chars)
+  [Tool ✓] call_00_s7IZ3Ex4vO8Yok0PgbcP0619
+  ✅ Tool 1 completed in 18.52s - {"satisfied": false, "reason": "命中率 100.0% >= 要求 92.0% [OK]; SEP 4.66m <= 要求 7.00m [OK]; PeakNy(平均值)...
+2026-06-08 12:30:48 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-29 (_call):49308 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+结果已出。保存本轮结果到持久记忆，然后输出最终摘要。2026-06-08 12:30:57 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-29 (_call):49308 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:30:57 - agent.conversation_loop - INFO - API call #17: model=deepseek-v4-pro provider=custom in=53427 out=542 total=53969 latency=8.7s cache=51712/53427 (97%)
+  📞 Tool 1: agent_memory_remember(['key', 'value']) - {"key": "T4_REUSE_HISTORY_1780892859_clean_template", "value": "{\"mode\":\"REUSE_HISTORY(TUNE_PARAM...
+  [Tool →] call_00_Uqd7zr0cyXxpI9TVBbrS8007
+2026-06-08 12:30:57 - agent.tool_executor - INFO - tool agent_memory_remember completed (0.01s, 1109 chars)
+  [Tool ✓] call_00_Uqd7zr0cyXxpI9TVBbrS8007
+  ✅ Tool 1 completed in 0.01s - {"status": "success", "message": "Remembered 'T4_REUSE_HISTORY_1780892859_clean_template' = '{\"mode...
+2026-06-08 12:30:57 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-30 (_call):16532 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+---
+
+## 📊 最终摘要 — T4 REUSE_HISTORY 仿真结果
+
+| 指标 | 实测值 | 要求 | 判定 |
+|------|--------|------|------|
+| **命中率** | **100.0%** | ≥92% | ✅ 达标 |
+| **SEP脱靶量** | **4.66 m** | ≤7 m | ✅ 达标 |
+| **PeakNy (均值)** | **17.23±5.43 g** | ≤20 g | ✅ 达标 |
+| **PeakNy (最大)** | **27.37 g** (第14轮) | ≤20 g | ❌ **超标** |
+| **PM相位裕度** | **51.4°** | [45°, 70°] | ✅ 达标 |
+| **BW带宽** | **80.04 rad/s** | [20, 85] | ✅ 达标 |
+
+---
+
+### 🔍 关键分析
+
+1. **5/5表面达标但PeakNy_max致命超标**：均值17.23g在限内，但第14轮峰值27.37g超出20g限37%。峰值过载的离散度(σ=5.43g)过大，说明当前参数组合在高频大机动工况下的鲁棒性不足。
+
+2. **对比持久记忆历史**：
+   - iter6（同参数）：hit=100%/SEP=4.66/PeakNy=17.23/PM=51.4/BW=80.04 — **结果完全复现**
+   - iter7（调整后）：hit=100%/SEP=4.42/PeakNy=19.70/PM=67.5/BW=84.5 — 边界更安全但PeakNy_max=40.54g更差
+
+3. **⚠️ PM/BW零方差警告**：PM=51.4±0.0°、BW=80.04±0.00 rad/s（20轮完全一致），强烈怀疑MC随机化未正确生效，与iter1/iter5/iter6/iter7持久记忆记录一致。
+
+4. **绕过了APN v2损坏脚本**：系统自动选择的 `T4_MODIFY_LAW_APN_v2` 脚本gf()函数破坏性修改导致0%命中率/SEP≈24km。通过 `generate_matlab(mode=TUNE_PARAMS)` 生成干净纯PN模板后恢复正常。
+
+---
+
+### 🎯 状态：**satisfied = FALSE**
+
+**Layer3路径**：→ **RL参数优化**  
+**优化方向**（judge_requirements建议）：
+- ↓ w1（从46.25降低）→ 减小驾驶仪响应速度，压低过载尖峰
+- ↑ zeta1（从0.35提升）→ 增大阻尼，平滑过载响应
+- ↓ N_pn（从4.62降低）→ 减小导引比，降低指令加速度幅值
+- 目标：PeakNy_max ≤ 20g 且不显著恶化其他四项指标
+
+---
+
+**STOP** — 本任务结束，等待Layer3 RL优化器介入。2026-06-08 12:31:09 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-30 (_call):16532 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-08 12:31:09 - agent.conversation_loop - INFO - API call #18: model=deepseek-v4-pro provider=custom in=54484 out=737 total=55221 latency=12.1s cache=53888/54484 (99%)
+🎉 Conversation completed after 12 OpenAI-compatible API call(s)
+2026-06-08 12:31:09 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=12/20 budget=12/20 tool_turns=14 last_msg_role=assistant response_len=1226 session=20260608_122217_56450c
+  [Hermes generated script] guidance_simulation_T4_reuse_clean_1780892859.m
+  [Hermes sim metrics] hit=100.0%  SEP=5.980m  PM=51.4°  BW=80.0r/s
+2026-06-08 12:31:09 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  Hermes response length: 1226 chars
+  No MATLAB code block found in Hermes response.
+  [Pre-RL] Hermes hit=100.0% >= PE cached hit=48.1%. Skipping PE re-simulation (Hermes metrics are fresher).
+  [Layer2→3] Rule-check: 1 metric(s) not met → entering RL
+
+[Layer 2 Gate] Validating script before Layer 3 (smoke nmc=5)…
+  [Layer 2 Gate] ✓ Layer2 gate passed (syntax + smoke)
+
+[Layer 3] Optimization Workflow | script=guidance_simulation_T4_reuse_clean_1780892859.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\b36e158e8ac5459097263ddd6ce400f0
+  [Layer 3] Using Hermes script params as warm-start: {'w1': 46.254404, 'zeta1': 0.35, 'tao1': 0.085711, 'w2': 35.784554, 'zeta2': 1.2, 'tao2': 0.105277, 'w3': 39.381182, 'zeta3': 1.2, 'N_pn': 4.619368}
+  [DEBUG Layer3] mission_conditions = {'T': [4]}
+2026-06-08 12:31:09 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Starting | directly_satisfied=False | script=guidance_simulation_T4_reuse_clean_1780892859.m
+2026-06-08 12:31:09 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Strategy from config: expert
+  [Layer 3] Strategy selected: EXPERT
+2026-06-08 12:31:09 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Optimization strategy: expert
+2026-06-08 12:31:30 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 1 params: w1=40.000 zeta1=0.800 tao1=0.120 w2=40.000 zeta2=0.800 tao2=0.120 w3=25.000 zeta3=1.000 N_pn=4.000 | 当前峰值过载27.4g超标，需降至≤20g。滚转通道(w3,zeta3)主要影响峰值过载，降低w3并增大zeta3可有效抑制过载。同时适当降低N_pn有助于减小过载，且命中率和SEP仍有裕度。俯仰通道选取安全区内参数保证PM和BW。
+2026-06-08 12:31:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.0000', 'rl_zeta1=0.8000', 'rl_tao1=0.1200', 'rl_w2=40.0000', 'rl_zeta2=0.8000', 'rl_tao2=0.1200', 'rl_w3=25.0000', 'rl_zeta3=1.0000', 'rl_N_pn=4.0000']
+2026-06-08 12:31:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:31:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Engine diagnostic: engine=matlab  matlab_engine_backend=None  matlab_path='E:\\software\\MATLAB\\R2025a\\extern\\engines\\python\\..\\..\\..\\bin\\win64\\matlab.EXE'→E:\software\MATLAB\R2025a\extern\engines\python\..\..\..\bin\win64\matlab.EXE  octave_path='E:\\software\\Octave-11.1.0\\octave-launch.exe'→E:\software\Octave-11.1.0\octave-launch.exe
+2026-06-08 12:31:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1685chars
+2026-06-08 12:31:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1685 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.52    51.98     77.0     93.66      Inf', '  [  2] HIT     2.81    13.47     77.0     93.66      Inf']
+2026-06-08 12:31:57 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 1 → hit=90.0% SEP=14.54m PM=77.0° BW=93.7
+  [Expert] Round 1/5: hit=90.0% SEP=14.54m PeakNy=59.70g PM=77.0° BW=93.7rad/s
+2026-06-08 12:32:03 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-08 12:32:45 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 2 params: w1=35.000 zeta1=0.600 tao1=0.150 w2=50.000 zeta2=0.800 tao2=0.100 w3=25.000 zeta3=0.900 N_pn=4.000 | 降低w1(35)以将BW从94降至目标范围(20-85)，同时降低zeta1(0.6)并适当提高tao1(0.15)以将PM从77°降至45-70°内；增大w2至50并保持较高阻尼(0.8)以减小SEP至7m以下；大幅降低w3(25)并提高zeta3(0.9)以抑制滚转响应，从而将峰值过载从59.7g降至20g以下；N_pn取4.0处于推荐范围，配合良好动态可维持命中率≥92%。
+2026-06-08 12:32:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=35.0000', 'rl_zeta1=0.6000', 'rl_tao1=0.1500', 'rl_w2=50.0000', 'rl_zeta2=0.8000', 'rl_tao2=0.1000', 'rl_w3=25.0000', 'rl_zeta3=0.9000', 'rl_N_pn=4.0000']
+2026-06-08 12:32:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:33:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1685chars
+2026-06-08 12:33:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1685 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.57    15.47     75.7      6.39      Inf', '  [  2] HIT     3.05    11.78     75.7      6.39      Inf']
+2026-06-08 12:33:10 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 2 → hit=100.0% SEP=9.01m PM=75.7° BW=6.4
+  [Expert] Round 2/5: hit=100.0% SEP=9.01m PeakNy=44.41g PM=75.7° BW=6.4rad/s
+2026-06-08 12:33:13 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-08 12:33:48 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 3 params: w1=40.000 zeta1=1.000 tao1=0.100 w2=45.000 zeta2=0.900 tao2=0.100 w3=40.000 zeta3=1.200 N_pn=3.000 | 过载超标、SEP略超标且BW偏低。大幅降低N_pn至3.0、增大滚转阻尼zeta3至1.2以压低峰值过载；提高偏航带宽w2=45并增大阻尼zeta2以降低SEP；增大俯仰w1至40提升BW至20以上，同时提高zeta1至1.0保持PM在45~70范围内，tao1保持低值确保稳定。
+2026-06-08 12:33:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.0000', 'rl_zeta1=1.0000', 'rl_tao1=0.1000', 'rl_w2=45.0000', 'rl_zeta2=0.9000', 'rl_tao2=0.1000', 'rl_w3=40.0000', 'rl_zeta3=1.2000', 'rl_N_pn=3.0000']
+2026-06-08 12:33:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:34:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1685chars
+2026-06-08 12:34:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1685 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.20    14.95     79.7    109.97      Inf', '  [  2] HIT     4.84    12.82     79.7    109.97      Inf']
+2026-06-08 12:34:14 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 3 → hit=90.0% SEP=10.99m PM=79.7° BW=110.0
+  [Expert] Round 3/5: hit=90.0% SEP=10.99m PeakNy=30.51g PM=79.7° BW=110.0rad/s
+2026-06-08 12:34:18 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-08 12:34:48 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 4 params: w1=35.000 zeta1=0.650 tao1=0.180 w2=50.000 zeta2=0.700 tao2=0.100 w3=40.000 zeta3=0.800 N_pn=4.000 | BW=110>85，PM=79.7>70，均超标。为降低BW需减小w1至35，但此举会使PM升高；因此同时降低zeta1至0.65、提高tao1至0.18以拉低PM进入45~70。为抑制30.5g过载，降低N_pn至4并增大滚转阻尼zeta3至0.8。为补偿命中率并改善SEP，提高偏航带宽w2至50、减小tao2至0.1，增强横向响应。
+2026-06-08 12:34:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=35.0000', 'rl_zeta1=0.6500', 'rl_tao1=0.1800', 'rl_w2=50.0000', 'rl_zeta2=0.7000', 'rl_tao2=0.1000', 'rl_w3=40.0000', 'rl_zeta3=0.8000', 'rl_N_pn=4.0000']
+2026-06-08 12:34:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:35:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1684chars
+2026-06-08 12:35:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1684 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.82    14.93     77.5      5.38      Inf', '  [  2] HIT     4.99    12.64     77.5      5.38      Inf']
+2026-06-08 12:35:24 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 4 → hit=100.0% SEP=6.46m PM=77.5° BW=5.4
+  [Expert] Round 4/5: hit=100.0% SEP=6.46m PeakNy=33.18g PM=77.5° BW=5.4rad/s
+2026-06-08 12:35:28 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-08 12:36:01 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 5 params: w1=50.000 zeta1=0.700 tao1=0.080 w2=45.000 zeta2=0.700 tao2=0.100 w3=20.000 zeta3=1.200 N_pn=3.500 | 大幅提升w1至50以将BW从5.4提高到20以上；保持zeta1适中以允许PM随w1增大而下降进入45~70°范围；减小tao1至0.08避免稳定性恶化。滚转通道降低w3并增大zeta3以抑制峰值过载，N_pn降至3.5进一步降低过载。偏航微调保持SEP。
+2026-06-08 12:36:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=50.0000', 'rl_zeta1=0.7000', 'rl_tao1=0.0800', 'rl_w2=45.0000', 'rl_zeta2=0.7000', 'rl_tao2=0.1000', 'rl_w3=20.0000', 'rl_zeta3=1.2000', 'rl_N_pn=3.5000']
+2026-06-08 12:36:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:38:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1686chars
+2026-06-08 12:38:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1686 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.33    55.26     70.4    113.41      Inf', '  [  2] HIT     4.15    17.11     70.4    113.41      Inf']
+2026-06-08 12:38:06 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 5 → hit=90.0% SEP=15.01m PM=70.4° BW=113.4
+  [Expert] Round 5/5: hit=90.0% SEP=15.01m PeakNy=92.33g PM=70.4° BW=113.4rad/s
+2026-06-08 12:38:12 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-08 12:38:12 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Finished 5 rounds without meeting requirements. Best: hit=100.0% SEP=5.98m
+  [Layer 3/Expert] Done 5 rounds | status=needs_iteration | hit=100.0% SEP=5.98m
+  [Layer 3] Expert tuning insufficient → falling back to PPO
+2026-06-08 12:38:12 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Expert insufficient → PPO fallback
+2026-06-08 12:38:12 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 500.0m → 7.0m | HitRate: 10.0% → 92.0%
+2026-06-08 12:38:12 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['500.0', '253.5', '7.0']
+2026-06-08 12:38:12 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['10.0', '51.0', '92.0']
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 500→7m | HitRate 10→92% | phases=3 x 15 ep
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 11 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\b36e158e8ac5459097263ddd6ce400f0\guidance_simulation_T4_reuse_clean_1780892859.m
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Baseline uses PE-retrieved initial params (9 values)
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO - RL networks initialised: state_dim=16, action_dim=9, mode=contextual_bandit(gamma=0), batch=16, entropy_coef=0.02, pitch_std=0.50, other_std=0.20
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] JSONL episode log → logs\rl_episodes_20260608_123812.jsonl
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Contextual-bandit PPO | batch=16 | nmc=10 | gamma=0 | entropy_coef=0.02
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO - Evaluating baseline (PE-retrieved / script params)…
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=46.2544', 'rl_zeta1=0.3500', 'rl_tao1=0.0857', 'rl_w2=35.7846', 'rl_zeta2=1.2000', 'rl_tao2=0.1053', 'rl_w3=39.3812', 'rl_zeta3=1.2000', 'rl_N_pn=4.6194']
+2026-06-08 12:38:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:38:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1685chars
+2026-06-08 12:38:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1685 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.27    15.69     51.4     80.04      Inf', '  [  2] HIT     3.29    10.97     51.4     80.04      Inf']
+2026-06-08 12:38:47 - multi_agent.rl.matlab_rl_optimizer - INFO - Baseline reward=3.800  metrics={'hit_rate': 100.0, 'SEP': 5.98, 'peak_ny': 24.53, 'pitch_PM': 51.4, 'pitch_BW': 80.04, 'pitch_GM': 6.0, 'miss_distance': 5.98, 'peak_n': 24.53, 'peak_ny_max': 24.53, 'peak_n_max': 24.53, '_parse_incomplete': False, '_sim_source': 'matlab'}
+2026-06-08 12:38:47 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Warm-start exploration shrink ×0.30 (pitch_std≈0.15)
+2026-06-08 12:38:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=20.0000', 'rl_zeta1=1.2000', 'rl_tao1=0.2289', 'rl_w2=22.3552', 'rl_zeta2=0.3774', 'rl_tao2=0.3500', 'rl_w3=42.5998', 'rl_zeta3=1.1496', 'rl_N_pn=3.0000']
+2026-06-08 12:38:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:39:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=1685chars
+2026-06-08 12:39:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=1685 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] MISS   12.54    20.70    -78.8      2.49    14.81', '  [  2] MISS   13.59    24.22    -78.8      2.49    14.81']
+2026-06-08 12:39:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 1/50] reward=-10.000  hit=0.0%  SEP=47.36m  best_reward_SEP=5.98m  best_SEP_ever=5.98m  PeakN=27.08(max=27.08)  PM=-78.8°(best=51.4°)  BW=2.5r/s(best=80.0r/s)
+2026-06-08 12:39:19 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 1/50] window=20 | mean_reward=-10.000 | mean_SEP=47.36m | mean_PeakN_max=27.08g | mean_hit=0.0% | diverge=100%
+2026-06-08 12:39:19 - multi_agent.simulation.optimization_workflow - ERROR - [OptimWorkflow] PPO fallback failed: MatlabRLOptimizer._maybe_save_checkpoint() got an unexpected keyword argument 'nmc'
+  [Layer 3/CLS] Starting local search (50 steps, nmc=25)…
+2026-06-08 12:39:19 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 11 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\b36e158e8ac5459097263ddd6ce400f0\guidance_simulation_T4_reuse_clean_1780892859.m
+2026-06-08 12:39:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=46.2544', 'rl_zeta1=0.3500', 'rl_tao1=0.0857', 'rl_w2=35.7846', 'rl_zeta2=1.2000', 'rl_tao2=0.1053', 'rl_w3=39.3812', 'rl_zeta3=1.2000', 'rl_N_pn=4.6194']
+2026-06-08 12:39:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:39:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:39:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.27    15.69     51.4     80.04      Inf', '  [  2] HIT     3.29    10.97     51.4     80.04      Inf']
+2026-06-08 12:39:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.0110', 'rl_zeta1=0.3500', 'rl_tao1=0.0748', 'rl_w2=36.5944', 'rl_zeta2=1.1348', 'rl_tao2=0.1071', 'rl_w3=42.1084', 'rl_zeta3=1.1954', 'rl_N_pn=4.6705']
+2026-06-08 12:39:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:40:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:40:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.33    15.47     53.1     77.42      Inf', '  [  2] HIT     2.95    10.71     53.1     77.42      Inf']
+2026-06-08 12:40:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.8877', 'rl_zeta1=0.3970', 'rl_tao1=0.0905', 'rl_w2=35.5485', 'rl_zeta2=1.1617', 'rl_tao2=0.0967', 'rl_w3=45.0300', 'rl_zeta3=1.2000', 'rl_N_pn=4.8921']
+2026-06-08 12:40:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:40:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:40:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.04    15.11     59.4     72.64      Inf', '  [  2] HIT     3.17    10.48     59.4     72.64      Inf']
+2026-06-08 12:40:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.8042', 'rl_zeta1=0.4084', 'rl_tao1=0.0567', 'rl_w2=37.5874', 'rl_zeta2=1.0703', 'rl_tao2=0.0952', 'rl_w3=41.6030', 'rl_zeta3=1.2000', 'rl_N_pn=4.8293']
+2026-06-08 12:40:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:41:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:41:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.23    14.98     59.9     81.16      Inf', '  [  2] HIT     3.75    10.44     59.9     81.16      Inf']
+2026-06-08 12:41:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.5390', 'rl_zeta1=0.4709', 'rl_tao1=0.0805', 'rl_w2=38.1889', 'rl_zeta2=1.0596', 'rl_tao2=0.1013', 'rl_w3=40.5154', 'rl_zeta3=1.1381', 'rl_N_pn=4.7639']
+2026-06-08 12:41:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:41:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:41:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.66    15.16     64.4     77.92      Inf', '  [  2] HIT     4.70    10.53     64.4     77.92      Inf']
+2026-06-08 12:41:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.7917', 'rl_zeta1=0.4607', 'rl_tao1=0.0620', 'rl_w2=40.3071', 'rl_zeta2=1.0264', 'rl_tao2=0.1171', 'rl_w3=39.6373', 'rl_zeta3=1.1850', 'rl_N_pn=4.6482']
+2026-06-08 12:41:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:42:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:42:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.91    15.44     61.1     88.92      Inf', '  [  2] HIT     3.66    10.69     61.1     88.92      Inf']
+2026-06-08 12:42:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.7309', 'rl_zeta1=0.4804', 'rl_tao1=0.0854', 'rl_w2=38.2868', 'rl_zeta2=1.0500', 'rl_tao2=0.1157', 'rl_w3=37.0179', 'rl_zeta3=1.2000', 'rl_N_pn=4.4123']
+2026-06-08 12:42:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:43:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:43:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.43    15.87     62.9     83.83      Inf', '  [  2] HIT     2.95    13.21     62.9     83.83      Inf']
+2026-06-08 12:43:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.6003', 'rl_zeta1=0.4194', 'rl_tao1=0.0500', 'rl_w2=43.2076', 'rl_zeta2=0.9599', 'rl_tao2=0.1132', 'rl_w3=37.1907', 'rl_zeta3=1.1883', 'rl_N_pn=4.6271']
+2026-06-08 12:43:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:44:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:44:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.17    15.23     59.6     87.45      Inf', '  [  2] HIT     4.02    10.60     59.6     87.45      Inf']
+2026-06-08 12:44:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.5870', 'rl_zeta1=0.3718', 'rl_tao1=0.0522', 'rl_w2=40.3135', 'rl_zeta2=0.9403', 'rl_tao2=0.0954', 'rl_w3=34.6549', 'rl_zeta3=1.1837', 'rl_N_pn=4.4011']
+2026-06-08 12:44:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:45:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:45:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.96    15.21     56.2     83.10      Inf', '  [  2] HIT     4.40    10.68     56.2     83.10      Inf']
+2026-06-08 12:45:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.8962', 'rl_zeta1=0.4035', 'rl_tao1=0.0500', 'rl_w2=37.8154', 'rl_zeta2=0.9187', 'rl_tao2=0.0807', 'rl_w3=37.6058', 'rl_zeta3=1.2000', 'rl_N_pn=4.4609']
+2026-06-08 12:45:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:46:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:46:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.20    14.89     60.6     81.38      Inf', '  [  2] HIT     4.36    10.51     60.6     81.38      Inf']
+2026-06-08 12:46:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.9831', 'rl_zeta1=0.4428', 'rl_tao1=0.0500', 'rl_w2=37.3884', 'rl_zeta2=0.9093', 'rl_tao2=0.0983', 'rl_w3=36.5942', 'rl_zeta3=1.1648', 'rl_N_pn=4.5313']
+2026-06-08 12:46:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:47:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:47:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.90    15.27     62.8     84.43      Inf', '  [  2] HIT     3.24    10.67     62.8     84.43      Inf']
+2026-06-08 12:47:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=37.8211', 'rl_zeta1=0.4701', 'rl_tao1=0.0500', 'rl_w2=37.4719', 'rl_zeta2=0.9267', 'rl_tao2=0.0927', 'rl_w3=35.0818', 'rl_zeta3=1.1273', 'rl_N_pn=4.3090']
+2026-06-08 12:47:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:47:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:47:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.74    15.35     66.4     80.58      Inf', '  [  2] HIT     2.80    12.28     66.4     80.58      Inf']
+2026-06-08 12:47:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.5827', 'rl_zeta1=0.4977', 'rl_tao1=0.0547', 'rl_w2=36.6262', 'rl_zeta2=0.9398', 'rl_tao2=0.0830', 'rl_w3=39.0168', 'rl_zeta3=1.1995', 'rl_N_pn=4.7235']
+2026-06-08 12:47:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:48:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:48:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.57    14.82     65.0     87.84      Inf', '  [  2] HIT     3.51    10.40     65.0     87.84      Inf']
+2026-06-08 12:48:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.1307', 'rl_zeta1=0.4323', 'rl_tao1=0.0500', 'rl_w2=38.2620', 'rl_zeta2=0.8931', 'rl_tao2=0.1208', 'rl_w3=37.1025', 'rl_zeta3=1.1148', 'rl_N_pn=4.5106']
+2026-06-08 12:48:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:48:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:48:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.34    15.71     62.1     83.93      Inf', '  [  2] HIT     4.30    12.10     62.1     83.93      Inf']
+2026-06-08 12:48:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.0681', 'rl_zeta1=0.4184', 'rl_tao1=0.0500', 'rl_w2=34.9685', 'rl_zeta2=0.9146', 'rl_tao2=0.1153', 'rl_w3=35.5415', 'rl_zeta3=1.1521', 'rl_N_pn=4.2980']
+2026-06-08 12:48:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:49:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:49:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.79    16.09     60.6     84.61      Inf', '  [  2] HIT     4.44    14.88     60.6     84.61      Inf']
+2026-06-08 12:49:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.3414', 'rl_zeta1=0.3838', 'rl_tao1=0.0500', 'rl_w2=40.4807', 'rl_zeta2=0.9369', 'rl_tao2=0.1204', 'rl_w3=38.7275', 'rl_zeta3=1.1089', 'rl_N_pn=4.5235']
+2026-06-08 12:49:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:49:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:49:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.69    15.54     57.4     84.32      Inf', '  [  2] HIT     3.23    11.31     57.4     84.32      Inf']
+2026-06-08 12:49:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=38.1710', 'rl_zeta1=0.4914', 'rl_tao1=0.0635', 'rl_w2=37.0782', 'rl_zeta2=0.8596', 'rl_tao2=0.0924', 'rl_w3=34.8740', 'rl_zeta3=1.2000', 'rl_N_pn=4.5475']
+2026-06-08 12:49:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:50:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:50:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.88    15.17     67.0     78.26      Inf', '  [  2] HIT     3.00    10.63     67.0     78.26      Inf']
+2026-06-08 12:50:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.0206', 'rl_zeta1=0.4488', 'rl_tao1=0.0709', 'rl_w2=34.3858', 'rl_zeta2=0.9546', 'rl_tao2=0.0989', 'rl_w3=35.7328', 'rl_zeta3=1.1806', 'rl_N_pn=4.6912']
+2026-06-08 12:50:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:50:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:50:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     2.75    15.48     62.0     80.93      Inf', '  [  2] HIT     4.37    10.73     62.0     80.93      Inf']
+2026-06-08 12:50:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=39.7018', 'rl_zeta1=0.3952', 'rl_tao1=0.0500', 'rl_w2=38.8463', 'rl_zeta2=0.8673', 'rl_tao2=0.0968', 'rl_w3=35.8795', 'rl_zeta3=1.2000', 'rl_N_pn=4.3962']
+2026-06-08 12:50:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:51:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:51:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.60    15.22     61.1     78.62      Inf', '  [  2] HIT     3.14    10.70     61.1     78.62      Inf']
+2026-06-08 12:51:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=37.8700', 'rl_zeta1=0.3921', 'rl_tao1=0.0500', 'rl_w2=40.5384', 'rl_zeta2=0.8739', 'rl_tao2=0.0969', 'rl_w3=39.3981', 'rl_zeta3=1.1473', 'rl_N_pn=4.5363']
+2026-06-08 12:51:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:53:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:53:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.34    14.96     62.7     75.11      Inf', '  [  2] HIT     4.89    10.52     62.7     75.11      Inf']
+2026-06-08 12:53:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.3593', 'rl_zeta1=0.4297', 'rl_tao1=0.0634', 'rl_w2=36.2962', 'rl_zeta2=0.9548', 'rl_tao2=0.0835', 'rl_w3=39.6343', 'rl_zeta3=1.1536', 'rl_N_pn=4.5289']
+2026-06-08 12:53:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:54:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:54:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.20    14.98     62.2     78.22      Inf', '  [  2] HIT     4.80    10.53     62.2     78.22      Inf']
+2026-06-08 12:54:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.1634', 'rl_zeta1=0.4978', 'rl_tao1=0.0500', 'rl_w2=40.2637', 'rl_zeta2=0.9050', 'rl_tao2=0.1102', 'rl_w3=38.8621', 'rl_zeta3=1.1441', 'rl_N_pn=4.4913']
+2026-06-08 12:54:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:54:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:54:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.19    15.33     64.7     90.75      Inf', '  [  2] HIT     4.24    10.70     64.7     90.75      Inf']
+2026-06-08 12:54:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.2927', 'rl_zeta1=0.4466', 'rl_tao1=0.0542', 'rl_w2=38.6189', 'rl_zeta2=0.9138', 'rl_tao2=0.1026', 'rl_w3=40.0922', 'rl_zeta3=1.1127', 'rl_N_pn=4.4796']
+2026-06-08 12:54:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:55:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:55:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.74    15.24     60.7     89.27      Inf', '  [  2] HIT     4.86    10.67     60.7     89.27      Inf']
+2026-06-08 12:55:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.7638', 'rl_zeta1=0.4905', 'rl_tao1=0.0708', 'rl_w2=41.5303', 'rl_zeta2=0.8863', 'rl_tao2=0.1071', 'rl_w3=40.8509', 'rl_zeta3=1.1003', 'rl_N_pn=4.3344']
+2026-06-08 12:55:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:55:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:55:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.11    15.26     62.8     88.97      Inf', '  [  2] HIT     3.29    11.98     62.8     88.97      Inf']
+2026-06-08 12:55:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.8624', 'rl_zeta1=0.4911', 'rl_tao1=0.0500', 'rl_w2=37.1017', 'rl_zeta2=0.9399', 'rl_tao2=0.0795', 'rl_w3=40.5052', 'rl_zeta3=1.1662', 'rl_N_pn=4.6054']
+2026-06-08 12:55:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:56:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:56:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.04    14.77     64.6     89.67      Inf', '  [  2] HIT     3.95    10.41     64.6     89.67      Inf']
+2026-06-08 12:56:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=44.8625', 'rl_zeta1=0.4299', 'rl_tao1=0.0720', 'rl_w2=38.6666', 'rl_zeta2=0.8582', 'rl_tao2=0.1203', 'rl_w3=39.9751', 'rl_zeta3=1.0523', 'rl_N_pn=4.2750']
+2026-06-08 12:56:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:56:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:56:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.33    15.76     58.9     84.68      Inf', '  [  2] HIT     2.90    13.80     58.9     84.68      Inf']
+2026-06-08 12:56:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.1325', 'rl_zeta1=0.4292', 'rl_tao1=0.0500', 'rl_w2=39.3254', 'rl_zeta2=0.9140', 'rl_tao2=0.0935', 'rl_w3=41.7812', 'rl_zeta3=1.1239', 'rl_N_pn=4.6550']
+2026-06-08 12:56:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:57:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:57:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.56    14.86     61.9     83.71      Inf', '  [  2] HIT     4.11    10.43     61.9     83.71      Inf']
+2026-06-08 12:57:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=39.9542', 'rl_zeta1=0.3759', 'rl_tao1=0.0500', 'rl_w2=41.5986', 'rl_zeta2=0.8715', 'rl_tao2=0.1075', 'rl_w3=43.8614', 'rl_zeta3=1.1591', 'rl_N_pn=4.8220']
+2026-06-08 12:57:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:57:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:58:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.71    14.85     59.7     77.68      Inf', '  [  2] HIT     4.28    10.38     59.7     77.68      Inf']
+2026-06-08 12:58:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=43.1182', 'rl_zeta1=0.4181', 'rl_tao1=0.0500', 'rl_w2=38.9561', 'rl_zeta2=0.9114', 'rl_tao2=0.1226', 'rl_w3=44.4081', 'rl_zeta3=1.1705', 'rl_N_pn=4.8536']
+2026-06-08 12:58:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:58:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:58:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.92    15.25     59.9     86.48      Inf', '  [  2] HIT     4.39    10.56     59.9     86.48      Inf']
+2026-06-08 12:58:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=46.2185', 'rl_zeta1=0.4439', 'rl_tao1=0.0596', 'rl_w2=38.7220', 'rl_zeta2=0.8606', 'rl_tao2=0.1177', 'rl_w3=42.2477', 'rl_zeta3=1.1320', 'rl_N_pn=4.8772']
+2026-06-08 12:58:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:59:08 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:59:08 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.94    15.17     59.3     90.97      Inf', '  [  2] HIT     4.16    10.51     59.3     90.97      Inf']
+2026-06-08 12:59:08 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.9899', 'rl_zeta1=0.4485', 'rl_tao1=0.0618', 'rl_w2=37.8003', 'rl_zeta2=0.8969', 'rl_tao2=0.1456', 'rl_w3=44.7761', 'rl_zeta3=1.2000', 'rl_N_pn=5.0815']
+2026-06-08 12:59:08 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 12:59:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 12:59:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.61    15.58     62.1     82.92      Inf', '  [  2] HIT     3.56    10.66     62.1     82.92      Inf']
+2026-06-08 12:59:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.1953', 'rl_zeta1=0.3547', 'rl_tao1=0.0500', 'rl_w2=40.1376', 'rl_zeta2=0.8603', 'rl_tao2=0.1063', 'rl_w3=43.6811', 'rl_zeta3=1.2000', 'rl_N_pn=5.0791']
+2026-06-08 12:59:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:01:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:01:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.64    14.70     58.0     76.58      Inf', '  [  2] HIT     4.60    10.24     58.0     76.58      Inf']
+2026-06-08 13:01:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.9908', 'rl_zeta1=0.3500', 'rl_tao1=0.0500', 'rl_w2=37.3008', 'rl_zeta2=0.8854', 'rl_tao2=0.1226', 'rl_w3=40.5106', 'rl_zeta3=1.2000', 'rl_N_pn=4.8809']
+2026-06-08 13:01:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:02:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:02:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     2.77    15.39     56.0     79.42      Inf', '  [  2] HIT     3.05    10.63     56.0     79.42      Inf']
+2026-06-08 13:02:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.3463', 'rl_zeta1=0.3767', 'rl_tao1=0.0500', 'rl_w2=38.8928', 'rl_zeta2=0.9271', 'rl_tao2=0.1040', 'rl_w3=46.1389', 'rl_zeta3=1.2000', 'rl_N_pn=4.8864']
+2026-06-08 13:02:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:03:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:03:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.40    14.86     57.7     82.01      Inf', '  [  2] HIT     3.52    10.37     57.7     82.01      Inf']
+2026-06-08 13:03:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=40.5789', 'rl_zeta1=0.4060', 'rl_tao1=0.0606', 'rl_w2=37.4748', 'rl_zeta2=0.9162', 'rl_tao2=0.0855', 'rl_w3=44.0779', 'rl_zeta3=1.1441', 'rl_N_pn=4.8925']
+2026-06-08 13:03:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:03:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:03:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.70    14.60     60.6     77.70      Inf', '  [  2] HIT     3.65    10.25     60.6     77.70      Inf']
+2026-06-08 13:03:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=41.0139', 'rl_zeta1=0.3500', 'rl_tao1=0.0527', 'rl_w2=40.4493', 'rl_zeta2=0.9825', 'rl_tao2=0.1271', 'rl_w3=46.3020', 'rl_zeta3=1.1947', 'rl_N_pn=5.0588']
+2026-06-08 13:03:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:04:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:04:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.26    15.12     56.6     76.81      Inf', '  [  2] HIT     3.25    10.43     56.6     76.81      Inf']
+2026-06-08 13:04:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.4558', 'rl_zeta1=0.3500', 'rl_tao1=0.0553', 'rl_w2=41.1448', 'rl_zeta2=1.0450', 'rl_tao2=0.1350', 'rl_w3=45.4514', 'rl_zeta3=1.2000', 'rl_N_pn=4.9405']
+2026-06-08 13:04:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:04:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:04:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.11    15.39     55.2     78.60      Inf', '  [  2] HIT     3.02    10.58     55.2     78.60      Inf']
+2026-06-08 13:04:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.4285', 'rl_zeta1=0.3735', 'rl_tao1=0.0507', 'rl_w2=41.5596', 'rl_zeta2=1.0159', 'rl_tao2=0.1348', 'rl_w3=43.2126', 'rl_zeta3=1.1562', 'rl_N_pn=5.0900']
+2026-06-08 13:04:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:05:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:05:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.12    15.27     57.3     81.66      Inf', '  [  2] HIT     4.20    10.49     57.3     81.66      Inf']
+2026-06-08 13:05:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=39.4817', 'rl_zeta1=0.3500', 'rl_tao1=0.0500', 'rl_w2=42.2447', 'rl_zeta2=1.0333', 'rl_tao2=0.1299', 'rl_w3=46.5568', 'rl_zeta3=1.1905', 'rl_N_pn=5.2028']
+2026-06-08 13:05:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:05:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:05:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.08    15.00     58.4     74.98      Inf', '  [  2] HIT     3.38    10.34     58.4     74.98      Inf']
+2026-06-08 13:05:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=36.7041', 'rl_zeta1=0.4071', 'rl_tao1=0.0651', 'rl_w2=43.4626', 'rl_zeta2=0.9990', 'rl_tao2=0.1421', 'rl_w3=44.8366', 'rl_zeta3=1.2000', 'rl_N_pn=5.3102']
+2026-06-08 13:05:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:06:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:06:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.77    15.08     64.3     69.60      Inf', '  [  2] HIT     3.39    10.35     64.3     69.60      Inf']
+2026-06-08 13:06:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=38.1264', 'rl_zeta1=0.4175', 'rl_tao1=0.0500', 'rl_w2=40.5737', 'rl_zeta2=1.0568', 'rl_tao2=0.1397', 'rl_w3=49.1559', 'rl_zeta3=1.2000', 'rl_N_pn=5.2680']
+2026-06-08 13:06:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:06:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:06:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.10    15.19     63.8     77.38      Inf', '  [  2] HIT     4.05    10.41     63.8     77.38      Inf']
+2026-06-08 13:06:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=39.0858', 'rl_zeta1=0.3500', 'rl_tao1=0.0500', 'rl_w2=40.7046', 'rl_zeta2=1.0011', 'rl_tao2=0.1432', 'rl_w3=46.6450', 'rl_zeta3=1.1288', 'rl_N_pn=5.2205']
+2026-06-08 13:06:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:07:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:07:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.67    15.28     58.8     74.28      Inf', '  [  2] HIT     3.93    10.47     58.8     74.28      Inf']
+2026-06-08 13:07:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=37.0553', 'rl_zeta1=0.3632', 'rl_tao1=0.0500', 'rl_w2=40.1666', 'rl_zeta2=1.0686', 'rl_tao2=0.1510', 'rl_w3=45.0182', 'rl_zeta3=1.1704', 'rl_N_pn=4.9745']
+2026-06-08 13:07:02 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:07:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:07:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.41    15.76     61.9     71.60      Inf', '  [  2] HIT     3.19    10.75     61.9     71.60      Inf']
+2026-06-08 13:07:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=38.1676', 'rl_zeta1=0.4048', 'rl_tao1=0.0500', 'rl_w2=40.0564', 'rl_zeta2=1.0076', 'rl_tao2=0.1470', 'rl_w3=45.5419', 'rl_zeta3=1.2000', 'rl_N_pn=5.0139']
+2026-06-08 13:07:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:07:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:07:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.37    15.59     63.1     76.55      Inf', '  [  2] HIT     2.83    10.66     63.1     76.55      Inf']
+2026-06-08 13:07:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=36.8320', 'rl_zeta1=0.3500', 'rl_tao1=0.0564', 'rl_w2=39.4277', 'rl_zeta2=1.0172', 'rl_tao2=0.1248', 'rl_w3=48.7988', 'rl_zeta3=1.1304', 'rl_N_pn=5.2530']
+2026-06-08 13:07:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:08:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:08:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     3.70    14.96     60.9     68.27      Inf', '  [  2] HIT     3.67    10.32     60.9     68.27      Inf']
+2026-06-08 13:08:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=37.3334', 'rl_zeta1=0.3654', 'rl_tao1=0.0500', 'rl_w2=41.1287', 'rl_zeta2=0.9763', 'rl_tao2=0.1486', 'rl_w3=48.3197', 'rl_zeta3=1.1828', 'rl_N_pn=5.0487']
+2026-06-08 13:08:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:08:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:08:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.21    15.46     61.7     72.26      Inf', '  [  2] HIT     3.40    10.59     61.7     72.26      Inf']
+2026-06-08 13:08:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=39.6920', 'rl_zeta1=0.3834', 'rl_tao1=0.0500', 'rl_w2=44.7583', 'rl_zeta2=0.9940', 'rl_tao2=0.1173', 'rl_w3=48.8351', 'rl_zeta3=1.2000', 'rl_N_pn=5.1913']
+2026-06-08 13:08:28 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:08:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:08:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.40    14.66     60.4     77.76      Inf', '  [  2] HIT     4.65    10.19     60.4     77.76      Inf']
+2026-06-08 13:08:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.4021', 'rl_zeta1=0.4474', 'rl_tao1=0.0500', 'rl_w2=42.3151', 'rl_zeta2=1.0466', 'rl_tao2=0.1392', 'rl_w3=48.9272', 'rl_zeta3=1.2000', 'rl_N_pn=5.3614']
+2026-06-08 13:08:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+2026-06-08 13:09:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] matlab subprocess OK  stdout=2570chars
+2026-06-08 13:09:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL DIAG] stdout_len=2570 metric_lines(first3)=['  [Run] Hit  Miss(m)  PeakNy(g)  PM(掳)   BW(rad/s)  GM(dB)', '  [  1] HIT     4.64    15.02     62.1     87.39      Inf', '  [  2] HIT     3.95    10.31     62.1     87.39      Inf']
+2026-06-08 13:09:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] RL_PARAMS block patched: ['rl_w1=42.8159', 'rl_zeta1=0.4265', 'rl_tao1=0.0500', 'rl_w2=45.1643', 'rl_zeta2=0.9648', 'rl_tao2=0.0998', 'rl_w3=51.0859', 'rl_zeta3=1.1511', 'rl_N_pn=5.0804']
+2026-06-08 13:09:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission patched: RUN_CASE='T' SUB_IDX=4
+
+
+────────────────────────────────────────────────────────────────
+  [人机中断] Ctrl+C — 当前执行已中止
+────────────────────────────────────────────────────────────────
+  原始任务: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━...
+  ────────────────────────────────────────────────────────────────
+  继续执行（保持当前指令）               → 输入 c 或 continue
+  手动晋升短期记忆到长期记忆             → 输入 p 或 promote
+  输入修改指令（追加到原始任务上）        → 直接输入修改内容
+  完全替换原始任务                       → 以 !! 开头输入新任务
+  恢复原始任务重启                       → 直接回车
+  退出程序                               → 再次 Ctrl+C
+  ────────────────────────────────────────────────────────────────
+  >>> 
+  [退出] 程序已终止。
+Exception ignored in: <function Handle.Close at 0x000001CBAEDE98A0>
+Traceback (most recent call last):
+  File "C:\Users\Lenovo\anaconda3\envs\GS312\Lib\subprocess.py", line 218, in Close
+    def Close(self, CloseHandle=_winapi.CloseHandle):
+
+KeyboardInterrupt: 
+[0m
+================================================================================
+Finished    : 2026-06-08 13:09:27
+Exit code   : 0
+================================================================================

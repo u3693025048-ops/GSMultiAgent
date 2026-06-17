@@ -1,0 +1,1241 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-05 02:18:42
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06050218.txt
+================================================================================
+
+2026-06-05 02:18:42 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06050218.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06050218.txt
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-05 02:18:42
+Task: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+运行工况：RUN_CASE='T'; SUB_IDX=4;
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+命中率     >= 92%
+SEP脱靶量  <= 7 m
+PeakNy峰值法向过载 <= 20 g
+PM相位裕度 在 45°~ 70° 范围内
+BW带宽     在 20 ~ 85 rad/s 范围内
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+设计约束
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 模板要求: 以 monte_carlo_single.m 为基础模板
+   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）
+   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数
+   - rl_N_pn对应制导律参数
+   - base=struct(...) 中引用上述 rl_* 变量
+
+2. 不可大变动的部分（接口与变量可改）:
+   - 六自由度弹道模型（df/rk4f 函数）
+   - 驾驶仪设计函数（cg 函数）
+   - 气动力计算（af 函数）
+   - 控制律（cf 函数）
+
+3. 可选修改:
+   - 制导律（gf 函数）：可修改导引律结构，但接口不变
+   - 初始交战参数（base struct 中的目标/导弹参数）
+
+4.MATLAB代码要求：
+- 要符合matlab语法规范
+- 变量定义完整，且整体一致
+- 不出现未定义变量
+- 保持原有接口兼容
+- 对关键参数和新增项加注释
+
+4. 仿真输出格式要求（RL优化器解析依赖）:
+   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm
+   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg
+   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB
+
+注意：
+若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-05 02:18:57 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-05 02:18:57 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-05 02:18:58 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+C:\Users\Lenovo\anaconda3\envs\GSMultiAgent13\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_184439.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_000409.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 02:18:58 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-05 02:18:59 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-05 02:18:59 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 6/6 documents
+2026-06-05 02:18:59 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 6 docs from 'guidance_output'
+  Indexed 6 report file(s) from ./guidance_output (source_tag=reports)
+2026-06-05 02:19:00 - multi_agent.memory.rag_knowledge_base - INFO - purge_stale_pe_docs: removed 6 non-KB doc(s) from collection.
+  [RAG Purge] Removed 6 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.
+2026-06-05 02:19:00 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-05 02:19:00 - multi_agent.memory.parameter_experience - INFO - Successfully loaded Parameter Experience memory from parameter_experience_memory.json
+C:\Users\Lenovo\anaconda3\envs\GSMultiAgent13\Lib\site-packages\matlab\__init__.py:158: UserWarning: Python versions 3.9, 3.10, 3.11, and 3.12 are supported, but your version of Python is 3_13
+  warnings.warn('Python versions 3.9, 3.10, 3.11, and 3.12 are supported, but your version of Python is %s' % _version)
+2026-06-05 02:19:00 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab_engine'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-05 02:19:00 - langchain_openai.chat_models._client_utils - INFO - langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+
+[Pre-Step] Parsing mission conditions from prompt…
+  [DEBUG] args.prompt = "制导系统设计任务（三层架构系统输入示例）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n运行工况：RUN_CASE='T'; SUB_IDX=4;\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n命中率     >= 92%\nSEP脱靶量  <= 7 m\nPeakNy峰值法向过载 <= 20 g\nPM相位裕度 在 45°~ 70° 范围内\nBW带宽     在 20 ~ 85 rad/s 范围内\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n设计约束\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n1. 模板要求: 以 monte_carlo_single.m 为基础模板\n   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）\n   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数\n   - rl_N_pn对应制导律参数\n   - base=struct(...) 中引用上述 rl_* 变量\n\n2. 不可大变动的部分（接口与变量可改）:\n   - 六自由度弹道模型（df/rk4f 函数）\n   - 驾驶仪设计函数（cg 函数）\n   - 气动力计算（af 函数）\n   - 控制律（cf 函数）\n\n3. 可选修改:\n   - 制导律（gf 函数）：可修改导引律结构，但接口不变\n   - 初始交战参数（base struct 中的目标/导弹参数）\n\n4.MATLAB代码要求：\n- 要符合matlab语法规范\n- 变量定义完整，且整体一致\n- 不出现未定义变量\n- 保持原有接口兼容\n- 对关键参数和新增项加注释\n\n4. 仿真输出格式要求（RL优化器解析依赖）:\n   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm\n   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg\n   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB\n\n注意：\n若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明"
+  [DEBUG] parse_mission_conditions → {'T': [4]}
+  Category T (目标机动 (Target Maneuver)): ['4']
+  Initializing Hermes persistent memory...
+2026-06-05 02:19:00 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 1 entry from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+  Loaded 1 long-term memory from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+2026-06-05 02:19:00 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:21868 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (14 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 14 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-05 02:19:00 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+2026-06-05 02:19:00 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'code_execution', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'rl', 'web']
+2026-06-05 02:19:02 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-05 02:19:02 - agent.auxiliary_client - INFO - Auxiliary auto-detect: using main provider custom (deepseek-v4-pro)
+2026-06-05 02:19:02 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] rag_agent → tools: ['rag_query', 'rag_retrieve', 'rag_expand']
+2026-06-05 02:19:02 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] matlab_agent → tools: ['generate_matlab', 'syntax_check_matlab', 'verify_guidance_compat']
+2026-06-05 02:19:02 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] sim_agent → tools: ['run_simulation', 'syntax_check_matlab']
+2026-06-05 02:19:02 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] analysis_agent → tools: ['judge_requirements', 'parameter_experience_best', 'parameter_experience_search']
+2026-06-05 02:19:02 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] memory_agent → tools: ['agent_memory_remember', 'agent_memory_recall', 'agent_memory_list', 'agent_memory_forget']
+2026-06-05 02:19:02 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] Specialized agents registered: ['rag_agent', 'matlab_agent', 'sim_agent', 'analysis_agent', 'memory_agent']
+2026-06-05 02:19:02 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:21868 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (15 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 15 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-05 02:19:03 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+2026-06-05 02:19:03 - agent.auxiliary_client - INFO - Vision auto-detect: using main provider openrouter (anthropic/claude-opus-4.7)
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'code_execution', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'rl', 'web']
+2026-06-05 02:19:03 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-05 02:19:03 - agent.auxiliary_client - INFO - Auxiliary auto-detect: using main provider custom (deepseek-v4-pro)
+  Hermes initialized with tools (task_prompt auto-injected).
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-05 02:19:03 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+
+  [Miss Hint] Detected user requirement: miss distance ≤ 7.00 m
+  Note: only the reflection agent's evaluation of ALL stated
+        requirements (PM/GM/hit rate/miss/etc.) will trigger early exit.
+
+========================================
+Iteration 1/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+2026-06-05 02:19:03 - multi_agent.integration.task_planner - INFO - [Planner] Analyzing task with LLM: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━...
+2026-06-05 02:19:03 - multi_agent.integration.task_planner - INFO - [Planner] expert_design_path.md read directly from knowledge_base\expert design path.md (80 chars, full document)
+2026-06-05 02:19:03 - multi_agent.integration.task_planner - INFO - [Planner] monte_mean_2.md read directly from knowledge_base\monte mean results.md (1982 chars)
+2026-06-05 02:19:03 - multi_agent.integration.task_planner - INFO - [Planner] Extracted gf/cg source from monte_carlo_single.m (2391 chars) for structural analysis
+2026-06-05 02:19:03 - multi_agent.integration.task_planner - INFO - [Planner] Using Hermes agent with tools for planning analysis...
+2026-06-05 02:19:03 - run_agent - INFO - conversation turn: session=20260605_021903_241727 model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]  任务描述： 制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━...'
+💬 Starting conversation: '[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]
+
+任务描述：
+制导系统设计任务（三层架构系...'
+2026-06-05 02:19:03 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-1 (_call):3344 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:19:20 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-1 (_call):3344 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:19:20 - run_agent - INFO - API call #1: model=deepseek-v4-pro provider=custom in=5803 out=932 total=6735 latency=16.4s
+  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "top_k": 5, "detail_level": "snippet"}
+  [Tool →] call_00_HaabVa7ptFoc1kdWOCV31265
+2026-06-05 02:19:20 - run_agent - INFO - tool rag_retrieve completed (0.34s, 4252 chars)
+  [Tool ✓] call_00_HaabVa7ptFoc1kdWOCV31265
+  ✅ Tool 1 completed in 0.34s - {"status": "success", "query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "detail_level": "snippet...
+  📞 Tool 2: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "top_k": 5, "detail_level": "snipp...
+  [Tool →] call_01_uSQ1NvEI8dj8GLzDi2Dd4818
+2026-06-05 02:19:21 - run_agent - INFO - tool rag_retrieve completed (0.12s, 4154 chars)
+  [Tool ✓] call_01_uSQ1NvEI8dj8GLzDi2Dd4818
+  ✅ Tool 2 completed in 0.12s - {"status": "success", "query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "detail_level...
+  📞 Tool 3: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "top_k": 5, "detail_leve...
+  [Tool →] call_02_bx6g0VAnwMZ6mLabLPwD6577
+2026-06-05 02:19:22 - run_agent - INFO - tool rag_retrieve completed (0.11s, 4301 chars)
+  [Tool ✓] call_02_bx6g0VAnwMZ6mLabLPwD6577
+  ✅ Tool 3 completed in 0.11s - {"status": "success", "query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "de...
+  📞 Tool 4: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"run_case": "T", "sub_idx": 4, "requirements": "hit_rate>=92%, SEP<=7m, PeakNy<=20...
+  [Tool →] call_03_I9juqDMqmdUvwA6DoZQ82051
+2026-06-05 02:19:23 - run_agent - INFO - tool parameter_experience_best completed (0.00s, 227 chars)
+  [Tool ✓] call_03_I9juqDMqmdUvwA6DoZQ82051
+  ✅ Tool 4 completed in 0.00s - {"status": "success", "task_context": {"run_case": "T", "sub_idx": 4, "requirements": "hit_rate>=92%...
+2026-06-05 02:19:23 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-5 (_call):20124 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:19:36 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-5 (_call):20124 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:19:36 - run_agent - INFO - API call #2: model=deepseek-v4-pro provider=custom in=11528 out=577 total=12105 latency=12.2s cache=5760/11528 (50%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\conditions.md", "max_chars": 6000}
+  [Tool →] call_00_o3Nfj7kORvBptOVUc06c1404
+2026-06-05 02:19:36 - run_agent - INFO - tool rag_expand completed (0.00s, 2311 chars)
+  [Tool ✓] call_00_o3Nfj7kORvBptOVUc06c1404
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\conditions.md", "metadata": {"dir": "knowledge...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\monte mean results.md", "max_chars": 6000}
+  [Tool →] call_01_1KYSL2OiVyHYlFLGDXX15786
+2026-06-05 02:19:37 - run_agent - INFO - tool rag_expand completed (0.00s, 2365 chars)
+  [Tool ✓] call_01_1KYSL2OiVyHYlFLGDXX15786
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\monte mean results.md", "metadata": {"type": "...
+2026-06-05 02:19:37 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-6 (_call):33640 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+现在数据齐全，开始按步骤执行分析。
+
+---
+
+## 步骤1 — 工况确认
+
+- `conditions.md` 明确列出 T 类 4 个子工况：**T1 匀速直飞、T2 低频小幅度机动、T3 中频中等幅度机动、T4 高频大幅度机动**。
+- `monte_carlo_single.m` 中 `RUN_CASE='T'; SUB_IDX=4;` 即选中第 4 个子工况 → **T4：高频大幅度机动**。
+
+**T4 标称参数**：目标 z 向机动幅度 120 m/s，y 向匀速横移 60 m/s，z 向机动频率 1.2 rad/s（蒙特卡洛散布与 T1‑T3 相同）。
+
+---
+
+## 步骤2 — RAG 历史指标（默认模板参数下的 T4 仿真结果）
+
+| 指标 | 数值 |
+|------|------|
+| 命中率 | **94.0%** |
+| SEP | **4.22 m** |
+| PeakNy | **51.53 g** |
+| PM | **77.1°** |
+| BW | **6.31 rad/s** |
+| GM | Inf |
+
+---
+
+## 步骤3 — 专家路径规则
+
+`expert design path.md` 核心规则：
+> T4 路径为修改制导律；若检索到满足历史指标的模型/参数 → 重用历史经验；若多轮调参和重用历史检验后仍不满足 → 改为修改制导律。
+
+---
+
+## 步骤4 — PE 历史最优参数
+
+`parameter_experience_best` 返回 **空记录**（无可复用的历史最优参数）。
+
+---
+
+## 步骤5 — 逐项比对
+
+### 数据源 A：RAG 历史指标（默认模板参数）
+
+| 指标 | 实测值 | 要求 | 判断 |
+|------|--------|------|------|
+| 命中率 | 94.0% | ≥92% | ✅ 达标 |
+| SEP | 4.22 m | ≤7 m | ✅ 达标 |
+| PeakNy | 51.53 g | ≤20 g | ❌ **未达标**（超标 157%） |
+| PM | 77.1° | 45°~70° | ❌ **未达标**（超出上限 7.1°） |
+| BW | 6.31 rad/s | 20~85 rad/s | ❌ **未达标**（远低于下限） |
+
+### 数据源 B：PE 最优记录
+
+无可用记录，无法比对。
+
+---
+
+## 步骤6 — mode 决策
+
+- PE 记录为空，不满足「PE 全部达标」条件。
+- RAG 历史数据有 **3 项指标不达标**（PeakNy、PM、BW），不满足「RAG 全部达标」条件。
+- 两个数据源均有未达标项 → 按规则不得选 `REUSE_HISTORY`。
+- 当前尚未尝试任何参数调优，且问题可能通过调整驾驶仪/制导律参数（w1~w3, ζ1~ζ3, τ1~τ3, N_pn）改善 → 应先选 **`TUNE_PARAMS`**。
+- 若调参后仍不满足，再根据 expert design path 转向 `MODIFY_LAW`。
+
+---
+
+## 步骤7 — 规划 JSON
+
+```json
+{
+  "should_split": false,
+  "strategy": "single",
+  "subagent_count": 1,
+  "subtasks": [
+    "对 T4 工况进行参数调优（TUNE_PARAMS），调整驾驶仪参数 rl_w1/rl_zeta1/rl_tao1, rl_w2/rl_zeta2/rl_tao2, rl_w3/rl_zeta3/rl_tao3 及制导律参数 rl_N_pn，目标：PeakNy ≤ 20g、PM 45~70°、BW 20~85 rad/s，同时保持命中率≥92% 和 SEP≤7m。若调参无法收敛，则升级为 MODIFY_LAW。"
+  ],
+  "subtask_conditions": [
+    "RUN_CASE='T';SUB_IDX=4;"
+  ],
+  "reason": "【逐项比对】RAG 默认模板参数下 T4 结果：命中率94%✅、SEP 4.22m✅、PeakNy 51.53g❌、PM 77.1°❌、BW 6.31rad/s❌，三项不达标。PE 最优记录为空。依据规则：两个数据源均未全部达标 → 排除 REUSE_HISTORY。当前未尝试调参，优先 TUNE_PARAMS；若调参后仍不满足，再按 expert design path 提示转向 MODIFY_LAW。",
+  "mode": "TUNE_PARAMS",
+  "mission_analysis": "T4 高频大幅度机动是 T 类中最严苛的子工况：目标以 120m/s 幅度、1.2rad/s 频率进行 z 向正弦机动，同时以 60m/s 匀速横移。该工况对自动驾驶仪带宽、相位裕度和过载能力提出极高要求，默认模板参数（w1=40, ζ1=0.75, w2=35, ζ2=0.75, w3=40, ζ3=0.70, N_pn=4）在该工况下带宽仅 6.31rad/s、峰值过载达 51.53g，远不能满足 ≤20g 和 BW≥20rad/s 的指标。需大幅提升驾驶仪带宽并调整阻尼以控制过载。",
+  "mission_conditions": {
+    "T": [4]
+  }
+}
+```2026-06-05 02:20:27 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-6 (_call):33640 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:20:27 - run_agent - INFO - API call #3: model=deepseek-v4-pro provider=custom in=14420 out=2658 total=17078 latency=50.2s cache=12032/14420 (83%)
+🎉 Conversation completed after 3 OpenAI-compatible API call(s)
+2026-06-05 02:20:27 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=3/20 budget=3/20 tool_turns=2 last_msg_role=assistant response_len=2282 session=20260605_021903_241727
+2026-06-05 02:20:27 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 analysis: T4 高频大幅度机动是 T 类中最严苛的子工况：目标以 120m/s 幅度、1.2rad/s 频率进行 z 向正弦机动，同时以 60m/s 匀速横移。该工况对自动驾驶仪带宽、相位裕度和过载能力提出极高要求，默认模板参数（w1=40, ζ1=0.75, w2=35, ζ2=0.75, w3=40, ζ3=0.70, N_pn=4）在该工况下带宽仅 6.31rad/s、峰值过载达 51.53g，远不能
+2026-06-05 02:20:27 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 conditions: {'T': [4]}
+  工况分析 : T4 高频大幅度机动是 T 类中最严苛的子工况：目标以 120m/s 幅度、1.2rad/s 频率进行 z 向正弦机动，同时以 60m/s 匀速横移。该工况对自动驾驶仪带宽、相位裕度和过载能力提出极高要求，默认模板参数（w1=40, ζ1=0.75, w2=35, ζ2=0.75, w3=40, ζ3=0.70, N_pn=4）在该工况下带宽仅 6.31rad/s、峰值过载达 51.53g，远不能满足 ≤20g 和 BW≥20rad/s 的指标。需大幅提升驾驶仪带宽并调整阻尼以控制过载。
+  工况映射 : {'T': [4]}
+  Plan   : single | mode=TUNE_PARAMS | subtasks=1
+  Reason : 【逐项比对】RAG 默认模板参数下 T4 结果：命中率94%✅、SEP 4.22m✅、PeakNy 51.53g❌、PM 77.1°❌、BW 6.31rad/s❌，三项不达标。PE 最优记录为空。依据规则：两个数据源均未全部达标 → 排除 REUSE_HISTORY。当前未尝试调参，优先 TUNE_PARAMS；若调参后仍不满足，再按 expert design path 提示转向 MODIFY_LAW。
+  Context (3746 chars total, preview):
+[知识库检索结果]
+  [score=0.62, src=monte_carlo_single.m]
+function monte_carlo_single()
+% 单文件蒙特卡洛仿真 | 修改 RUN_CASE 选择工况
+% 'T'目标机动(T0-T3)  'G'交战几何(G0-G4)  'AP'驾驶仪(AP0-AP4)  'R'综合鲁棒(R0-R2)
+clc; close all; rng(42);
+RUN_CASE='ALL'; SUB_IDX=0; N_MC=100; KILL_R=10;
+% RUN_CASE: 'T'|'G'|'AP'|'R' 单类别, 'ALL' 全部类别
+% SUB_IDX:  0=全部子工况, 1=仅第1子工况, 2=仅第2子工况, ...
+
+%% ── RL_PARAMS_BEGIN (auto-patched by RL optimizer, do not edit manually) ──
+rl_w1          = 40;
+rl_zeta1       = 0.75;
+rl_tao1        = 0.20;
+rl_w2          = 35;
+rl_zeta2       = 0.75;
+rl_tao2        = 0.20;
+rl_w3          = 40;
+rl_zeta3       = 0.70;
+r
+2026-06-05 02:20:27 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-05 02:20:27 - run_agent - INFO - conversation turn: session=20260605_021903_241727 model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='从以下提示词中提取制导系统的初始参数，返回JSON格式。 任务：制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━━━━━━━━━━━━━━━...'
+💬 Starting conversation: '从以下提示词中提取制导系统的初始参数，返回JSON格式。
+任务：制导系统设计任务（三层架构系统输入示例）
+━━━━━━━...'
+2026-06-05 02:20:27 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-7 (_call):44452 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+我需要先从知识库中获取 `monte_carlo_single.m` 完整的默认参数（提示词中的代码片段被截断了），然后再结合您给出的工况和指标要求一并输出。2026-06-05 02:20:43 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-7 (_call):44452 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:20:43 - run_agent - INFO - API call #4: model=deepseek-v4-pro provider=custom in=5345 out=862 total=6207 latency=16.3s
+  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "monte_carlo_single.m RL_PARAMS_BEGIN 默认参数 rl_w1 rl_zeta1 rl_tao1 rl_w2 rl_zeta2 rl_tao2 r...
+  [Tool →] call_00_wv98tsZa4SCytP6spHkg5237
+2026-06-05 02:20:44 - run_agent - INFO - tool rag_retrieve completed (0.31s, 2988 chars)
+  [Tool ✓] call_00_wv98tsZa4SCytP6spHkg5237
+  ✅ Tool 1 completed in 0.31s - {"status": "success", "query": "monte_carlo_single.m RL_PARAMS_BEGIN 默认参数 rl_w1 rl_zeta1 rl_tao1 rl_...
+2026-06-05 02:20:44 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-9 (_call):36080 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+已从知识库中补全了被截断的默认参数，结合提示词中的工况与指标，整理如下：
+
+```json
+{
+  "navigation_coefficient": 4,
+  "autopilot_params": {
+    "w1": 40,
+    "zeta1": 0.75,
+    "tao1": 0.20,
+    "w2": 35,
+    "zeta2": 0.75,
+    "tao2": 0.20,
+    "w3": 40,
+    "zeta3": 0.70,
+    "gama_max_deg": 45
+  },
+  "mission_conditions": {
+    "RUN_CASE": "T",
+    "SUB_IDX": 4
+  },
+  "nmc": 100,
+  "kill_radius_m": 10,
+  "requirements": {
+    "hit_rate_min_pct": 92,
+    "SEP_max_m": 7,
+    "PeakNy_max_g": 20,
+    "PM_range_deg": [45, 70],
+    "BW_range_rads": [20, 85]
+  }
+}
+```
+
+**参数来源说明**：
+
+| 参数 | 模板默认值 | 来源 |
+|------|-----------|------|
+| `N_pn` (navigation_coefficient) | **4** | `monte_carlo_single.m` → `RL_PARAMS_BEGIN` 块 |
+| `w1, zeta1, tao1` | 40 / 0.75 / 0.20 | 同上（提示词片段 + KB 补全） |
+| `w2, zeta2, tao2` | 35 / 0.75 / 0.20 | 同上 |
+| `w3, zeta3` | 40 / 0.70 | 同上 |
+| `gama_max_deg` | 45 | 同上（最大攻角限制） |
+| `RUN_CASE / SUB_IDX` | **T / 4** | 提示词任务工况 |
+| `N_MC / KILL_R` | 100 / 10 | 模板默认（命中判定半径 10m） |
+| 五项指标 | ≥92% / ≤7m / ≤20g / 45-70° / 20-85 rad/s | 提示词性能要求 |
+
+> **注意**：模板中未出现 `tao3`（三回路驾驶仪仅两回路有时延），`gama_max_deg` 是模板额外存在的约束参数。如需直接用于 `generate_matlab` 或 `run_simulation`，可直接取 `autopilot_params` 子集（w1/zeta1/tao1/w2/zeta2/tao2/w3/zeta3/N_pn）。2026-06-05 02:21:13 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-9 (_call):36080 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:21:13 - run_agent - INFO - API call #5: model=deepseek-v4-pro provider=custom in=7537 out=1683 total=9220 latency=29.6s cache=5248/7537 (70%)
+🎉 Conversation completed after 2 OpenAI-compatible API call(s)
+2026-06-05 02:21:13 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=2/20 budget=2/20 tool_turns=1 last_msg_role=assistant response_len=1204 session=20260605_021903_241727
+  LLM param extraction also failed: Expecting value: line 1 column 1 (char 0)
+  [DEBUG] mission_conditions before build = {'T': [4]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=4;
+
+[Step 2.5] Hermes Content Generation (mode=TUNE_PARAMS)...
+  Running Hermes agent [strategy=single, subtasks=1]...
+2026-06-05 02:21:13 - run_agent - INFO - conversation turn: session=20260605_021903_241727 model=deepseek-v4-pro provider=custom platform=unknown history=10 msg='System: You are a missile guidance system orchestrator. Your PRIMARY tool is:   ...'
+💬 Starting conversation: 'System: You are a missile guidance system orchestrator. Your...'
+2026-06-05 02:21:13 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-10 (_call):29780 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:21:24 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-10 (_call):29780 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:21:24 - run_agent - INFO - API call #6: model=deepseek-v4-pro provider=custom in=22927 out=518 total=23445 latency=10.4s cache=17024/22927 (74%)
+  📞 Tool 1: rag_query(['query', 'max_hops', 'top_k']) - {"query": "T4 高频大幅度机动 自动驾驶仪参数合理范围 w1 zeta1 tao1 w2 zeta2 tao2 w3 zeta3 tao3 N_pn 过载限制 带宽 相位裕度 调参", "...
+  [Tool →] call_00_9oVNvtPDjdALxsVV5Qct6213
+2026-06-05 02:21:29 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 4 sub-queries: ['T4高频机动自动驾驶仪带宽与相位裕度要求', '三回路自动驾驶仪参数w zeta tao合理范围', '大过载限制下自动驾驶仪调参方法', '高频大幅度机动对制导回路N_pn的影响']
+2026-06-05 02:21:32 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 6 candidates → 6 kept (threshold=0.30)
+2026-06-05 02:21:37 - run_agent - INFO - tool rag_query completed (13.01s, 5474 chars)
+  [Tool ✓] call_00_9oVNvtPDjdALxsVV5Qct6213
+  ✅ Tool 1 completed in 13.01s - {"status": "success", "query": "T4 高频大幅度机动 自动驾驶仪参数合理范围 w1 zeta1 tao1 w2 zeta2 tao2 w3 zeta3 tao3 N_p...
+  📞 Tool 2: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"task": "guidance_rl_optimization", "RUN_CASE": "T", "SUB_IDX": 4}, "top_k": 5}
+  [Tool →] call_01_LKpLObaK2y5cySrQuxG56562
+2026-06-05 02:21:38 - run_agent - INFO - tool parameter_experience_best completed (0.00s, 181 chars)
+  [Tool ✓] call_01_LKpLObaK2y5cySrQuxG56562
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "task_context": {"task": "guidance_rl_optimization", "RUN_CASE": "T", "SUB_IDX...
+2026-06-05 02:21:38 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-12 (_call):14156 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+RAG 未返回具体参数范围，但系统 `verify_guidance_compat` 提供了适配性验证参考范围。PE 无匹配历史记录。现在基于物理分析推导初始参数，然后生成脚本。
+
+**参数推导逻辑**：
+- 默认参数 BW 仅 6.31 rad/s，目标 ≥20 → 需大幅提高 w1（主导带宽），w1 从 40 → 60
+- PM 默认 77.1° 超出上限 → 降低 ζ1 从 0.75 → 0.55
+- PeakNy 51.53 g → 需要降低过载，τ1 不宜过低（避免过灵敏），N_pn 不宜过高
+- 三通道协调：w2/w3 同步提高至 50-55，ζ 适度降低
+
+```
+INIT_PARAMS = {
+  w1: 60,    zeta1: 0.55,  tao1: 0.08,
+  w2: 50,    zeta2: 0.60,  tao2: 0.10,
+  w3: 55,    zeta3: 0.60,
+  N_pn: 4.0
+}
+```
+
+现在生成脚本。2026-06-05 02:22:06 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-12 (_call):14156 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:22:06 - run_agent - INFO - API call #7: model=deepseek-v4-pro provider=custom in=25666 out=1609 total=27275 latency=28.9s cache=22912/25666 (89%)
+  📞 Tool 1: generate_matlab(['autopilot_params', 'mission_conditions', 'mode', 'nmc', 'script_name', 'task_description']) - {"autopilot_params": {"w1": 60, "zeta1": 0.55, "tao1": 0.08, "w2": 50, "zeta2": 0.6, "tao2": 0.1, "w...
+  [Tool →] call_00_AcgR4kPVfLzrzVy3cggF1652
+2026-06-05 02:22:06 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Loaded template from scripts folder: 'guidance_simulation_T4_sat_apn_1780596988.m' (kw_score=0.0)
+2026-06-05 02:22:06 - multi_agent.tools.simulation_tool - INFO - [MATLAB] TUNE_PARAMS: seeding from scripts folder (src=scripts:guidance_simulation_T4_sat_apn_1780596988.m)
+2026-06-05 02:22:07 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated 996-char code analysis of retrieved model for LLM context.
+2026-06-05 02:22:07 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Injected 1194-char context into task_description (analysis=0, retrieved_code=996).
+2026-06-05 02:22:07 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Renamed function declaration 'guidance_simulation_T4_sat_apn_1780596988' → 'guidance_T4_tune_v2_1780597327' to match filename
+2026-06-05 02:22:07 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Stripped 6 annotation line(s) from script → sidecar: guidance_T4_tune_v2_1780597327_interface_check.txt
+2026-06-05 02:22:07 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated script → guidance_output\scripts\guidance_T4_tune_v2_1780597327.m  (source: scripts:guidance_simulation_T4_sat_apn_1780596988.m)
+2026-06-05 02:22:07 - run_agent - INFO - tool generate_matlab completed (0.03s, 313 chars)
+  [Tool ✓] call_00_AcgR4kPVfLzrzVy3cggF1652
+  ✅ Tool 1 completed in 0.03s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_tune_v2_1780597327.m", "...
+2026-06-05 02:22:07 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-13 (_call):13136 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:22:09 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-13 (_call):13136 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:22:09 - run_agent - INFO - API call #8: model=deepseek-v4-pro provider=custom in=27392 out=78 total=27470 latency=2.3s cache=25600/27392 (93%)
+  📞 Tool 1: syntax_check_matlab(['script_path']) - {"script_path": "guidance_output\\scripts\\guidance_T4_tune_v2_1780597327.m"}
+  [Tool →] call_00_KYzPOKZi2Eup7qDYNbL19476
+2026-06-05 02:22:09 - run_agent - INFO - tool syntax_check_matlab completed (0.03s, 186 chars)
+  [Tool ✓] call_00_KYzPOKZi2Eup7qDYNbL19476
+  ✅ Tool 1 completed in 0.03s - {"status": "success", "valid": true, "issues": ["脚本检查通过，无问题"], "fixed_path": "guidance_output\\scrip...
+2026-06-05 02:22:09 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-14 (_call):1504 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:22:12 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-14 (_call):1504 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:22:12 - run_agent - INFO - API call #9: model=deepseek-v4-pro provider=custom in=27547 out=118 total=27665 latency=3.1s cache=27264/27547 (99%)
+  📞 Tool 1: run_simulation(['mission_conditions', 'nmc', 'script_path']) - {"mission_conditions": "RUN_CASE='T';SUB_IDX=4;", "nmc": 20, "script_path": "guidance_output\\script...
+  [Tool →] call_00_BR6IbFfJYiNdKpPcXp0b1644
+C:\Users\Lenovo\anaconda3\envs\GSMultiAgent13\Lib\site-packages\matlab\engine\__init__.py:43: UserWarning: MATLAB Engine for Python supports Python version 3.9, 3.10, 3.11, and 3.12, but your version of Python is 3_13
+  warnings.warn('MATLAB Engine for Python supports Python version'
+2026-06-05 02:22:14 - multi_agent.simulation.matlab_engine_backend - WARNING - Python 3.13 detected — MATLAB Engine API officially supports 3.9-3.12.  In-process engine may be unstable; subprocess fallback ('matlab -batch') is recommended.
+2026-06-05 02:22:14 - multi_agent.simulation.matlab_engine_backend - INFO - Starting new MATLAB engine session (this takes 30–90 s on Windows)…
+2026-06-05 02:22:24 - multi_agent.simulation.matlab_engine_backend - INFO - MATLAB engine session started (in-process).
+2026-06-05 02:22:28 - multi_agent.tools.simulation_tool - INFO - [run_simulation] in-process matlab.engine complete, stdout=1485 chars
+2026-06-05 02:22:28 - multi_agent.rl.matlab_rl_optimizer - INFO - [parse] ALL 20 runs produced ERR (no HIT/MISS). Parameters likely caused sim crash.
+2026-06-05 02:22:31 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-05 02:22:31 - run_agent - INFO - tool run_simulation completed (19.23s, 3396 chars)
+  [Tool ✓] call_00_BR6IbFfJYiNdKpPcXp0b1644
+  ✅ Tool 1 completed in 19.23s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_tune_v2_1780597327.m", "...
+2026-06-05 02:22:31 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-16 (_call):1832 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+仿真出现 `endfunction` 语法错误（非MATLAB标准），需要修复。传入错误信息进行语法校正。2026-06-05 02:22:42 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-16 (_call):1832 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:22:42 - run_agent - INFO - API call #10: model=deepseek-v4-pro provider=custom in=29285 out=573 total=29858 latency=11.0s cache=27648/29285 (94%)
+  📞 Tool 1: syntax_check_matlab(['auto_fix', 'error_message', 'script_path']) - {"auto_fix": true, "error_message": "未定义与 'char' 类型的输入参数相对应的函数 'endfunction'。", "script_path": "guid...
+  [Tool →] call_00_wdar7U1TdCTI9yrzyDVv3997
+2026-06-05 02:22:42 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error="未定义与 'char' 类型的输入参数相对应的函数 'endfunction'。" issues=0
+2026-06-05 02:24:42 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Wrote LLM-fixed script (10956 chars).
+2026-06-05 02:24:42 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] All static issues resolved after LLM fix.
+2026-06-05 02:24:42 - run_agent - INFO - tool syntax_check_matlab completed (119.63s, 186 chars)
+  [Tool ✓] call_00_wdar7U1TdCTI9yrzyDVv3997
+  ✅ Tool 1 completed in 119.63s - {"status": "success", "valid": true, "issues": ["脚本检查通过，无问题"], "fixed_path": "guidance_output\\scrip...
+2026-06-05 02:24:42 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-18 (_call):47004 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:24:46 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-18 (_call):47004 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:24:46 - run_agent - INFO - API call #11: model=deepseek-v4-pro provider=custom in=29935 out=163 total=30098 latency=3.8s cache=29824/29935 (100%)
+  📞 Tool 1: run_simulation(['mission_conditions', 'nmc', 'script_path']) - {"mission_conditions": "RUN_CASE='T';SUB_IDX=4;", "nmc": 20, "script_path": "guidance_output\\script...
+  [Tool →] call_00_tqDDC3ktfx2AyFFcEnFC3441
+2026-06-05 02:30:16 - multi_agent.tools.simulation_tool - WARNING - matlab.engine failed on 'guidance_T4_tune_v2_1780597327_direct_244d5470.m': TimeoutError: ; falling back to MATLAB subprocess.
+2026-06-05 02:30:44 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=1656 chars
+2026-06-05 02:30:48 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+C:\Users\Lenovo\anaconda3\envs\GSMultiAgent13\Lib\asyncio\events.py:89: RuntimeWarning: The executor did not finishing joining its threads within 300 seconds.
+  self._context.run(self._callback, *self._args)
+2026-06-05 02:35:48 - run_agent - INFO - tool run_simulation completed (662.57s, 3816 chars)
+  [Tool ✓] call_00_tqDDC3ktfx2AyFFcEnFC3441
+  ✅ Tool 1 completed in 662.57s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_tune_v2_1780597327.m", "...
+2026-06-05 02:35:48 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-20 (_call):27220 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+仿真完成。现在调用 judge_requirements 判断指标是否满足。2026-06-05 02:36:07 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-20 (_call):27220 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:36:07 - run_agent - INFO - API call #12: model=deepseek-v4-pro provider=custom in=32018 out=1004 total=33022 latency=18.9s cache=30080/32018 (94%)
+  📞 Tool 1: judge_requirements(['metrics', 'script_path', 'task_prompt']) - {"metrics": {"BW_rads": 20.03, "PeakNy_g": 2.99, "PM_deg": 29.7, "SEP_m": 11.01, "hit_rate_pct": 55....
+  [Tool →] call_00_PSUuqBxjwkVkbdSKcZpD2222
+2026-06-05 02:36:07 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+2026-06-05 02:36:22 - multi_agent.tools.judge_requirements_tool - INFO - [JudgeRequirements] satisfied=False | 命中率 55.0% < 要求 92.0% [NG]; SEP 11.01m > 要求 7.00m [NG]; PeakNy 2.99g <= 要求 20.00g [OK]
+2026-06-05 02:36:22 - run_agent - INFO - tool judge_requirements completed (14.53s, 338 chars)
+  [Tool ✓] call_00_PSUuqBxjwkVkbdSKcZpD2222
+  ✅ Tool 1 completed in 14.53s - {"satisfied": false, "reason": "命中率 55.0% < 要求 92.0% [NG]; SEP 11.01m > 要求 7.00m [NG]; PeakNy 2.99g ...
+2026-06-05 02:36:22 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-22 (_call):43044 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+---
+
+## 📊 TUNE_PARAMS 仿真结果摘要 — T4 高频大幅度机动
+
+| 指标 | 实测值 | 要求 | 判定 |
+|------|--------|------|------|
+| **命中率** | 55.0% | ≥92% | ❌ 不达标 |
+| **SEP** | 11.01 m | ≤7 m | ❌ 不达标 |
+| **PeakNy** | 2.99 g | ≤20 g | ✅ 达标 |
+| **PM** | 29.7° | 45°~70° | ❌ 不达标（偏低） |
+| **BW** | 20.03 rad/s | 20~85 rad/s | ✅ 达标（临界） |
+
+### 本轮参数
+```
+w1=60, ζ1=0.55, τ1=0.08
+w2=50, ζ2=0.60, τ2=0.10
+w3=55, ζ3=0.60
+N_pn=4.0
+```
+
+### 分析
+- **BW** 从默认的 6.31 → 20.03 rad/s，提升显著（+218%），已达标但处于下限。
+- **PeakNy** 从 51.53 → 2.99 g，大幅下降，远低于 20g 要求。
+- **PM** 从 77.1° → 29.7°，矫正过度，跌出下限（需要 >45°）。`ζ1=0.55` 过低，应回拉至 0.65~0.70。
+- **命中率** 从 94% 暴跌至 55%，说明激进参数破坏了制导精度。N_pn=4 可能不足以应对高频机动，或阻尼过低导致振荡。
+- **SEP** 11.01 m 超标，命中样本平均 3.62 m 尚可，但未命中次数多（9/20），最大脱靶 37 m。
+
+### 结论
+**satisfied = False** → 本轮 TUNE_PARAMS 未达标。Layer3 将进入 **RL 参数优化环节**，自动搜索更优的参数组合（建议方向：提高 ζ1 回到 0.65~0.75 以恢复 PM；适当提高 N_pn 至 4.5~5.0 以改善命中率；保持 w1 在 55~60 维持带宽）。2026-06-05 02:36:37 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-22 (_call):43044 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-05 02:36:37 - run_agent - INFO - API call #13: model=deepseek-v4-pro provider=custom in=33193 out=766 total=33959 latency=15.2s cache=32000/33193 (96%)
+🎉 Conversation completed after 8 OpenAI-compatible API call(s)
+2026-06-05 02:36:37 - run_agent - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=8/20 budget=8/20 tool_turns=9 last_msg_role=assistant response_len=870 session=20260605_021903_241727
+  [Hermes generated script] guidance_T4_tune_v2_1780597327.m
+2026-06-05 02:36:52 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+  [Hermes sim metrics] hit=0.0%  SEP=50.000m  PM=30.0°  BW=20.0r/s
+2026-06-05 02:36:52 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  Hermes response length: 870 chars
+  ⚠ Extracted code block is not a runnable simulation template (guidance-law explanation?); saved to model_output only → guidance_output\scripts\hermes_generated_1.m
+
+[Layer 3] Optimization Workflow | script=guidance_T4_tune_v2_1780597327.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\b1bbdadc2057452ba3da41240367e189
+  [Layer 3] Using Hermes script params as warm-start: {'w1': 60.0, 'zeta1': 0.55, 'tao1': 0.08, 'w2': 50.0, 'zeta2': 0.6, 'tao2': 0.1, 'w3': 55.0, 'zeta3': 0.6, 'N_pn': 4.0}
+  [DEBUG Layer3] mission_conditions = {'T': [4]}
+2026-06-05 02:36:52 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Starting | directly_satisfied=False | script=guidance_T4_tune_v2_1780597327.m
+  [Layer 3] Strategy selected: PPO
+2026-06-05 02:36:57 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Optimization strategy: ppo
+2026-06-05 02:36:57 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 11 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\b1bbdadc2057452ba3da41240367e189\guidance_T4_tune_v2_1780597327.m
+2026-06-05 02:36:57 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Baseline uses PE-retrieved initial params (9 values)
+2026-06-05 02:36:57 - multi_agent.rl.matlab_rl_optimizer - INFO - RL networks initialised: state_dim=16, action_dim=9, mode=contextual_bandit(gamma=0), batch=64, entropy_coef=0.05, pitch_std=1.00, other_std=0.37
+2026-06-05 02:36:57 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Contextual-bandit PPO | batch=64 | nmc=10 | gamma=0 | entropy_coef=0.05
+2026-06-05 02:36:57 - multi_agent.rl.matlab_rl_optimizer - INFO - Evaluating baseline (PE-retrieved / script params)…
+2026-06-05 02:36:57 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 02:36:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 02:36:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 02:36:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 02:36:57 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 02:41:58 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_024158.json
+2026-06-05 02:41:58 - multi_agent.rl.matlab_rl_optimizer - INFO - Baseline reward=-0.009  metrics={'hit_rate': 37.8921568627451, 'SEP': 8.63235294117647, 'miss_distance': 8.63235294117647, 'peak_ny': 9.7, 'pitch_PM': 51.5625, 'pitch_BW': 50.5, 'pitch_GM': 8.0, '_sim_source': 'fallback', 'peak_n': 9.7}
+2026-06-05 02:41:58 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 02:41:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 02:41:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 02:41:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 02:41:58 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 02:46:59 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_024659.json
+2026-06-05 02:46:59 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 1/100] reward=-0.010  hit=33.9%  SEP=9.82m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.42  PM=68.8°(best=51.6°)  BW=18.0r/s(best=50.5r/s)
+2026-06-05 02:47:05 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 02:47:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 1] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 02:47:05 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 02:47:05 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 02:47:05 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 02:47:05 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 02:47:05 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 02:52:07 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_025207.json
+2026-06-05 02:52:07 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 2/100] reward=-0.010  hit=32.7%  SEP=10.19m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.88  PM=61.0°(best=51.6°)  BW=21.0r/s(best=50.5r/s)
+2026-06-05 02:52:13 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 02:52:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 2] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 02:52:13 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 02:52:13 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 02:52:13 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 02:52:13 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 02:52:13 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 02:57:14 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_025714.json
+2026-06-05 02:57:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 3/100] reward=-0.010  hit=31.9%  SEP=10.42m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=8.41  PM=43.9°(best=51.6°)  BW=41.6r/s(best=50.5r/s)
+2026-06-05 02:57:19 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 02:57:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 3] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 02:57:19 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 02:57:19 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 02:57:19 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 02:57:19 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 02:57:19 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:02:20 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_030220.json
+2026-06-05 03:02:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 4/100] reward=-0.010  hit=34.4%  SEP=9.69m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.89  PM=62.4°(best=51.6°)  BW=26.9r/s(best=50.5r/s)
+2026-06-05 03:02:26 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:02:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 4] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:02:26 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:02:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:02:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:02:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:02:26 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:07:27 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_030727.json
+2026-06-05 03:07:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 5/100] reward=-0.009  hit=37.5%  SEP=8.75m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=7.07  PM=54.2°(best=51.6°)  BW=35.9r/s(best=50.5r/s)
+2026-06-05 03:07:32 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:07:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 5] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:07:32 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:07:32 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:07:32 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:07:32 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:07:32 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:12:33 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_031233.json
+2026-06-05 03:12:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 6/100] reward=-0.009  hit=35.0%  SEP=9.49m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=5.63  PM=59.7°(best=51.6°)  BW=28.5r/s(best=50.5r/s)
+2026-06-05 03:12:40 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:12:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 6] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:12:40 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:12:40 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:12:40 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:12:40 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:12:40 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:17:41 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_031741.json
+2026-06-05 03:17:41 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 7/100] reward=-0.010  hit=34.6%  SEP=9.63m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=3.40  PM=54.7°(best=51.6°)  BW=17.0r/s(best=50.5r/s)
+2026-06-05 03:17:50 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:17:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 7] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:17:50 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:17:50 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:17:50 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:17:50 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:17:50 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:22:51 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_032251.json
+2026-06-05 03:22:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 8/100] reward=-0.012  hit=27.6%  SEP=11.72m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=3.40  PM=64.0°(best=51.6°)  BW=17.0r/s(best=50.5r/s)
+2026-06-05 03:22:58 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:22:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 8] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:22:58 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:22:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:22:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:22:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:22:58 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:28:00 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_032800.json
+2026-06-05 03:28:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 9/100] reward=-0.010  hit=33.8%  SEP=9.86m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=6.55  PM=52.6°(best=51.6°)  BW=32.4r/s(best=50.5r/s)
+2026-06-05 03:28:06 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:28:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 9] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:28:06 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:28:06 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:28:06 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:28:06 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:28:06 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:33:07 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_033307.json
+2026-06-05 03:33:07 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 10/100] reward=-0.010  hit=31.9%  SEP=10.42m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=3.40  PM=47.7°(best=51.6°)  BW=17.0r/s(best=50.5r/s)
+2026-06-05 03:33:12 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:33:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 10] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:33:12 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:33:12 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:33:12 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:33:12 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:33:12 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:38:13 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_033813.json
+2026-06-05 03:38:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 11/100] reward=-0.010  hit=32.3%  SEP=10.30m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=6.01  PM=57.6°(best=51.6°)  BW=34.4r/s(best=50.5r/s)
+2026-06-05 03:38:18 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:38:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 11] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:38:18 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:38:18 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:38:18 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:38:18 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:38:18 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:43:19 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_034319.json
+2026-06-05 03:43:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 12/100] reward=-0.010  hit=34.4%  SEP=9.69m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=7.52  PM=73.8°(best=51.6°)  BW=38.7r/s(best=50.5r/s)
+2026-06-05 03:43:25 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:43:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 12] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:43:25 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:43:25 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:43:25 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:43:25 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:43:25 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:48:27 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_034827.json
+2026-06-05 03:48:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 13/100] reward=-0.009  hit=35.6%  SEP=9.32m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=7.10  PM=59.7°(best=51.6°)  BW=41.6r/s(best=50.5r/s)
+2026-06-05 03:48:32 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:48:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 13] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:48:32 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:48:32 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:48:32 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:48:32 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:48:32 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:53:33 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_035333.json
+2026-06-05 03:53:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 14/100] reward=-0.011  hit=28.9%  SEP=11.34m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=3.40  PM=69.4°(best=51.6°)  BW=17.0r/s(best=50.5r/s)
+2026-06-05 03:53:39 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:53:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 14] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:53:39 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:53:39 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:53:39 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:53:39 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:53:39 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 03:58:40 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_035840.json
+2026-06-05 03:58:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 15/100] reward=-0.011  hit=31.1%  SEP=10.68m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.49  PM=77.4°(best=51.6°)  BW=18.1r/s(best=50.5r/s)
+2026-06-05 03:58:46 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 03:58:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 15] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 03:58:46 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 03:58:46 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 03:58:46 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 03:58:46 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 03:58:46 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:03:47 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_040347.json
+2026-06-05 04:03:47 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 16/100] reward=-0.011  hit=31.0%  SEP=10.71m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=7.35  PM=61.9°(best=51.6°)  BW=40.1r/s(best=50.5r/s)
+2026-06-05 04:03:52 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:03:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 16] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:03:52 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:03:52 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:03:52 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:03:52 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:03:52 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:08:53 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_040853.json
+2026-06-05 04:08:53 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 17/100] reward=-0.010  hit=33.4%  SEP=9.98m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.64  PM=52.7°(best=51.6°)  BW=25.3r/s(best=50.5r/s)
+2026-06-05 04:08:58 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:08:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 17] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:08:58 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:08:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:08:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:08:58 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:08:58 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:14:00 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_041400.json
+2026-06-05 04:14:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 18/100] reward=-0.011  hit=30.7%  SEP=10.79m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.89  PM=72.0°(best=51.6°)  BW=22.7r/s(best=50.5r/s)
+2026-06-05 04:14:05 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:14:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 18] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:14:05 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:14:05 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:14:05 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:14:05 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:14:05 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:19:06 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_041906.json
+2026-06-05 04:19:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 19/100] reward=-0.011  hit=30.7%  SEP=10.80m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.44  PM=73.0°(best=51.6°)  BW=18.0r/s(best=50.5r/s)
+2026-06-05 04:19:11 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:19:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 19] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:19:11 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:19:11 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:19:11 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:19:11 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:19:11 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:24:12 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_042412.json
+2026-06-05 04:24:12 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 20/100] reward=-0.011  hit=31.5%  SEP=10.56m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=6.18  PM=52.6°(best=51.6°)  BW=34.6r/s(best=50.5r/s)
+2026-06-05 04:24:16 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:24:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 20] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:24:16 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:24:16 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:24:16 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:24:16 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:24:16 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:29:17 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_042917.json
+2026-06-05 04:29:17 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 21/100] reward=-0.011  hit=30.5%  SEP=10.86m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=5.21  PM=69.1°(best=51.6°)  BW=29.0r/s(best=50.5r/s)
+2026-06-05 04:29:24 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:29:24 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 21] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:29:24 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:29:24 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:29:24 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:29:24 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:29:24 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:34:25 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_043425.json
+2026-06-05 04:34:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 22/100] reward=-0.011  hit=30.8%  SEP=10.76m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=8.22  PM=60.1°(best=51.6°)  BW=49.0r/s(best=50.5r/s)
+2026-06-05 04:34:33 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:34:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 22] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:34:33 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:34:33 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:34:33 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:34:33 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:34:33 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:39:34 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_043934.json
+2026-06-05 04:39:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 23/100] reward=-0.011  hit=29.9%  SEP=11.04m  best_reward_SEP=8.63m  best_SEP_ever=8.63m  PeakN=4.41  PM=76.5°(best=51.6°)  BW=21.4r/s(best=50.5r/s)
+2026-06-05 04:39:40 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:39:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 23] needs_optimization=True | 命中率 37.9% < 92.0% [NG]; SEP 8.63m > 7.00m [NG]
+2026-06-05 04:39:40 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:39:40 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:39:40 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:39:40 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:39:40 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:44:41 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_044441.json
+2026-06-05 04:44:41 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 24] New best reward=-0.008  params={'w1': 47.014843821525574, 'zeta1': 0.7482369847595691, 'tao1': 0.2459188103675842, 'w2': 32.68118679523468, 'zeta2': 0.776190248131752, 'tao2': 0.2719419732689857, 'w3': 21.1283540725708, 'zeta3': 0.5498618021607398, 'N_pn': 5.000465020537376}
+2026-06-05 04:44:41 - multi_agent.memory.parameter_experience - INFO - Stored memory 57c2ec21f97850a2 with fitness 0.536843963494878
+2026-06-05 04:44:41 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-05 04:44:41 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 24/100] reward=-0.008  hit=39.0%  SEP=8.29m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=7.28  PM=55.6°(best=55.6°)  BW=39.2r/s(best=39.2r/s)
+2026-06-05 04:44:48 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:44:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 24] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 04:44:48 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:44:48 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:44:48 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:44:48 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:44:48 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:49:49 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_044949.json
+2026-06-05 04:49:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 25/100] reward=-0.010  hit=34.6%  SEP=9.62m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.06  PM=76.1°(best=55.6°)  BW=17.7r/s(best=39.2r/s)
+2026-06-05 04:49:54 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:49:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 25] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 04:49:54 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:49:54 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:49:54 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:49:54 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:49:54 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 04:54:55 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_045455.json
+2026-06-05 04:54:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 26/100] reward=-0.010  hit=32.8%  SEP=10.17m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=7.84  PM=59.1°(best=55.6°)  BW=41.4r/s(best=39.2r/s)
+2026-06-05 04:55:00 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 04:55:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 26] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 04:55:00 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 04:55:00 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 04:55:00 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 04:55:00 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 04:55:00 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:00:01 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_050001.json
+2026-06-05 05:00:01 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 27/100] reward=-0.010  hit=34.0%  SEP=9.81m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.40  PM=62.1°(best=55.6°)  BW=20.3r/s(best=39.2r/s)
+2026-06-05 05:00:08 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:00:08 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 27] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:00:08 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:00:08 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:00:08 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:00:08 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:00:08 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:05:09 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_050509.json
+2026-06-05 05:05:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 28/100] reward=-0.010  hit=33.7%  SEP=9.88m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=6.21  PM=60.6°(best=55.6°)  BW=31.2r/s(best=39.2r/s)
+2026-06-05 05:05:16 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:05:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 28] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:05:16 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:05:16 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:05:16 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:05:16 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:05:17 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:10:18 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_051018.json
+2026-06-05 05:10:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 29/100] reward=-0.009  hit=37.5%  SEP=8.76m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.15  PM=51.7°(best=55.6°)  BW=25.5r/s(best=39.2r/s)
+2026-06-05 05:10:25 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:10:25 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 29] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:10:25 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:10:25 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:10:25 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:10:25 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:10:25 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:15:26 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_051526.json
+2026-06-05 05:15:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 30/100] reward=-0.011  hit=30.6%  SEP=10.82m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.91  PM=54.9°(best=55.6°)  BW=17.5r/s(best=39.2r/s)
+2026-06-05 05:15:31 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:15:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 30] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:15:31 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:15:31 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:15:31 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:15:31 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:15:31 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:20:32 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_052032.json
+2026-06-05 05:20:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 31/100] reward=-0.011  hit=29.7%  SEP=11.09m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.21  PM=69.8°(best=55.6°)  BW=17.8r/s(best=39.2r/s)
+2026-06-05 05:20:37 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:20:37 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 31] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:20:37 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:20:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:20:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:20:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:20:37 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:25:38 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_052538.json
+2026-06-05 05:25:38 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 32/100] reward=-0.010  hit=33.1%  SEP=10.06m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.24  PM=56.6°(best=55.6°)  BW=25.6r/s(best=39.2r/s)
+2026-06-05 05:25:44 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:25:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 32] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:25:44 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:25:44 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:25:44 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:25:44 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:25:44 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:30:45 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_053045.json
+2026-06-05 05:30:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 33/100] reward=-0.011  hit=28.7%  SEP=11.38m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.40  PM=59.0°(best=55.6°)  BW=17.0r/s(best=39.2r/s)
+2026-06-05 05:30:51 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:30:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 33] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:30:51 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:30:51 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:30:51 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:30:51 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:30:51 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:35:52 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_053552.json
+2026-06-05 05:35:52 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 34/100] reward=-0.010  hit=32.7%  SEP=10.20m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=6.31  PM=57.3°(best=55.6°)  BW=35.0r/s(best=39.2r/s)
+2026-06-05 05:35:57 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:35:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 34] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:35:57 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:35:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:35:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:35:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:35:57 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:40:58 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_054058.json
+2026-06-05 05:40:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 35/100] reward=-0.011  hit=30.7%  SEP=10.79m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.66  PM=55.0°(best=55.6°)  BW=18.6r/s(best=39.2r/s)
+2026-06-05 05:41:06 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:41:06 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 35] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:41:06 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:41:06 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:41:06 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:41:06 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:41:06 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:46:07 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_054607.json
+2026-06-05 05:46:07 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 36/100] reward=-0.012  hit=28.3%  SEP=11.52m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.40  PM=61.1°(best=55.6°)  BW=17.0r/s(best=39.2r/s)
+2026-06-05 05:46:11 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:46:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 36] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:46:11 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:46:11 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:46:11 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:46:11 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:46:11 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:51:13 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_055113.json
+2026-06-05 05:51:13 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 37/100] reward=-0.011  hit=28.9%  SEP=11.32m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.69  PM=60.5°(best=55.6°)  BW=20.1r/s(best=39.2r/s)
+2026-06-05 05:51:19 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:51:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 37] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:51:19 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:51:19 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:51:19 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:51:19 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:51:19 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 05:56:21 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_055621.json
+2026-06-05 05:56:21 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 38/100] reward=-0.012  hit=28.1%  SEP=11.58m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=8.30  PM=42.4°(best=55.6°)  BW=48.3r/s(best=39.2r/s)
+2026-06-05 05:56:26 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 05:56:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 38] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 05:56:26 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 05:56:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 05:56:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 05:56:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 05:56:26 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:01:27 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_060127.json
+2026-06-05 06:01:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 39/100] reward=-0.010  hit=34.6%  SEP=9.61m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.63  PM=74.3°(best=55.6°)  BW=25.2r/s(best=39.2r/s)
+2026-06-05 06:01:36 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:01:36 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 39] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:01:36 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:01:36 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:01:36 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:01:36 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:01:36 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:06:37 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_060637.json
+2026-06-05 06:06:37 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 40/100] reward=-0.010  hit=34.3%  SEP=9.71m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.30  PM=62.2°(best=55.6°)  BW=21.1r/s(best=39.2r/s)
+2026-06-05 06:06:45 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:06:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 40] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:06:45 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:06:45 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:06:45 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:06:45 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:06:45 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:11:46 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_061146.json
+2026-06-05 06:11:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 41/100] reward=-0.011  hit=31.4%  SEP=10.57m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=6.73  PM=45.0°(best=55.6°)  BW=37.4r/s(best=39.2r/s)
+2026-06-05 06:11:50 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:11:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 41] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:11:50 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:11:50 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:11:50 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:11:50 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:11:50 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:16:51 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_061651.json
+2026-06-05 06:16:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 42/100] reward=-0.010  hit=33.0%  SEP=10.09m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.79  PM=68.9°(best=55.6°)  BW=19.6r/s(best=39.2r/s)
+2026-06-05 06:16:57 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:16:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 42] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:16:57 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:16:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:16:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:16:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:16:57 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:21:58 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_062158.json
+2026-06-05 06:21:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 43/100] reward=-0.011  hit=28.9%  SEP=11.34m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=7.74  PM=65.3°(best=55.6°)  BW=44.4r/s(best=39.2r/s)
+2026-06-05 06:22:03 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:22:03 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 43] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:22:03 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:22:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:22:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:22:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:22:03 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:27:04 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_062704.json
+2026-06-05 06:27:04 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 44/100] reward=-0.011  hit=30.6%  SEP=10.81m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.40  PM=64.5°(best=55.6°)  BW=17.0r/s(best=39.2r/s)
+2026-06-05 06:27:07 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:27:07 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 44] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:27:07 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:27:08 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:27:08 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:27:08 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:27:08 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:32:09 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_063209.json
+2026-06-05 06:32:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 45/100] reward=-0.011  hit=29.2%  SEP=11.23m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.94  PM=46.0°(best=55.6°)  BW=17.5r/s(best=39.2r/s)
+2026-06-05 06:32:22 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:32:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 45] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:32:22 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:32:22 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:32:22 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:32:22 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:32:22 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:37:23 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_063723.json
+2026-06-05 06:37:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 46/100] reward=-0.010  hit=32.0%  SEP=10.40m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.30  PM=59.1°(best=55.6°)  BW=17.9r/s(best=39.2r/s)
+2026-06-05 06:37:42 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:37:42 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 46] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:37:42 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:37:42 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:37:42 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:37:42 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:37:42 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:42:44 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_064244.json
+2026-06-05 06:42:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 47/100] reward=-0.010  hit=33.4%  SEP=9.98m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=7.11  PM=55.3°(best=55.6°)  BW=39.6r/s(best=39.2r/s)
+2026-06-05 06:42:49 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:42:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 47] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:42:49 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:42:49 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:42:49 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:42:49 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:42:49 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:47:50 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_064750.json
+2026-06-05 06:47:50 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 48/100] reward=-0.010  hit=33.0%  SEP=10.11m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.89  PM=69.3°(best=55.6°)  BW=26.9r/s(best=39.2r/s)
+2026-06-05 06:48:14 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:48:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 48] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:48:14 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:48:14 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:48:14 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:48:14 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:48:14 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:53:16 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_065316.json
+2026-06-05 06:53:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 49/100] reward=-0.010  hit=33.1%  SEP=10.07m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.33  PM=64.1°(best=55.6°)  BW=27.3r/s(best=39.2r/s)
+2026-06-05 06:53:20 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:53:20 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 49] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:53:20 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:53:20 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:53:20 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:53:20 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:53:20 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 06:58:22 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_065822.json
+2026-06-05 06:58:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 50/100] reward=-0.011  hit=31.3%  SEP=10.60m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.39  PM=59.9°(best=55.6°)  BW=22.9r/s(best=39.2r/s)
+2026-06-05 06:58:31 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 06:58:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 50] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 06:58:31 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 06:58:31 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 06:58:31 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 06:58:31 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 06:58:31 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:03:32 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_070332.json
+2026-06-05 07:03:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 51/100] reward=-0.011  hit=28.9%  SEP=11.32m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.46  PM=59.6°(best=55.6°)  BW=17.1r/s(best=39.2r/s)
+2026-06-05 07:03:37 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:03:37 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 51] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:03:37 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:03:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:03:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:03:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:03:37 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:08:38 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_070838.json
+2026-06-05 07:08:38 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 52/100] reward=-0.011  hit=30.5%  SEP=10.86m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=6.01  PM=59.1°(best=55.6°)  BW=31.2r/s(best=39.2r/s)
+2026-06-05 07:08:44 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:08:44 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 52] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:08:44 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:08:44 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:08:44 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:08:44 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:08:44 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:13:45 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_071345.json
+2026-06-05 07:13:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 53/100] reward=-0.011  hit=28.9%  SEP=11.32m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.62  PM=63.8°(best=55.6°)  BW=18.4r/s(best=39.2r/s)
+2026-06-05 07:13:49 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:13:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 53] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:13:49 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:13:49 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:13:49 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:13:49 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:13:49 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:18:51 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_071851.json
+2026-06-05 07:18:51 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 54/100] reward=-0.011  hit=31.5%  SEP=10.56m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.57  PM=43.8°(best=55.6°)  BW=29.5r/s(best=39.2r/s)
+2026-06-05 07:18:57 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:18:57 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 54] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:18:57 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:18:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:18:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:18:57 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:18:57 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:23:58 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_072358.json
+2026-06-05 07:23:58 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 55/100] reward=-0.010  hit=33.1%  SEP=10.08m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.95  PM=59.4°(best=55.6°)  BW=17.5r/s(best=39.2r/s)
+2026-06-05 07:24:04 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:24:04 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 55] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:24:04 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:24:04 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:24:04 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:24:04 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:24:04 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:29:05 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_072905.json
+2026-06-05 07:29:05 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 56/100] reward=-0.011  hit=30.7%  SEP=10.80m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.80  PM=55.3°(best=55.6°)  BW=22.8r/s(best=39.2r/s)
+2026-06-05 07:29:14 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:29:14 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 56] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:29:14 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:29:14 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:29:14 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:29:14 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:29:14 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:34:16 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_073416.json
+2026-06-05 07:34:16 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 57/100] reward=-0.010  hit=33.1%  SEP=10.06m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.39  PM=56.4°(best=55.6°)  BW=30.3r/s(best=39.2r/s)
+2026-06-05 07:34:22 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:34:22 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 57] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:34:22 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:34:22 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:34:22 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:34:22 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:34:22 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:39:23 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_073923.json
+2026-06-05 07:39:23 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 58/100] reward=-0.009  hit=36.1%  SEP=9.16m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=6.04  PM=56.4°(best=55.6°)  BW=32.5r/s(best=39.2r/s)
+2026-06-05 07:39:30 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:39:30 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 58] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:39:30 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:39:30 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:39:30 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:39:30 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:39:30 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:44:31 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_074431.json
+2026-06-05 07:44:31 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 59/100] reward=-0.011  hit=30.8%  SEP=10.75m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.09  PM=57.1°(best=55.6°)  BW=20.8r/s(best=39.2r/s)
+2026-06-05 07:44:37 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:44:37 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 59] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:44:37 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:44:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:44:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:44:37 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:44:37 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:49:39 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_074939.json
+2026-06-05 07:49:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 60/100] reward=-0.011  hit=30.3%  SEP=10.90m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.63  PM=61.2°(best=55.6°)  BW=22.9r/s(best=39.2r/s)
+2026-06-05 07:49:45 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:49:45 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 60] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:49:45 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:49:45 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:49:45 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:49:45 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:49:45 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:54:46 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_075446.json
+2026-06-05 07:54:46 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 61/100] reward=-0.011  hit=30.2%  SEP=10.93m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.82  PM=56.3°(best=55.6°)  BW=25.4r/s(best=39.2r/s)
+2026-06-05 07:54:54 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 07:54:54 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 61] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 07:54:54 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 07:54:54 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 07:54:54 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 07:54:54 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 07:54:54 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 07:59:55 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_075955.json
+2026-06-05 07:59:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 62/100] reward=-0.010  hit=32.0%  SEP=10.40m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.79  PM=53.4°(best=55.6°)  BW=31.4r/s(best=39.2r/s)
+2026-06-05 08:00:03 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:00:03 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 62] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:00:03 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:00:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:00:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:00:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:00:03 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:05:04 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_080504.json
+2026-06-05 08:05:04 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 63/100] reward=-0.011  hit=30.7%  SEP=10.79m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.54  PM=61.7°(best=55.6°)  BW=17.1r/s(best=39.2r/s)
+2026-06-05 08:05:10 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:05:10 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 63] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:05:10 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:05:10 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:05:10 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:05:10 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:05:10 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:10:11 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_081011.json
+2026-06-05 08:10:11 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 64/100] reward=-0.011  hit=29.3%  SEP=11.21m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.67  PM=50.6°(best=55.6°)  BW=24.2r/s(best=39.2r/s)
+2026-06-05 08:10:18 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:10:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 64] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:10:18 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Update] batch=64 actor_loss=0.3863  critic_loss=0.2812  entropy=-2.1778
+2026-06-05 08:10:18 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:10:18 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:10:18 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:10:18 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:10:18 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:15:19 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_081519.json
+2026-06-05 08:15:19 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 65/100] reward=-0.011  hit=30.4%  SEP=10.89m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.01  PM=58.7°(best=55.6°)  BW=20.1r/s(best=39.2r/s)
+2026-06-05 08:15:26 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:15:26 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 65] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:15:26 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:15:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:15:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:15:26 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:15:26 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:20:27 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_082027.json
+2026-06-05 08:20:27 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 66/100] reward=-0.012  hit=27.7%  SEP=11.70m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.03  PM=60.8°(best=55.6°)  BW=20.4r/s(best=39.2r/s)
+2026-06-05 08:20:33 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:20:33 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 66] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:20:33 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:20:33 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:20:33 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:20:33 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:20:33 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:25:34 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_082534.json
+2026-06-05 08:25:34 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 67/100] reward=-0.012  hit=28.0%  SEP=11.59m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.12  PM=53.5°(best=55.6°)  BW=21.1r/s(best=39.2r/s)
+2026-06-05 08:25:39 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:25:39 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 67] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:25:39 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:25:39 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:25:39 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:25:39 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:25:39 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:30:40 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_083040.json
+2026-06-05 08:30:40 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 68/100] reward=-0.011  hit=28.9%  SEP=11.32m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=4.68  PM=62.6°(best=55.6°)  BW=24.1r/s(best=39.2r/s)
+2026-06-05 08:30:48 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:30:48 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 68] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:30:48 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:30:48 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:30:48 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:30:48 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:30:48 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:35:49 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_083549.json
+2026-06-05 08:35:49 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 69/100] reward=-0.011  hit=29.7%  SEP=11.08m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.45  PM=47.4°(best=55.6°)  BW=30.6r/s(best=39.2r/s)
+2026-06-05 08:35:55 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:35:55 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 69] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:35:55 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:35:55 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:35:55 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:35:55 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:35:55 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:40:56 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_084056.json
+2026-06-05 08:40:56 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 70/100] reward=-0.010  hit=31.8%  SEP=10.47m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=3.51  PM=63.0°(best=55.6°)  BW=17.1r/s(best=39.2r/s)
+2026-06-05 08:41:03 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:41:03 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 70] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:41:03 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:41:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:41:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:41:03 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:41:03 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:46:04 - multi_agent.simulation.guidance_simulator - INFO - Simulation complete. Results saved to: ./guidance_output\results\result_20260605_084604.json
+2026-06-05 08:46:04 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 71/100] reward=-0.011  hit=29.6%  SEP=11.11m  best_reward_SEP=8.29m  best_SEP_ever=8.29m  PeakN=5.60  PM=48.4°(best=55.6°)  BW=28.0r/s(best=39.2r/s)
+2026-06-05 08:46:09 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] LLM-extracted requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'pm_min': 45.0, 'pm_max': 70.0, 'bw_min': 20.0, 'bw_max': 85.0}
+2026-06-05 08:46:09 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL Reflection @ Ep 71] needs_optimization=True | 命中率 39.0% < 92.0% [NG]; SEP 8.29m > 7.00m [NG]
+2026-06-05 08:46:09 - multi_agent.rl.matlab_rl_optimizer - ERROR -   [RL] Detected placeholder sim_s in 'guidance_T4_tune_v2_1780597327.m': script contains a PLACEHOLDER sim_s that ignores parameters. Metrics would be identical regardless of RL params. Falling back to internal Python simulator.
+2026-06-05 08:46:09 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_bdd.xml
+2026-06-05 08:46:09 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_parametric.xml
+2026-06-05 08:46:09 - multi_agent.simulation.guidance_simulator - INFO - Generated SysML file: ./guidance_output\sysml_models\GuidanceSystem_ibd.xml
+2026-06-05 08:46:09 - multi_agent.simulation.guidance_simulator - INFO - Generated MATLAB script: ./guidance_output\matlab_scripts\guidance_simulation.m
+2026-06-05 08:49:30 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL] ⚠️ Interrupted at episode 72/100. Saving best results (reward=-0.008)...
+
+  [RL] ⚠️ 优化被中断 (episode 72/100). 保存当前最优结果...
+2026-06-05 08:49:30 - multi_agent.memory.parameter_experience - INFO - Stored memory 58a97a0b9978bbd8 with fitness 0.536843963494878
+2026-06-05 08:49:30 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-05 08:49:30 - multi_agent.rl.matlab_rl_optimizer - INFO - Best params stored → memory_id=58a97a0b9978bbd8, fitness=0.5368, layer=SHORT_TERM | guidance={'N_pn': 5.000465020537376} | autopilot_w1=47.014843821525574
+2026-06-05 08:49:30 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] PPO done: status=interrupted episodes=72 best_reward=-0.008
+2026-06-05 08:49:30 - multi_agent.integration.reflection_agent - INFO - [Reflection] Extracted gf/cg source from guidance_T4_tune_v2_1780597327.m (49 chars)
+2026-06-05 08:49:30 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+
+
+────────────────────────────────────────────────────────────────
+  [人机中断] Ctrl+C — 当前执行已中止
+────────────────────────────────────────────────────────────────
+  原始任务: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━...
+  ────────────────────────────────────────────────────────────────
+  继续执行（保持当前指令）               → 输入 c 或 continue
+  手动晋升短期记忆到长期记忆             → 输入 p 或 promote
+  输入修改指令（追加到原始任务上）        → 直接输入修改内容
+  完全替换原始任务                       → 以 !! 开头输入新任务
+  恢复原始任务重启                       → 直接回车
+  退出程序                               → 再次 Ctrl+C
+  ────────────────────────────────────────────────────────────────
+  >>> 
+  [退出] 程序已终止。

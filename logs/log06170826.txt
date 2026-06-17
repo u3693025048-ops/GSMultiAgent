@@ -1,0 +1,64 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-17 08:26:39
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06170826.txt
+================================================================================
+
+2026-06-17 08:26:39 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06170826.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06170826.txt
+C:\Users\Lenovo\anaconda3\Lib\site-packages\matlab\__init__.py:158: UserWarning: Python versions 3.9, 3.10, 3.11, and 3.12 are supported, but your version of Python is 3_13
+  warnings.warn('Python versions 3.9, 3.10, 3.11, and 3.12 are supported, but your version of Python is %s' % _version)
+2026-06-17 08:26:39 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+Traceback (most recent call last):
+  File [35m"C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\cli_agent.py"[0m, line [35m3769[0m, in [35m<module>[0m
+    [31mensure_preflight_or_exit[0m[1;31m([0m
+    [31m~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^[0m
+        [1;31mstrict=args.preflight_strict,[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+        [1;31mpreflight_only=args.preflight_only,[0m
+        [1;31m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+    [1;31m)[0m
+    [1;31m^[0m
+  File [35m"C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\multi_agent\preflight\preflight_check.py"[0m, line [35m482[0m, in [35mensure_preflight_or_exit[0m
+    report = run_preflight_checks(project_root=project_root, config_path=config_path)
+  File [35m"C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\multi_agent\preflight\preflight_check.py"[0m, line [35m435[0m, in [35mrun_preflight_checks[0m
+    [31m_check_parser[0m[1;31m(report)[0m
+    [31m~~~~~~~~~~~~~[0m[1;31m^^^^^^^^[0m
+  File [35m"C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\multi_agent\preflight\preflight_check.py"[0m, line [35m317[0m, in [35m_check_parser[0m
+    m_bad = parse_sim_stdout(bad)
+  File [35m"C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\multi_agent\rl\matlab_rl_optimizer.py"[0m, line [35m756[0m, in [35mparse_sim_stdout[0m
+    llm_vals = _parse_metrics_with_llm(str(raw))
+  File [35m"C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\multi_agent\rl\matlab_rl_optimizer.py"[0m, line [35m666[0m, in [35m_parse_metrics_with_llm[0m
+    import openai as _openai
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\__init__.py"[0m, line [35m9[0m, in [35m<module>[0m
+    from . import types
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\__init__.py"[0m, line [35m63[0m, in [35m<module>[0m
+    from .eval_create_params import EvalCreateParams as EvalCreateParams
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\eval_create_params.py"[0m, line [35m10[0m, in [35m<module>[0m
+    from .graders.grader_inputs_param import GraderInputsParam
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\graders\__init__.py"[0m, line [35m5[0m, in [35m<module>[0m
+    from .multi_grader import MultiGrader as MultiGrader
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\graders\multi_grader.py"[0m, line [35m8[0m, in [35m<module>[0m
+    from .label_model_grader import LabelModelGrader
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\graders\label_model_grader.py"[0m, line [35m7[0m, in [35m<module>[0m
+    from .grader_inputs import GraderInputs
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\graders\grader_inputs.py"[0m, line [35m7[0m, in [35m<module>[0m
+    from ..responses.response_input_text import ResponseInputText
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\responses\__init__.py"[0m, line [35m72[0m, in [35m<module>[0m
+    from .response_stream_event import ResponseStreamEvent as ResponseStreamEvent
+  File [35m"C:\Users\Lenovo\anaconda3\Lib\site-packages\openai\types\responses\response_stream_event.py"[0m, line [35m39[0m, in [35m<module>[0m
+    from .response_file_search_call_completed_event import ResponseFileSearchCallCompletedEvent
+  File [35m"<frozen importlib._bootstrap>"[0m, line [35m1360[0m, in [35m_find_and_load[0m
+  File [35m"<frozen importlib._bootstrap>"[0m, line [35m1331[0m, in [35m_find_and_load_unlocked[0m
+  File [35m"<frozen importlib._bootstrap>"[0m, line [35m935[0m, in [35m_load_unlocked[0m
+  File [35m"<frozen importlib._bootstrap_external>"[0m, line [35m1022[0m, in [35mexec_module[0m
+  File [35m"<frozen importlib._bootstrap_external>"[0m, line [35m1118[0m, in [35mget_code[0m
+  File [35m"<frozen importlib._bootstrap_external>"[0m, line [35m1217[0m, in [35mget_data[0m
+[1;35mKeyboardInterrupt[0m
+
+================================================================================
+Finished    : 2026-06-17 08:26:41
+Exit code   : 0
+================================================================================

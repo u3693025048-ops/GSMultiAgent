@@ -1,0 +1,554 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-15 14:28:38
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06151428.txt
+================================================================================
+
+2026-06-15 14:28:38 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06151428.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06151428.txt
+2026-06-15 14:28:38 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-15 14:28:55 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-15 14:28:58 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned None content
+2026-06-15 14:28:58 - multi_agent.rl.matlab_rl_optimizer - WARNING - [parse_sim_stdout] hit_rate/SEP at sentinel defaults (0%% / 50m) with no MC evidence in stdout — metrics unreliable for RL
+
+========================================================================
+  GSMultiAgent 启动前检查 (Preflight)
+========================================================================
+  [OK] python_version: Python 3.12.13
+  [OK] imports: 核心依赖 numpy / yaml / torch 可用
+  [OK] config_file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\config.yaml
+  [OK] llm_api_key: LLM 已配置 model=deepseek-v4-pro
+  [OK] ablation_workflow: optimization_workflow / rl_optimization 已启用
+  [OK] layer2_gate_config: layer2_script_gate=true
+  [OK] simulation_engine: engine=matlab  matlab_exe=True  matlab_engine=True  octave=True
+  [OK] knowledge_base: knowledge_base 存在 (4 md, 1 m)
+  [OK] kb_template: monte_carlo_single.m 可用 (339 行)
+  [OK] layer2_gate_code: Layer2 Gate 模块与 force_kb_template 可用
+  [OK] parser: parse_sim_stdout 自检通过（含占位值检测）
+  [WARN] guidance_scripts: 发现 5/31 个可能不可用的 .m 脚本: hermes_generated_2.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch; hermes_generated_1.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch; hermes_generated_5.m: 缺少 RL_PARAMS_BEGIN 且 dp.* 参数不足，RL 无法 patch 等共 5 个
+         → 删除 guidance_output/scripts 下旧脚本，或开启 layer2_script_gate 自动重生
+  [OK] hermes: Hermes run_agent 可用
+  [OK] cli_agent_gate: cli_agent 已集成 Gate + Preflight
+------------------------------------------------------------------------
+  结论: 无阻断项，有 1 条警告，可继续运行。
+========================================================================
+
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-15 14:28:58  verbosity=normal
+Task: 制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 任务工况（基于 monte_carlo_single.m T/G/AP/R 体系） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 运行工况：RUN_CASE='T'; SUB_IDX=4; ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估） ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 命中率 >= 92% SEP脱靶量 <= 7 m Pe...
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+  [TaskWorkspace] swept 4 stale sandbox(es)
+  Indexing knowledge_base + reports into RAG…
+C:\Users\Lenovo\anaconda3\envs\GS312\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-15 14:29:20 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_135731.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:20 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_142254.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:20 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_144411.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_164604.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_174034.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_184439.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_000409.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_204045.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_013916.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_161335.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_182024.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_232509.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_065502.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_175242.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_181819.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_184129.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_201349.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_212016.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_230610.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260610_000513.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_004552.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_010632.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_011648.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_013009.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_111139.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260611_172537.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260612_121026.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260612_153411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260615_001921.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-15 14:29:21 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+  RAG ready: total=9 | knowledge_base:9
+2026-06-15 14:29:28 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 14:29:28 - multi_agent.memory.parameter_experience - INFO - Successfully loaded Parameter Experience memory from parameter_experience_memory.json
+2026-06-15 14:29:28 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+
+[Pre-Step] Parsing mission conditions from prompt…
+  Initializing Hermes persistent memory...
+2026-06-15 14:29:28 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 6 entries from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+  Loaded 6 long-term memories from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (14 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 14 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:29 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:29.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-15 14:29:31 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] rag_agent → tools: ['rag_query', 'rag_retrieve', 'rag_expand']
+2026-06-15 14:29:31 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] matlab_agent → tools: ['generate_matlab', 'syntax_check_matlab', 'verify_guidance_compat']
+2026-06-15 14:29:31 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] sim_agent → tools: ['run_simulation', 'syntax_check_matlab']
+2026-06-15 14:29:31 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] analysis_agent → tools: ['judge_requirements', 'parameter_experience_best', 'parameter_experience_search']
+2026-06-15 14:29:31 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] memory_agent → tools: ['agent_memory_remember', 'agent_memory_recall', 'agent_memory_list', 'agent_memory_forget']
+2026-06-15 14:29:31 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] Specialized agents registered: ['rag_agent', 'matlab_agent', 'sim_agent', 'analysis_agent', 'memory_agent']
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (15 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 15 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-15 14:29:31 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:31.
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:32.
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:32.
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:32.
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:32.
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:32.
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:32.
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-15 14:29:32 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 14:30:32.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+  Hermes initialized with tools (task_prompt auto-injected).
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-15 14:29:32 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-15 14:29:32 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-15 14:29:32 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-15 14:29:32 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-15 14:29:32 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-15 14:29:32 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-15 14:29:32 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 100→7m | HitRate 50→92% | phases=3 x 20 ep
+2026-06-15 14:29:32 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0, 'peak_ny_mean_max': 20.0, 'peak_ny_hard_max': 21.0}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+
+  [Miss Hint] Detected user requirement: miss distance ≤ 7.00 m
+  Note: only the reflection agent's evaluation of ALL stated
+        requirements (PM/GM/hit rate/miss/etc.) will trigger early exit.
+
+── Iter 1/5 ──
+
+[Step 2] Task Planning & Parameter Extraction...
+2026-06-15 14:29:32 - multi_agent.integration.task_planner - INFO - [Planner] Analyzing task with LLM: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━...
+2026-06-15 14:29:32 - multi_agent.integration.task_planner - INFO - [Planner] expert_design_path.md read directly from knowledge_base\expert design path.md (80 chars, full document)
+2026-06-15 14:29:32 - multi_agent.integration.task_planner - INFO - [Planner] monte_mean_2.md read directly from knowledge_base\monte mean results.md (1982 chars)
+2026-06-15 14:29:32 - multi_agent.integration.task_planner - INFO - [Planner] Extracted gf/cg source from monte_carlo_single.m (2391 chars) for structural analysis
+2026-06-15 14:29:32 - multi_agent.integration.task_planner - INFO - [Planner] Using Hermes agent with tools for planning analysis...
+💬 Starting conversation: '[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]
+
+任务描述：
+制导系统设计任务（三层架构系...'
+好的，我将严格按照步骤1-7执行任务规划分析。先并行启动前三步检索和第四步参数经验查询。  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "top_k": 5, "detail_level": "snippet"}
+  [Tool →] call_00_XBn8VLd0P5DXWRxbiwjw8451
+  [Tool ✓] call_00_XBn8VLd0P5DXWRxbiwjw8451
+  ✅ Tool 1 completed in 0.23s - {"status": "success", "query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "detail_level": "snippet...
+  📞 Tool 2: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "top_k": 5, "detail_level": "snipp...
+  [Tool →] call_01_znwm1nzewEFfFoiMSMdb9739
+  [Tool ✓] call_01_znwm1nzewEFfFoiMSMdb9739
+  ✅ Tool 2 completed in 0.11s - {"status": "success", "query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "detail_level...
+  📞 Tool 3: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "top_k": 5, "detail_leve...
+  [Tool →] call_02_UUn5SWFidAN4PqgZ3vAN0177
+  [Tool ✓] call_02_UUn5SWFidAN4PqgZ3vAN0177
+  ✅ Tool 3 completed in 0.13s - {"status": "success", "query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "de...
+  📞 Tool 4: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"mission_type": "T", "sub_idx": 4, "guidance_law": "PN", "task": "目标机动 sub_idx=4 制...
+  [Tool →] call_03_SU0yFrwwxaxrJlwfT7Ta1927
+  [Tool ✓] call_03_SU0yFrwwxaxrJlwfT7Ta1927
+  ✅ Tool 4 completed in 0.00s - {"status": "success", "task_context": {"mission_type": "T", "sub_idx": 4, "guidance_law": "PN", "tas...
+
+
+步骤1和2的结果被截断，需要展开关键文档获取完整数据。同时步骤4的PE结果为空，需要扩大搜索范围。  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\monte mean results.md", "max_chars": 6000}
+  [Tool →] call_00_82bzUhzLfF3kRLSwAork4057
+  [Tool ✓] call_00_82bzUhzLfF3kRLSwAork4057
+  ✅ Tool 1 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\monte mean results.md", "metadata": {"type": "...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\conditions.md", "max_chars": 6000}
+  [Tool →] call_01_VfIrVKSTUMuXm3ptFMBJ9980
+  [Tool ✓] call_01_VfIrVKSTUMuXm3ptFMBJ9980
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\conditions.md", "metadata": {"source_tag": "kn...
+  📞 Tool 3: parameter_experience_search(['query', 'top_k']) - {"query": "T4 目标机动 高频 大幅度 命中率 SEP hit_rate", "top_k": 5}
+  [Tool →] call_02_8dUtHs23Xg1hI56ztYie7877
+  [Tool ✓] call_02_8dUtHs23Xg1hI56ztYie7877
+  ✅ Tool 3 completed in 0.00s - {"status": "success", "query": {"task": "T4 目标机动 高频 大幅度 命中率 SEP hit_rate", "description": "T4 目标机动 高...
+
+
+步骤1-3的完整数据已获取。现在展开专家设计路径文档，确认T4的完整处置策略。  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\expert design path.md", "max_chars": 6000}
+  [Tool →] call_00_Zwz0OUihxKOaCZ5A7uuu9713
+  [Tool ✓] call_00_Zwz0OUihxKOaCZ5A7uuu9713
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\expert design path.md", "metadata": {"source_t...
+
+
+所有数据已齐全。下面执行步骤5的逐项比对和步骤6的mode决策。
+
+---
+
+## 步骤5 — 逐项比对
+
+### 源A：RAG历史指标（monte mean results.md 默认模板参数）
+
+| 指标 | T4实测值 | 任务要求 | 判定 |
+|------|---------|----------|------|
+| 命中率 | **94.0%** | ≥92% | ✅ 达标 |
+| SEP | **4.22m** | ≤7m | ✅ 达标 |
+| PeakNy | **51.53g** | ≤20g | ❌ **未达标** (超标157.7%) |
+| PM | **77.1°** | [45°, 70°] | ❌ **未达标** (超出上限7.1°) |
+| BW | **6.31 rad/s** | [20, 85] rad/s | ❌ **未达标** (低于下限68.5%) |
+
+> **结论**：5项中仅2项达标，PeakNy/PM/BW三项均不满足要求。
+
+### 源B：PE最优经验记录
+
+> **无匹配记录** — `parameter_experience_best` 和 `parameter_experience_search` 均返回空结果。无可复用的历史优化参数。
+
+---
+
+## 步骤6 — Mode 决策
+
+按照严格规则判定：
+
+| 规则条件 | 判定 |
+|----------|------|
+| PE存在全部达标记录？ | ❌ PE为空，跳过 |
+| PE不达标但RAG全部达标？ | ❌ RAG有三项不达标 |
+| 两源均有未达标？ | ✅ 命中 → 基础mode=`TUNE_PARAMS` |
+| 需修改制导律结构？ | ✅ **是** → 最终mode=`MODIFY_LAW` |
+
+**MODIFY_LAW 判定依据**：
+1. **专家路径明确指示**："T4路径为修改制导律"
+2. **物理量级分析**：PeakNy=51.53g vs 上限20g，超出2.5倍以上。T4工况下目标做120m/s幅度/1.2rad/s频率的大机动，纯PN导引律会产生剧烈过载响应。单纯调参（改变N_pn/w/ζ）无法在保持命中率的同时将峰值过载压缩到20g以内
+3. **PM/BW也严重偏离**：PM=77.1°超出上限，BW=6.31远低于下限20rad/s，说明当前驾驶仪-制导律耦合响应特性在T4工况下无法同时满足频域和时域要求，需要调整制导律算法结构（如限幅、变增益、或引入终端约束）
+
+---
+
+## 步骤7 — 规划结果JSON
+
+```json
+{
+  "should_split": false,
+  "strategy": "single",
+  "subagent_count": 1,
+  "subtasks": [
+    "T4高频大幅度机动工况制导律修改设计：目标z向机动幅度120m/s(1σ±36m/s)、频率1.2rad/s(1σ±0.36)、y向横移60m/s(1σ±15m/s)。默认PN导引下PeakNy=51.53g远超20g上限、PM=77.1°超过70°、BW=6.31rad/s低于20下限。需修改gf()制导律算法结构（如引入过载限幅/变增益PN/终端角度约束），使五项指标全部满足：命中率≥92%、SEP≤7m、PeakNy≤20g、PM∈[45°,70°]、BW∈[20,85]rad/s。"
+  ],
+  "subtask_conditions": [
+    "RUN_CASE='T';SUB_IDX=4;"
+  ],
+  "reason": "【逐项比对】源A(RAG历史/T4默认参数): 命中率94.0%达标、SEP=4.22m达标、PeakNy=51.53g未达标(超标157.7%)、PM=77.1°未达标(超上限7.1°)、BW=6.31rad/s未达标(低于下限68.5%)→三项不达标。源B(PE经验): 无记录。【Mode决策】两数据源均有指标未达标→基础mode=TUNE_PARAMS。但专家路径明确' T4路径为修改制导律'，且PeakNy超出2.5倍、PM/BW均严重偏离，纯参数调优(N_pn/w/ζ调整)无法在维持命中率前提下将过载压缩至20g并同时满足频域要求→最终mode=MODIFY_LAW。",
+  "mode": "MODIFY_LAW",
+  "mission_analysis": "任务工况为T4高频大幅度机动目标。标称参数：目标z向机动幅度120m/s、z向机动频率1.2rad/s、y向匀速横移60m/s。MC散布(1σ)：z向机动幅度±36m/s、z向机动频率±0.36rad/s、x向速度±20m/s、y向速度±15m/s。该工况是T类(目标机动)中最严苛子工况，高频率大幅值机动导致拦截弹需频繁大过载响应，默认PN导引律在此工况下峰值过载51.53g远超驾驶仪20g物理限制，频域指标也全面偏离。",
+  "mission_conditions": {
+    "T": [4]
+  }
+}
+```🎉 Conversation completed after 4 OpenAI-compatible API call(s)
+2026-06-15 14:31:19 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 analysis: 任务工况为T4高频大幅度机动目标。标称参数：目标z向机动幅度120m/s、z向机动频率1.2rad/s、y向匀速横移60m/s。MC散布(1σ)：z向机动幅度±36m/s、z向机动频率±0.36rad/s、x向速度±20m/s、y向速度±15m/s。该工况是T类(目标机动)中最严苛子工况，高频率大幅值机动导致拦截弹需频繁大过载响应，默认PN导引律在此工况下峰值过载51.53g远超驾驶仪20g物理限
+2026-06-15 14:31:19 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 conditions: {'T': [4]}
+  工况: 任务工况为T4高频大幅度机动目标。标称参数：目标z向机动幅度120m/s、z向机动频率1.2rad/s、y向匀速横移60m/s。MC散布(1σ)：z向机动幅度±36m/s、z向机动频率±0.36rad/s、x向速度±20m/s、y向速...
+  Plan: single | mode=MODIFY_LAW | subtasks=1 | 【逐项比对】源A(RAG历史/T4默认参数): 命中率94.0%达标、SEP=4.22m达标、PeakNy=51.53g未达标(超标157.7%)、PM=77.1°未达标(超上限7.1°)、BW=6.31rad/s未达标(低于下限68.5%)→三项不达标。源B(PE经验): 无记录。【Mode决策】两数据源均有指标未达标→基础mode=TUNE_PAR...
+2026-06-15 14:31:19 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+💬 Starting conversation: '从以下提示词中提取制导系统的初始参数，返回JSON格式。
+任务：制导系统设计任务（三层架构系统输入示例）
+━━━━━━━...'
+根据提示词提取，以下是制导系统的初始参数：
+
+```json
+{
+  "mission_conditions": {
+    "RUN_CASE": "T",
+    "SUB_IDX": 4,
+    "N_MC": 100,
+    "KILL_R": 10
+  },
+  "autopilot_params": {
+    "w1": 40,
+    "zeta1": 0.75,
+    "tao1": 0.20
+  },
+  "performance_requirements": {
+    "hit_rate_min_pct": 92,
+    "SEP_max_m": 7,
+    "PeakNy_max_g": 20,
+    "pitch_PM_range_deg": [45, 70],
+    "pitch_BW_range_rads": [20, 85]
+  },
+  "template": "monte_carlo_single.m",
+  "rl_param_mapping": {
+    "rl_w1": "w1 (俯仰驾驶仪自然频率, rad/s)",
+    "rl_zeta1": "zeta1 (俯仰驾驶仪阻尼比)",
+    "rl_tao1": "tao1 (俯仰驾驶仪时间常数, s)",
+    "rl_w2": "w2 (偏航驾驶仪自然频率, rad/s)",
+    "rl_zeta2": "zeta2 (偏航驾驶仪阻尼比)",
+    "rl_tao2": "tao2 (偏航驾驶仪时间常数, s)",
+    "rl_w3": "w3 (滚转驾驶仪自然频率, rad/s)",
+    "rl_zeta3": "zeta3 (滚转驾驶仪阻尼比)",
+    "rl_tao3": "tao3 (滚转驾驶仪时间常数, s)",
+    "rl_N_pn": "N_pn (比例导引系数)"
+  },
+  "note": "提示词中 RL_PARAMS 块被截断，仅显式提取到 rl_w1/zl_zeta1/rl_tao1。其余 rl_w2/rl_zeta2/rl_tao2/rl_w3/rl_zeta3/rl_tao3/rl_N_pn 需从知识库模板 monte_carlo_single.m 中获取默认值。"
+}
+```
+
+**关键说明：**
+
+1. **已提取参数**：`rl_w1=40`、`rl_zeta1=0.75`、`rl_tao1=0.20` 是从提示词中直接可见的。
+2. **工况**：`RUN_CASE='T'`（目标机动类），`SUB_IDX=4`（第4子工况）。
+3. **截断参数**：`rl_w2`/`rl_zeta2`/`rl_tao2`、`rl_w3`/`rl_zeta3`/`rl_tao3`、`rl_N_pn` 在提示词中被截断，需从 `monte_carlo_single.m` 模板文件中读取默认值。
+
+需要我从知识库中检索完整的模板默认参数吗？🎉 Conversation completed after 1 OpenAI-compatible API call(s)
+  LLM param extraction also failed: Expecting value: line 1 column 1 (char 0)
+  Conditions: RUN_CASE='T';SUB_IDX=4;
+
+[Step 2.5] Hermes Content Generation (mode=MODIFY_LAW)...
+  [generate_matlab] Injected 1 analysis context block(s)
+  Running Hermes agent [strategy=single, subtasks=1]...
+💬 Starting conversation: 'System: You are a missile guidance system orchestrator. Your...'
+  📞 Tool 1: call_specialist(['agent_type', 'task', 'context']) - {"agent_type": "rag_agent", "task": "检索制导律知识库：\n1. PN比例导引律在T4高频大幅度机动工况下的设计约束与改进方案\n2. 过载饱和限幅对制导回路带宽(...
+2026-06-15 14:32:58 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] → rag_agent | task: 检索制导律知识库：
+1. PN比例导引律在T4高频大幅度机动工况下的设计约束与改进方案
+2. 过载饱和限幅对制导回路带宽(BW)和相位裕度(PM)的影响
+3. 驾驶仪参数(w1/w2/w3/zeta1
+2026-06-15 14:32:58 - multi_agent.integration.sub_agent - INFO - [SubAgent:rag_agent] run — tools: ['rag_retrieve', 'rag_expand', 'rag_query'] | task: 检索制导律知识库：
+1. PN比例导引律在T4高频大幅度机动工况下的设计约束与改进方案
+2. 过载饱和限幅对制导回路带宽(BW)和相位裕度(PM)的影响
+3. 
+💬 Starting conversation: '【子智能体角色：知识检索专家】
+可用工具：rag_query（Agentic多跳检索）、rag_retrieve（单次检...'
+  📞 Tool 1: rag_query(['query', 'max_hops', 'top_k', 'detail_level']) - {"query": "PN比例导引律在高频大机动目标工况下的设计约束与改进方案，带宽限制，过载饱和限幅影响，T4工况", "max_hops": 2, "top_k": 5, "detail_leve...
+2026-06-15 14:33:15 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 1 sub-queries: ['PN比例导引律在高频大机动目标工况下的设计约束与改进方案，带宽限制，过载饱和限幅影响，T4工况']
+2026-06-15 14:33:18 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 5 candidates → 5 kept (threshold=0.30)
+  ✅ Tool 1 completed in 13.80s - {"status": "success", "query": "PN比例导引律在高频大机动目标工况下的设计约束与改进方案，带宽限制，过载饱和限幅影响，T4工况", "hops": 1, "sub_qu...
+  📞 Tool 2: rag_query(['query', 'max_hops', 'top_k', 'detail_level']) - {"query": "过载饱和限幅对制导回路带宽BW和相位裕度PM的影响，饱和限幅与稳定性关系", "max_hops": 2, "top_k": 5, "detail_level": "snippe...
+2026-06-15 14:33:28 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 4 sub-queries: ['saturation limit effect on guidance loop bandwidth', 'saturation limit effect on phase margin guidance', 'saturation nonlinearity stability guidance loop', 'overload saturation limiter stability analysis']
+2026-06-15 14:33:31 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 8 candidates → 8 kept (threshold=0.30)
+  ✅ Tool 2 completed in 13.47s - {"status": "success", "query": "过载饱和限幅对制导回路带宽BW和相位裕度PM的影响，饱和限幅与稳定性关系", "hops": 1, "sub_queries": ["s...
+  📞 Tool 3: rag_query(['query', 'max_hops', 'top_k', 'detail_level']) - {"query": "驾驶仪参数w1 w2 w3 zeta1 zeta2 zeta3 tao1设计范围，带宽控制20-85rad/s，相位裕度PM≥45°", "max_hops": 2, "top_...
+2026-06-15 14:33:43 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 1 sub-queries: ['驾驶仪参数w1 w2 w3 zeta1 zeta2 zeta3 tao1设计范围，带宽控制20-85rad/s，相位裕度PM≥45°']
+2026-06-15 14:33:47 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 5 candidates → 5 kept (threshold=0.30)
+  ✅ Tool 3 completed in 13.80s - {"status": "success", "query": "驾驶仪参数w1 w2 w3 zeta1 zeta2 zeta3 tao1设计范围，带宽控制20-85rad/s，相位裕度PM≥45°",...
+  📞 Tool 4: rag_query(['query', 'max_hops', 'top_k', 'detail_level']) - {"query": "monte_carlo_single.m gf()函数接口规范，输入输出变量，N_pn使用方式", "max_hops": 2, "top_k": 5, "detail_leve...
+2026-06-15 14:33:57 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 1 sub-queries: ['["monte_carlo_single.m gf function interface specification", "gf function input variables in monte_carlo_single.m", "gf function output variables in monte_carlo_s']
+2026-06-15 14:34:01 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 5 candidates → 5 kept (threshold=0.30)
+2026-06-15 14:34:06 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Gap queries: ['["monte_carlo_single.m']
+2026-06-15 14:34:10 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 2: 1 candidates → 1 kept (threshold=0.30)
+  ✅ Tool 4 completed in 17.66s - {"status": "success", "query": "monte_carlo_single.m gf()函数接口规范，输入输出变量，N_pn使用方式", "hops": 2, "sub_qu...
+  📞 Tool 5: rag_query(['query', 'max_hops', 'top_k', 'detail_level']) - {"query": "PN与APN导引律目标机动补偿能力差异对比，增强型比例导引", "max_hops": 2, "top_k": 5, "detail_level": "snippet"}
+2026-06-15 14:34:16 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 4 sub-queries: ['比例导引 (PN) 目标机动补偿能力分析', '增强型比例导引 (APN) 目标机动补偿原理', 'PN 与 APN 制导律机动目标拦截对比', '增强型比例导引加速度补偿项设计']
+2026-06-15 14:34:20 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 6 candidates → 6 kept (threshold=0.30)
+  ✅ Tool 5 completed in 14.24s - {"status": "success", "query": "PN与APN导引律目标机动补偿能力差异对比，增强型比例导引", "hops": 1, "sub_queries": ["比例导引 (PN...
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "max_chars": 12000}
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "meta...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\monte mean results.md", "max_chars": 12000}
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\monte mean results.md", "metadata": {"source_t...
+  📞 Tool 3: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\conditions.md", "max_chars": 12000}
+  ✅ Tool 3 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\conditions.md", "metadata": {"filename": "cond...
+  📞 Tool 4: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\expert design path.md", "max_chars": 6000}
+  ✅ Tool 4 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\expert design path.md", "metadata": {"source_t...
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars', 'start_char']) - {"doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "max_chars": 12000, "start...
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "meta...
+  📞 Tool 1: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "gf function guidance filter N_pn PN proportional navigation trans...
+  ✅ Tool 1 completed in 0.13s - {"status": "success", "query": "gf function guidance filter N_pn PN proportional navigation transfer...
+  📞 Tool 2: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "APN augmented proportional navigation target maneuver compensatio...
+  ✅ Tool 2 completed in 0.09s - {"status": "success", "query": "APN augmented proportional navigation target maneuver compensation a...
+  📞 Tool 3: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "saturation limit actuator bandwidth phase margin stability nonlin...
+  ✅ Tool 3 completed in 0.12s - {"status": "success", "query": "saturation limit actuator bandwidth phase margin stability nonlinear...
+  📞 Tool 1: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "sim_s function guidance simulation six DOF dynamics ny_lim satura...
+  ✅ Tool 1 completed in 0.26s - {"status": "success", "query": "sim_s function guidance simulation six DOF dynamics ny_lim saturatio...
+  📞 Tool 2: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "snippet", "query": "chengxu robust analysis singlefile guidance optimization GA th...
+  ✅ Tool 2 completed in 0.14s - {"status": "success", "query": "chengxu robust analysis singlefile guidance optimization GA three lo...
+🎉 Conversation completed after 6 OpenAI-compatible API call(s)
+2026-06-15 14:36:01 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] rag_agent done (2398 chars)
+  ✅ Tool 1 completed in 182.88s - 知识库检索完成。现在汇总所有信息，输出最终JSON。
+
+---
+
+## 检索总结
+
+### 1. PN比例导引律在T4工况下的设计约束
+从 `monte mean results.md` 和 `mon...
+  📞 Tool 1: generate_matlab(['mode', 'script_name', 'task_description', 'autopilot_params', 'mission_conditions', 'nmc']) - {"mode": "MODIFY_LAW", "script_name": "guidance_T4_PN_sat_v7", "task_description": "Modify gf() guid...
+2026-06-15 14:36:35 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Using local KB template: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\knowledge_base\matlab\guidance\monte_carlo_single.m
+2026-06-15 14:36:35 - multi_agent.integration.script_seed_policy - INFO - [SeedPolicy] KB template → local:monte_carlo_single.m
+2026-06-15 14:36:35 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated 6108-char code analysis of retrieved model for LLM context.
+2026-06-15 14:36:35 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Injected 7649-char context into task_description (analysis=194, retrieved_code=6108).
+2026-06-15 14:36:35 - multi_agent.integration.t4_low_risk - INFO - [T4LowRisk] Applied deterministic minimal APN gf() for T4
+2026-06-15 14:36:35 - multi_agent.integration.model_generation_agent - INFO - [ModelGen] T4 low-risk: deterministic minimal APN gf() applied on KB seed (LLM skipped)
+2026-06-15 14:36:35 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Skip physics bounds (deterministic T4 minimal APN)
+2026-06-15 14:36:35 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Renamed function declaration 'monte_carlo_single' → 'guidance_T4_PN_sat_v7_1781505395' to match filename
+2026-06-15 14:36:35 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Stripped 18 annotation line(s) from script → sidecar: guidance_T4_PN_sat_v7_1781505395_interface_check.txt
+2026-06-15 14:36:35 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated script → guidance_output\scripts\guidance_T4_PN_sat_v7_1781505395.m  (source: local:monte_carlo_single.m)
+  ✅ Tool 1 completed in 0.07s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_PN_sat_v7_1781505395.m",...
+  📞 Tool 1: syntax_check_matlab(['script_path', 'auto_fix', 'max_fix_attempts']) - {"script_path": "guidance_output\\scripts\\guidance_T4_PN_sat_v7_1781505395.m", "auto_fix": true, "m...
+2026-06-15 14:36:42 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Sanitizer applied 16 fix(es) to 'guidance_T4_PN_sat_v7_1781505395.m'
+2026-06-15 14:36:42 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=2
+2026-06-15 14:39:19 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM returned identical content — stopping.
+  ✅ Tool 1 completed in 157.24s - {"status": "success", "valid": true, "issues": ["第 19 行: RL 参数 'rl_ny_lim' 已声明但未注入 base=struct()（RL ...
+  📞 Tool 1: verify_guidance_compat(['script_path', 'task_description']) - {"script_path": "guidance_output\\scripts\\guidance_T4_PN_sat_v7_1781505395.m", "task_description": ...
+2026-06-15 14:39:32 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Found guidance function 'gf' (1623 chars)
+2026-06-15 14:39:32 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Interface check: pass=True issues=0 warnings=0
+2026-06-15 14:39:32 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Math derivation: law=unknown overall_pass=True
+2026-06-15 14:40:23 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Result: overall=PASS confidence=40 law=unknown
+  ✅ Tool 1 completed in 51.01s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_T4_PN_sat_v7_1781505395.m",...
+2026-06-15 14:40:24 - agent.chat_completion_helpers - INFO - Streaming failed before delivery: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:40:24 - agent.conversation_loop - WARNING - API call failed (attempt 1/3) error_type=APIStatusError thread=MainThread:56528 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro summary=HTTP 402: Insufficient Balance
+⚠️  API call failed (attempt 1/3): APIStatusError [HTTP 402]
+   🔌 Provider: custom  Model: deepseek-v4-pro
+   🌐 Endpoint: https://api.deepseek.com
+   📝 Error: HTTP 402: Insufficient Balance
+   📋 Details: {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}
+   ⏱️  Elapsed: 1.84s  Context: 23 msgs, ~22,190 tokens
+❌ Non-retryable error (HTTP 402): HTTP 402: Insufficient Balance
+❌ Non-retryable client error (HTTP 402). Aborting.
+   🔌 Provider: custom  Model: deepseek-v4-pro
+   🌐 Endpoint: https://api.deepseek.com
+   💡 custom reported that billing, credits, or account entitlement is exhausted for deepseek-v4-pro.
+   💡 Add credits or update billing with that provider, then retry.
+   💡 You can switch providers temporarily with /model <model> --provider <provider>.
+2026-06-15 14:40:24 - agent.conversation_loop - ERROR - Non-retryable client error: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Hermes generated script] guidance_T4_PN_sat_v7_1781505395.m
+  [Hermes sim metrics] hit=0.0% SEP=nanm PeakNy_avg=0.00g PeakNy_max=0.00g PM=0.0° BW=0.0r/s
+2026-06-15 14:40:24 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+
+[Layer 2 Gate] Validating script before Layer 3 (smoke nmc=25)…
+2026-06-15 14:40:25 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=2
+2026-06-15 14:40:25 - multi_agent.tools.syntax_check_tool - WARNING - [SyntaxCheck] LLM fix call failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:40:25 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM returned identical content — stopping.
+2026-06-15 14:40:25 - multi_agent.integration.layer2_script_gate - INFO - [Layer2Gate] Smoke run_simulation nmc=20 → guidance_output\scripts\guidance_T4_PN_sat_v7_1781505395.m
+2026-06-15 14:41:05 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=2314 chars
+2026-06-15 14:41:05 - multi_agent.integration.layer2_script_gate - INFO - [Layer2Gate] T4 MODIFY closed-loop gate nmc=10
+2026-06-15 14:41:51 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=1724 chars
+  [Layer 2 Gate] ✓ Layer2 gate passed (syntax + smoke)
+
+[Layer 3] Optimization Workflow | script=guidance_T4_PN_sat_v7_1781505395.m
+  [DEBUG Layer3] mission_conditions = {'T': [4]}
+2026-06-15 14:41:51 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Starting | directly_satisfied=False | script=guidance_T4_PN_sat_v7_1781505395.m
+2026-06-15 14:41:51 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Strategy from config: expert
+  [Layer 3] Strategy selected: EXPERT
+2026-06-15 14:41:51 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Optimization strategy: expert
+2026-06-15 14:41:52 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 1 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 1 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:41:55 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 1 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 1 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:42:00 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 1 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 1 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:42:00 - multi_agent.simulation.optimization_workflow - WARNING - [ExpertTuning] Round 1: all attempts empty, using random perturbation
+  [Expert] Round 1: LLM empty → random pitch perturbation fallback
+2026-06-15 14:42:00 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 1 fallback params: w1=41.750 zeta1=0.639 tao1=0.156 w2=45.835 zeta2=0.582 tao2=0.143 w3=45.652 zeta3=0.555 N_pn=4.049 ny_lim=19.955
+2026-06-15 14:42:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Mission: RUN_CASE='T' SUB_IDX=4 nmc=25
+2026-06-15 14:42:00 - multi_agent.rl.matlab_rl_optimizer - INFO -   [RL] Engine diagnostic: engine=matlab  matlab_engine_backend=None  matlab_path='E:\\software\\MATLAB\\R2025a\\extern\\engines\\python\\..\\..\\..\\bin\\win64\\matlab.EXE'→E:\software\MATLAB\R2025a\extern\engines\python\..\..\..\bin\win64\matlab.EXE  octave_path='E:\\software\\Octave-11.1.0\\octave-launch.exe'→E:\software\Octave-11.1.0\octave-launch.exe
+2026-06-15 14:42:27 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 2 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 2 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:42:31 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 2 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 2 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:42:34 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 2 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 2 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:42:34 - multi_agent.simulation.optimization_workflow - WARNING - [ExpertTuning] Round 2: all attempts empty, using random perturbation
+  [Expert] Round 2: LLM empty → random pitch perturbation fallback
+2026-06-15 14:42:34 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 2 fallback params: w1=43.420 zeta1=0.618 tao1=0.133 w2=46.786 zeta2=0.594 tao2=0.138 w3=45.087 zeta3=0.535 N_pn=3.995 ny_lim=19.909
+2026-06-15 14:43:04 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 3 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 3 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:43:07 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 3 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 3 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:43:10 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 3 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 3 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:43:10 - multi_agent.simulation.optimization_workflow - WARNING - [ExpertTuning] Round 3: all attempts empty, using random perturbation
+  [Expert] Round 3: LLM empty → random pitch perturbation fallback
+2026-06-15 14:43:10 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 3 fallback params: w1=43.084 zeta1=0.678 tao1=0.115 w2=46.849 zeta2=0.598 tao2=0.143 w3=46.035 zeta3=0.519 N_pn=4.053 ny_lim=19.977
+2026-06-15 14:43:38 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 4 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 4 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:43:41 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 4 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 4 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:43:45 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 4 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 4 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:43:45 - multi_agent.simulation.optimization_workflow - WARNING - [ExpertTuning] Round 4: all attempts empty, using random perturbation
+  [Expert] Round 4: LLM empty → random pitch perturbation fallback
+2026-06-15 14:43:45 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 4 fallback params: w1=39.980 zeta1=0.651 tao1=0.099 w2=47.192 zeta2=0.586 tao2=0.136 w3=45.119 zeta3=0.521 N_pn=4.037 ny_lim=20.000
+2026-06-15 14:44:12 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 5 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 5 attempt 1 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:44:16 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 5 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 5 attempt 2 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:44:19 - multi_agent.simulation.optimization_workflow - ERROR - [ExpertTuning] Round 5 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+  [Expert] Round 5 attempt 3 LLM failed: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_error', 'param': None, 'code': 'invalid_request_error'}}
+2026-06-15 14:44:19 - multi_agent.simulation.optimization_workflow - WARNING - [ExpertTuning] Round 5: all attempts empty, using random perturbation
+  [Expert] Round 5: LLM empty → random pitch perturbation fallback
+2026-06-15 14:44:19 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Round 5 fallback params: w1=37.458 zeta1=0.683 tao1=0.092 w2=48.109 zeta2=0.578 tao2=0.142 w3=44.696 zeta3=0.535 N_pn=4.101 ny_lim=20.000
+2026-06-15 14:44:43 - multi_agent.simulation.optimization_workflow - INFO - [ExpertTuning] Finished 5 rounds without meeting requirements. Best: hit=96.0% SEP=10.19m
+  [Layer 3/Expert] Done 5 rounds | status=needs_iteration | hit=96.0% SEP=10.19m
+  [Layer 3] Expert tuning insufficient → falling back to PPO
+2026-06-15 14:44:43 - multi_agent.simulation.optimization_workflow - INFO - [OptimWorkflow] Expert insufficient → PPO fallback
+2026-06-15 14:44:43 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 500.0m → 7.0m | HitRate: 10.0% → 92.0%
+2026-06-15 14:44:43 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['500.0', '253.5', '7.0']
+2026-06-15 14:44:43 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['10.0', '51.0', '92.0']
+2026-06-15 14:44:43 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 500→7m | HitRate 10→92% | phases=3 x 15 ep
+2026-06-15 14:44:43 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 12 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\d9b9658644ad40d4999e115a57b8c389\guidance_T4_PN_sat_v7_1781505395.m
+2026-06-15 14:44:43 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Baseline uses PE-retrieved initial params (10 values)
+2026-06-15 14:44:43 - multi_agent.rl.matlab_rl_optimizer - INFO - RL networks initialised: state_dim=17, action_dim=10, mode=contextual_bandit(gamma=0), batch=16, entropy_coef=0.02, pitch_std=0.50, other_std=0.20
+2026-06-15 14:44:43 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] JSONL episode log → logs\rl_episodes_20260615_144443.jsonl
+2026-06-15 14:44:43 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Contextual-bandit PPO | batch=16 | nmc=25 | gamma=0 | entropy_coef=0.02
+2026-06-15 14:44:43 - multi_agent.rl.matlab_rl_optimizer - INFO - Evaluating baseline (PE-retrieved / script params)…
+2026-06-15 14:45:08 - multi_agent.rl.matlab_rl_optimizer - INFO - Baseline reward=1.231  metrics={'hit_rate': 96.0, 'SEP': 10.19, 'peak_ny': 23.205, 'pitch_PM': 74.6, 'pitch_BW': 11.910000000000002, 'pitch_GM': 6.0, 'miss_distance': 10.19, 'peak_n': 23.205, 'peak_ny_mean': 23.205, 'peak_ny_max': 26.4, 'peak_n_max': 26.4, '_parse_incomplete': False, '_sim_source': 'matlab'}
+2026-06-15 14:45:08 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] Warm-start exploration shrink ×0.30 (pitch_std≈0.15)
+2026-06-15 14:45:32 - multi_agent.memory.parameter_experience - INFO - Stored memory 674687e676bb245e with fitness 0.4594664198896232
+2026-06-15 14:45:32 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-15 14:45:32 - multi_agent.rl.matlab_rl_optimizer - INFO -   [Ep 1/50] reward=3.11 hit=96% SEP=19.67m PeakN_max=20.84g ★
+2026-06-15 14:45:32 - multi_agent.rl.rolling_stats - INFO -   [RollingStats @ Ep 1/50] window=20 | mean_reward=3.114 | mean_SEP=19.67m | mean_PeakN_max=20.84g | mean_hit=96.0% | diverge=0%
+2026-06-15 14:47:12 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Phase 0/2 | Episodes: 5/15 | Feasible: 5 | SEP <= 500.0m, HitRate >= 10.0%
+2026-06-15 14:48:00 - multi_agent.rl.matlab_rl_optimizer - INFO - [RL] 3 consecutive divergent episodes — reducing log_std by -0.50
+2026-06-15 14:48:47 - multi_agent.rl.matlab_rl_optimizer - WARNING -   [RL] ⚠️ Interrupted at episode 9/50. Saving best results (reward=3.114)...
+
+  [RL] ⚠️ 优化被中断 (episode 9/50). 保存当前最优结果...
+2026-06-15 14:48:47 - multi_agent.simulation.optimization_workflow - WARNING - [OptimWorkflow] PPO fallback interrupted — using expert results
+  [Layer 3] PPO interrupted — using expert results
+  [Layer 3/CLS] Starting local search (50 steps, nmc=25)…
+2026-06-15 14:48:47 - multi_agent.rl.matlab_rl_optimizer - INFO - Extracted 12 params from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\tasks\d9b9658644ad40d4999e115a57b8c389\guidance_T4_PN_sat_v7_1781505395.m
+
+
+────────────────────────────────────────────────────────────────
+  [人机中断] Ctrl+C — 当前执行已中止
+────────────────────────────────────────────────────────────────
+  原始任务: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━...
+  ────────────────────────────────────────────────────────────────
+  继续执行（保持当前指令）               → 输入 c 或 continue
+  手动晋升短期记忆到长期记忆             → 输入 p 或 promote
+  输入修改指令（追加到原始任务上）        → 直接输入修改内容
+  完全替换原始任务                       → 以 !! 开头输入新任务
+  恢复原始任务重启                       → 直接回车
+  退出程序                               → 再次 Ctrl+C
+  ────────────────────────────────────────────────────────────────
+  >>> 
+  [退出] 程序已终止。
+[0m
+================================================================================
+Finished    : 2026-06-15 14:48:49
+Exit code   : 0
+================================================================================

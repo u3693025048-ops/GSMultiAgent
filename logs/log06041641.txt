@@ -1,0 +1,41 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-04 16:41:34
+Command     : cli_agent.py --prompt test
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06041641.txt
+================================================================================
+
+2026-06-04 16:41:34 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06041641.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06041641.txt
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-04 16:41:34
+Task: test
+================================================================================
+
+[Step 1] Initializing components...
+Traceback (most recent call last):
+  File [35m"E:\PythonProject\GSMultiAgent13\cli_agent.py"[0m, line [35m3487[0m, in [35m<module>[0m
+    [31masyncio.run[0m[1;31m(main(args))[0m
+    [31m~~~~~~~~~~~[0m[1;31m^^^^^^^^^^^^[0m
+  File [35m"C:\Python314\Lib\asyncio\runners.py"[0m, line [35m204[0m, in [35mrun[0m
+    return [31mrunner.run[0m[1;31m(main)[0m
+           [31m~~~~~~~~~~[0m[1;31m^^^^^^[0m
+  File [35m"C:\Python314\Lib\asyncio\runners.py"[0m, line [35m127[0m, in [35mrun[0m
+    return [31mself._loop.run_until_complete[0m[1;31m(task)[0m
+           [31m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m[1;31m^^^^^^[0m
+  File [35m"C:\Python314\Lib\asyncio\base_events.py"[0m, line [35m719[0m, in [35mrun_until_complete[0m
+    return [31mfuture.result[0m[1;31m()[0m
+           [31m~~~~~~~~~~~~~[0m[1;31m^^[0m
+  File [35m"E:\PythonProject\GSMultiAgent13\cli_agent.py"[0m, line [35m145[0m, in [35mmain[0m
+    from multi_agent.integration.reflection_agent import ReflectionAgent
+  File [35m"E:\PythonProject\GSMultiAgent13\multi_agent\integration\reflection_agent.py"[0m, line [35m6[0m, in [35m<module>[0m
+    from langchain_openai import ChatOpenAI
+[1;35mModuleNotFoundError[0m: [35mNo module named 'langchain_openai'[0m
+
+================================================================================
+Finished    : 2026-06-04 16:41:34
+Exit code   : 0
+================================================================================

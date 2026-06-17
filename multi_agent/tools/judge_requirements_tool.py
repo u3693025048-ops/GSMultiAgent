@@ -19,64 +19,52 @@ import logging
 import re
 from typing import Any, Dict, Optional
 
+from multi_agent.integration.judgment_agent import (
+    _extract_numeric_requirements,
+    all_requirements_satisfied,
+    requirement_score,
+    requirements_complete,
+)
+from multi_agent.tools.tool_arg_aliases import (
+    coerce_script_path as _coerce_script_path,
+    coerce_task_prompt as _coerce_task_prompt,
+)
+
 logger = logging.getLogger(__name__)
 
 
 def _parse_requirements_from_prompt(prompt: str) -> Dict[str, Any]:
     """Extract numeric requirements from natural language prompt."""
-    reqs: Dict[str, Any] = {}
+    return _extract_numeric_requirements(prompt)
 
-    for pat in [
-        r"命中率\s*[>=]+\s*(\d+(?:\.\d+)?)\s*%",
-        r"hit[_\s]*rate\s*[>=]+\s*(\d+(?:\.\d+)?)",
-    ]:
-        m = re.search(pat, prompt, re.IGNORECASE)
-        if m:
-            reqs["hit_rate_min"] = float(m.group(1))
-            break
 
-    for pat in [
-        r"(?:脱靶量|SEP|miss)\s*[<=]+\s*(\d+(?:\.\d+)?)\s*m",
-        r"miss\s*distance\s*[<=]+\s*(\d+(?:\.\d+)?)",
-    ]:
-        m = re.search(pat, prompt, re.IGNORECASE)
-        if m:
-            reqs["sep_max"] = float(m.group(1))
-            break
+def _requirement_score(reqs: Dict[str, Any]) -> int:
+    """Higher = more complete task requirements."""
+    return requirement_score(reqs)
 
-    m = re.search(
-        r"(?:峰值法向过载|法向过载|PeakNy|peak_ny)\s*[<=]+\s*(\d+(?:\.\d+)?)\s*g",
-        prompt, re.IGNORECASE,
-    )
-    if m:
-        reqs["peak_ny_max"] = float(m.group(1))
 
-    m = re.search(
-        r"PM\s*(?:在|in|∈)\s*\[?\s*(\d+(?:\.\d+)?)\s*[,~到\-]\s*(\d+(?:\.\d+)?)",
-        prompt, re.IGNORECASE,
-    )
-    if m:
-        reqs["pm_min"] = float(m.group(1))
-        reqs["pm_max"] = float(m.group(2))
-    else:
-        for pat in [
-            r"PM\s*[>=]+\s*(\d+(?:\.\d+)?)\s*°?",
-            r"相位裕度\s*[>=]+\s*(\d+(?:\.\d+)?)",
-        ]:
-            m = re.search(pat, prompt, re.IGNORECASE)
-            if m:
-                reqs["pm_min"] = float(m.group(1))
-                break
+def _resolve_requirements(task_prompt: str, cache: str = "") -> Dict[str, Any]:
+    """Prefer the cached user prompt when it carries fuller numeric requirements."""
+    cached = _parse_requirements_from_prompt(cache or "")
+    called = _parse_requirements_from_prompt(task_prompt or "")
+    if _requirement_score(cached) >= max(_requirement_score(called), 3):
+        merged = dict(cached)
+        for k, v in called.items():
+            if k not in merged:
+                merged[k] = v
+        return merged
+    return {**cached, **called}
 
-    m = re.search(
-        r"BW\s*(?:在|in)\s*\[?\s*(\d+(?:\.\d+)?)\s*[,~到]\s*(\d+(?:\.\d+)?)",
-        prompt, re.IGNORECASE,
-    )
-    if m:
-        reqs["bw_min"] = float(m.group(1))
-        reqs["bw_max"] = float(m.group(2))
 
-    return reqs
+def _hard_constraint_failed(reasons: list) -> bool:
+    """True when rule check failed on safety-critical metrics (never LLM-overridden)."""
+    for r in reasons:
+        if "[NG]" not in r:
+            continue
+        # Hard constraints: PeakNy, hit_rate, SEP, PM, BW (all critical)
+        if any(k in r for k in ("PeakNy", "命中率", "SEP", "hit_rate", "PM", "BW")):
+            return True
+    return False
 
 
 def _rule_check(metrics: Dict[str, float], reqs: Dict[str, Any]) -> tuple:
@@ -102,17 +90,14 @@ def _rule_check(metrics: Dict[str, float], reqs: Dict[str, Any]) -> tuple:
             + (" [OK]" if ok else " [NG]")
         )
 
-    if "peak_ny_max" in reqs:
-        pny = metrics.get("peak_ny", metrics.get("peak_n", 0.0))
-        if pny <= 0.0:
-            reasons.append("PeakNy 数据不可用（跳过此约束）")
-        else:
-            ok = pny <= reqs["peak_ny_max"]
-            satisfied = satisfied and ok
-            reasons.append(
-                f"PeakNy {pny:.2f}g {'<=' if ok else '>'} 要求 {reqs['peak_ny_max']:.2f}g"
-                + (" [OK]" if ok else " [NG]")
-            )
+    if "peak_ny_max" in reqs or "peak_ny_mean_max" in reqs:
+        from multi_agent.rl.metric_utils import check_peak_ny, normalize_peak_ny_requirements
+
+        ok_peak, peak_reasons = check_peak_ny(
+            metrics, normalize_peak_ny_requirements(reqs)
+        )
+        satisfied = satisfied and ok_peak
+        reasons.extend(peak_reasons)
 
     if "pm_min" in reqs:
         pm = metrics.get("pitch_PM", 0.0)
@@ -164,7 +149,14 @@ class JudgeRequirementsTool:
             },
             "metrics": {
                 "type": "object",
-                "description": "仿真指标字典，键: hit_rate, SEP, peak_ny, pitch_PM, pitch_BW",
+                "description": (
+                    "仿真指标字典。支持的键名（任一格式均可）：\n"
+                    "  hit_rate 或 hit_rate_pct (命中率%)\n"
+                    "  SEP 或 SEP_m (脱靶量m)\n"
+                    "  peak_ny 或 PeakNy_g (峰值过载g)\n"
+                    "  pitch_PM 或 PM_deg (相位裕度°)\n"
+                    "  pitch_BW 或 BW_rads (带宽rad/s)"
+                ),
             },
             "script_path": {
                 "type": "string",
@@ -176,11 +168,52 @@ class JudgeRequirementsTool:
 
     def __init__(self):
         self._reflection_agent = None
+        self._run_simulation_tool = None
         self._task_prompt_cache: str = ""
         self._last_result: Optional[Dict[str, Any]] = None
 
     def set_reflection_agent(self, agent: Any) -> None:
         self._reflection_agent = agent
+
+    def set_run_simulation_tool(self, tool: Any) -> None:
+        """Optional trusted metrics source (run_simulation.last_metrics)."""
+        self._run_simulation_tool = tool
+
+    def _merge_trusted_sim_metrics(
+        self, metrics: Dict[str, float]
+    ) -> tuple[Dict[str, float], bool]:
+        """Prefer parsed simulation metrics over LLM hand-filled values."""
+        tool = self._run_simulation_tool
+        if tool is None:
+            return metrics, False
+        trusted = getattr(tool, "last_metrics", None) or {}
+        if not trusted:
+            return metrics, False
+
+        merged = dict(metrics)
+        overridden = False
+        _trusted_keys = (
+            "hit_rate", "SEP", "miss_distance",
+            "peak_ny", "peak_n", "peak_ny_max", "peak_n_max",
+            "pitch_PM", "pitch_BW",
+        )
+        for key in _trusted_keys:
+            if key not in trusted:
+                continue
+            try:
+                val = float(trusted[key])
+            except (TypeError, ValueError):
+                continue
+            if val == 0.0 and key in ("peak_ny_max", "peak_n_max"):
+                continue
+            if merged.get(key) != val:
+                merged[key] = val
+                overridden = True
+        if "SEP" not in merged and "miss_distance" in merged:
+            merged["SEP"] = merged["miss_distance"]
+        from multi_agent.rl.metric_utils import normalize_peak_ny_aliases
+        merged = normalize_peak_ny_aliases(merged)
+        return merged, overridden
 
     def set_task_prompt(self, prompt: str) -> None:
         self._task_prompt_cache = prompt
@@ -190,9 +223,11 @@ class JudgeRequirementsTool:
         task_prompt: str = "",
         metrics: Optional[Dict[str, Any]] = None,
         script_path: str = "",
+        **kwargs: Any,
     ) -> str:
-        if not task_prompt:
-            task_prompt = self._task_prompt_cache
+        task_prompt = _coerce_task_prompt(task_prompt, **kwargs) or self._task_prompt_cache
+        if kwargs.get("path") and not script_path:
+            script_path = _coerce_script_path(script_path, **kwargs)
         if metrics is None:
             metrics = {}
 
@@ -202,11 +237,58 @@ class JudgeRequirementsTool:
                 m[k] = float(v)
             except (TypeError, ValueError):
                 pass
+        # Normalise key aliases that Hermes agent may send.
+        # Hermes often attaches unit suffixes (_pct, _m, _g, _deg, _rads)
+        # or uses short forms (PM, BW, PeakNy).  Map them all to canonical
+        # keys expected by _rule_check: hit_rate, SEP, peak_ny, pitch_PM, pitch_BW.
+        _key_aliases = {
+            # short forms
+            "PM":           "pitch_PM",
+            "BW":           "pitch_BW",
+            "GM":           "pitch_GM",
+            "PeakNy":       "peak_ny",
+            "PeakNy_max":   "peak_ny_max",
+            "PeakN":        "peak_n",
+            "PeakN_max":    "peak_ny_max",
+            # unit-suffixed forms (Hermes LLM generated)
+            "hit_rate_pct": "hit_rate",
+            "SEP_m":        "SEP",
+            "PeakNy_g":     "peak_ny",
+            "PeakNy_mean_g": "peak_ny",
+            "peak_ny_mean_g": "peak_ny",
+            "PeakNy_max_g": "peak_ny_max",
+            "peak_ny_max_g": "peak_ny_max",
+            "peak_n_max_g": "peak_ny_max",
+            "PM_deg":       "pitch_PM",
+            "BW_rads":      "pitch_BW",
+            "BW_rad_s":     "pitch_BW",
+            "PM_degree":    "pitch_PM",
+            "miss_distance_m": "miss_distance",
+            "peak_ny_g":    "peak_ny",
+            "peak_n_g":     "peak_n",
+        }
+        for _short, _full in _key_aliases.items():
+            if _short in m and _full not in m:
+                m[_full] = m[_short]
+        from multi_agent.rl.metric_utils import normalize_peak_ny_aliases
+        m = normalize_peak_ny_aliases(m)
+        m, _trusted_override = self._merge_trusted_sim_metrics(m)
+        if _trusted_override:
+            logger.info("[JudgeRequirements] metrics overridden from run_simulation.last_metrics")
 
-        reqs = _parse_requirements_from_prompt(task_prompt)
+        reqs = _resolve_requirements(task_prompt, self._task_prompt_cache)
+        if not reqs and self._task_prompt_cache and task_prompt != self._task_prompt_cache:
+            reqs = _parse_requirements_from_prompt(self._task_prompt_cache)
+
         if reqs:
             satisfied, reasons = _rule_check(m, reqs)
             reason_str = "; ".join(reasons) if reasons else "规则检查通过"
+            if not requirements_complete(reqs, task_prompt or self._task_prompt_cache):
+                satisfied = False
+                reason_str += "; 任务要求解析不完整，禁止 satisfied 放行"
+            elif _requirement_score(reqs) < 3:
+                satisfied = False
+                reason_str += "; 任务要求解析不完整，禁止 satisfied 放行"
         else:
             satisfied = False
             reason_str = "未检测到明确数值要求，将转入 RL 优化"
@@ -217,18 +299,28 @@ class JudgeRequirementsTool:
                 llm_satisfied = not ref.get("needs_optimization", True)
                 llm_suggestion = ref.get("suggestion", "")
                 if llm_satisfied and not satisfied:
-                    satisfied = True
-                    reason_str += f"; LLM判断: {llm_suggestion[:200]}"
+                    reason_str += (
+                        "; LLM 建议通过但规则未满足，忽略 LLM 放行"
+                    )
                 elif not llm_satisfied and satisfied:
                     satisfied = False
                     reason_str += f"; LLM判断需改进: {llm_suggestion[:200]}"
+                elif llm_satisfied:
+                    # LLM cannot override — all metrics must pass rule check
+                    rule_ok, _ = _rule_check(m, reqs)
+                    if not rule_ok or not all_requirements_satisfied(
+                        m, reqs, task_prompt or self._task_prompt_cache
+                    ):
+                        satisfied = False
+                        reason_str += "; LLM 建议通过但规则未全部满足，忽略 LLM 放行"
             except Exception as exc:
                 logger.warning(f"JudgeRequirements LLM stage failed: {exc}")
 
         summary = {
             "命中率(%)": m.get("hit_rate", 0.0),
             "SEP(m)": m.get("SEP", m.get("miss_distance", 0.0)),
-            "PeakNy(g)": m.get("peak_ny", m.get("peak_n", 0.0)),
+            "PeakNy_mean(g)": m.get("peak_ny", m.get("peak_n", 0.0)),
+            "PeakNy_max(g)": m.get("peak_ny_max", m.get("peak_n_max", 0.0)),
             "PM(deg)": m.get("pitch_PM", 0.0),
             "BW(r/s)": m.get("pitch_BW", 0.0),
         }
@@ -239,6 +331,7 @@ class JudgeRequirementsTool:
             "metrics_summary": summary,
             "next_step": "done" if satisfied else "rl_optimize",
             "requirements_found": reqs,
+            "metrics_trusted_from_sim": _trusted_override,
         }
         self._last_result = result
         logger.info(f"[JudgeRequirements] satisfied={satisfied} | {reason_str[:120]}")

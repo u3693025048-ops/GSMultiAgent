@@ -1,0 +1,32 @@
+# smoke_hermes_full started 2026-06-12T13:02:43.607473
+# prompt: T4高频大幅度机动：RUN_CASE='T'; SUB_IDX=4; 命中率>=92%; SEP<=7m; PeakNy<=20g; PM在45-70度; BW在20-85rad/s
+# config: E:\PythonProject\GSMultiAgent13\config.smoke.yaml
+
+Failed to load plugin 'nous': No module named 'hermes_cli.dashboard_auth'
+2026-06-12 13:02:44,824 - multi_agent.integration.hermes_integration - INFO - Patched model_tools._run_async — tool dispatch timeout = 1800s (was hardcoded 300s upstream)
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-12 13:02:44  verbosity=normal
+Task: T4高频大幅度机动：RUN_CASE='T'; SUB_IDX=4; 命中率>=92%; SEP<=7m; PeakNy<=20g; PM在45-70度; BW在20-85rad/s
+================================================================================
+
+[Step 1] Initializing components...
+Traceback (most recent call last):
+  File "E:\PythonProject\GSMultiAgent13\scripts\_smoke_cli_launcher.py", line 24, in <module>
+    asyncio.run(cli_agent.main(Args()))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\asyncio\runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Python314\Lib\asyncio\base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "E:\PythonProject\GSMultiAgent13\cli_agent.py", line 173, in main
+    from multi_agent.integration.reflection_agent import ReflectionAgent
+  File "E:\PythonProject\GSMultiAgent13\multi_agent\integration\reflection_agent.py", line 6, in <module>
+    from langchain_openai import ChatOpenAI
+ModuleNotFoundError: No module named 'langchain_openai'

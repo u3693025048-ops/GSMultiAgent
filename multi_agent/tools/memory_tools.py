@@ -60,9 +60,13 @@ class AgentMemoryRememberTool(_MemoryToolBase):
         "required": ["key", "value"],
     }
 
-    async def execute(self, key: str, value: str) -> str:
+    async def execute(self, key: str = "", value: str = "", **kwargs: Any) -> str:
+        key = (key or str(kwargs.get("memory_id") or kwargs.get("name") or "")).strip()
+        if not key:
+            return json.dumps({"status": "error", "message": "key is required"})
         if self._memory is None:
-            return json.dumps({"status": "error", "message": "Memory not initialized."})
+            logger.warning("[agent_memory_remember] Memory not initialized — skip.")
+            return json.dumps({"status": "skipped", "message": "Memory not available in this session."})
         try:
             result = self._memory.remember(key, value)
             return json.dumps({"status": "success", "message": result})
@@ -86,15 +90,37 @@ class AgentMemoryRecallTool(_MemoryToolBase):
                 "type": "string",
                 "description": "The key used when the memory was saved.",
             },
+            "memory_id": {
+                "type": "string",
+                "description": "Alternative parameter name for the key (for compatibility).",
+            },
+            "query": {
+                "type": "string",
+                "description": "Alias for key / memory_id when recalling by name.",
+            },
         },
-        "required": ["key"],
+        "required": [],  # At least one of key, memory_id, or query must be provided
     }
 
-    async def execute(self, key: str) -> str:
+    async def execute(
+        self,
+        key: str = None,
+        memory_id: str = None,
+        query: str = None,
+        **_: Any,
+    ) -> str:
+        recall_key = key or memory_id or query
+        if not recall_key:
+            return json.dumps(
+                {"status": "error", "message": "Either 'key', 'memory_id', or 'query' is required"}
+            )
+        
         if self._memory is None:
-            return json.dumps({"status": "error", "message": "Memory not initialized."})
+            logger.warning("[agent_memory_recall] Memory not initialized — skip.")
+            return json.dumps({"status": "skipped", "value": None,
+                               "message": "Memory not available in this session. Proceed without this memory."})
         try:
-            result = self._memory.recall(key)
+            result = self._memory.recall(recall_key)
             return json.dumps({"status": "success", "message": result})
         except Exception as exc:
             logger.error(f"[agent_memory_recall] {exc}")
@@ -118,7 +144,9 @@ class AgentMemoryListTool(_MemoryToolBase):
 
     async def execute(self) -> str:
         if self._memory is None:
-            return json.dumps({"status": "error", "message": "Memory not initialized."})
+            logger.warning("[agent_memory_list] Memory not initialized — skip.")
+            return json.dumps({"status": "skipped", "keys": [],
+                               "message": "Memory not available in this session."})
         try:
             result = self._memory.list_memories()
             return json.dumps({"status": "success", "message": result})
@@ -142,15 +170,26 @@ class AgentMemoryForgetTool(_MemoryToolBase):
                 "type": "string",
                 "description": "The key of the memory entry to delete.",
             },
+            "memory_id": {
+                "type": "string",
+                "description": "Alternative parameter name for the key (for compatibility).",
+            },
         },
-        "required": ["key"],
+        "required": [],  # At least one of key or memory_id must be provided
     }
 
-    async def execute(self, key: str) -> str:
+    async def execute(self, key: str = None, memory_id: str = None) -> str:
+        # Accept both 'key' and 'memory_id' for compatibility with different LLM outputs
+        forget_key = key or memory_id
+        if not forget_key:
+            return json.dumps({"status": "error", "message": "Either 'key' or 'memory_id' parameter is required"})
+        
         if self._memory is None:
-            return json.dumps({"status": "error", "message": "Memory not initialized."})
+            logger.warning("[agent_memory_forget] Memory not initialized — skip.")
+            return json.dumps({"status": "skipped",
+                               "message": "Memory not available in this session."})
         try:
-            result = self._memory.forget(key)
+            result = self._memory.forget(forget_key)
             return json.dumps({"status": "success", "message": result})
         except Exception as exc:
             logger.error(f"[agent_memory_forget] {exc}")

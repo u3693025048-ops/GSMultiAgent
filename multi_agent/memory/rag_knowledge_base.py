@@ -4,10 +4,11 @@ RAG Knowledge Base
 基于 ChromaDB 的向量知识库，支持可配置的 Embedding 模型
 """
 
+import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,22 @@ class RAGKnowledgeBase:
         self._collection = None
         self._embedding_function = None
 
+    # ------------------------------------------------------------------
+    # Async helper: run any synchronous callable in a thread-pool executor
+    # so it never blocks the asyncio event loop.  A hard timeout (default
+    # 30 s) prevents hangs when the embedding / Chroma API is unreachable.
+    # ------------------------------------------------------------------
+    @staticmethod
+    async def _blocking(
+        fn: Callable,
+        *args,
+        timeout: float = 30.0,
+        **kwargs,
+    ):
+        loop = asyncio.get_event_loop()
+        coro = loop.run_in_executor(None, lambda: fn(*args, **kwargs))
+        return await asyncio.wait_for(coro, timeout=timeout)
+
     async def initialize(self) -> bool:
         """初始化 ChromaDB 和 Embedding 模型"""
         try:
@@ -98,7 +115,7 @@ class RAGKnowledgeBase:
             # collection.upsert() to fail silently, leaving 0 indexed documents.
             if self._embedding_function is not None:
                 try:
-                    self._embedding_function(["ok"])
+                    await self._blocking(self._embedding_function, ["ok"], timeout=15.0)
                 except Exception as emb_exc:
                     logger.error(
                         f"Embedding API test failed "
@@ -221,30 +238,38 @@ class RAGKnowledgeBase:
                 contents.append(content)
                 metas.append(doc_metadata)
 
-            # Try the whole batch first (fast path).
-            try:
-                self._collection.upsert(ids=ids, documents=contents, metadatas=metas)
-                logger.info(f"Indexed {len(documents)} documents")
-                return len(documents)
-            except Exception as batch_exc:
-                logger.warning(
-                    f"Batch upsert failed ({batch_exc}); "
-                    "retrying one document at a time."
-                )
-
-            # Slow-path: index individually, skip any that still fail.
+            # DashScope embedding API: at most 10 items per call.
+            # upsert() calls the embedding API synchronously — use _blocking().
+            _UPSERT_CHUNK = 10
             ok = 0
-            for doc_id, content, meta in zip(ids, contents, metas):
+            for _start in range(0, len(ids), _UPSERT_CHUNK):
+                _sl = slice(_start, _start + _UPSERT_CHUNK)
+                _u_ids = ids[_sl]
+                _u_docs = contents[_sl]
+                _u_metas = metas[_sl]
                 try:
-                    self._collection.upsert(
-                        ids=[doc_id], documents=[content], metadatas=[meta]
+                    await self._blocking(
+                        self._collection.upsert,
+                        ids=_u_ids, documents=_u_docs, metadatas=_u_metas,
+                        timeout=30.0,
                     )
-                    ok += 1
-                except Exception as single_exc:
+                    ok += len(_u_ids)
+                except Exception as chunk_exc:
                     logger.warning(
-                        f"  Skipping doc '{doc_id}': {single_exc}"
+                        f"Chunk upsert failed (docs {_start}-{_start + _UPSERT_CHUNK}): "
+                        f"{chunk_exc}; retrying one by one."
                     )
-            logger.info(f"Indexed {ok}/{len(documents)} documents (1-by-1 fallback)")
+                    for _doc_id, _content, _meta in zip(_u_ids, _u_docs, _u_metas):
+                        try:
+                            await self._blocking(
+                                self._collection.upsert,
+                                ids=[_doc_id], documents=[_content], metadatas=[_meta],
+                                timeout=30.0,
+                            )
+                            ok += 1
+                        except Exception as single_exc:
+                            logger.warning(f"  Skipping doc '{_doc_id}': {single_exc}")
+            logger.info(f"Indexed {ok}/{len(documents)} documents")
             return ok
 
         except Exception as e:
@@ -383,24 +408,24 @@ class RAGKnowledgeBase:
             return []
 
         try:
-            where_filter = None
-            if filters:
-                where_filter = filters
+            where_filter = filters if filters else None
 
-            # Fetch extra candidates so the kb_only post-filter still returns
-            # top_k results even if many untagged docs are discarded.
-            # Cap to collection size to avoid Chroma ValueError when
-            # n_results > number of documents in the index.
+            # count() and query() call the embedding API synchronously.
+            # Use _blocking() so the asyncio event loop is never blocked.
             try:
-                _col_size = self._collection.count()
+                _col_size = await self._blocking(
+                    self._collection.count, timeout=10.0
+                )
             except Exception:
                 _col_size = top_k
             fetch_k = min((top_k * 3) if kb_only else top_k, max(1, _col_size))
 
-            results = self._collection.query(
+            results = await self._blocking(
+                self._collection.query,
                 query_texts=[query],
                 n_results=fetch_k,
                 where=where_filter,
+                timeout=30.0,
             )
 
             retrieved = []
@@ -570,7 +595,14 @@ class RAGKnowledgeBase:
         return summary
 
     async def get_document(self, doc_id: str) -> Optional[Dict[str, Any]]:
-        """获取指定文档"""
+        """获取指定文档.
+
+        Falls back to suffix/filename matching when the exact doc_id is not
+        found.  This handles the common case where the LLM provides a
+        relative path (e.g. "file:knowledge_base\\\\monte mean results.md")
+        while ChromaDB stores absolute paths
+        (e.g. "file:C:\\Users\\...\\knowledge_base\\monte mean results.md").
+        """
         if self._collection is None:
             return None
 
@@ -582,10 +614,45 @@ class RAGKnowledgeBase:
                     "content": result["documents"][0],
                     "metadata": result["metadatas"][0] if result.get("metadatas") else {},
                 }
-            return None
         except Exception as e:
             logger.error(f"Failed to get document: {e}")
             return None
+
+        # ── Fuzzy fallback: match by path suffix or bare filename ─────────────
+        # Normalise separators so "knowledge_base\\\\monte mean results.md"
+        # and "knowledge_base/monte mean results.md" both work.
+        try:
+            _needle = doc_id.replace("\\\\", "/").replace("\\", "/").lower()
+            # Strip the "file:" scheme prefix for suffix comparison
+            if _needle.startswith("file:"):
+                _needle = _needle[5:]
+            # Also accept bare filename without any path prefix
+            _needle_name = _needle.split("/")[-1]
+
+            all_ids_result = self._collection.get(include=[])
+            all_ids = all_ids_result.get("ids", []) if all_ids_result else []
+            matched_id = None
+            for cid in all_ids:
+                _cid_norm = cid.replace("\\", "/").lower()
+                if _cid_norm.endswith(_needle) or _cid_norm.endswith(_needle_name):
+                    matched_id = cid
+                    break
+
+            if matched_id:
+                logger.info(
+                    f"get_document: fuzzy match '{doc_id}' → '{matched_id}'"
+                )
+                result2 = self._collection.get(ids=[matched_id])
+                if result2 and result2.get("documents"):
+                    return {
+                        "doc_id": matched_id,
+                        "content": result2["documents"][0],
+                        "metadata": result2["metadatas"][0] if result2.get("metadatas") else {},
+                    }
+        except Exception as e2:
+            logger.error(f"get_document fuzzy fallback failed: {e2}")
+
+        return None
 
     async def delete_document(self, doc_id: str) -> bool:
         """删除文档"""

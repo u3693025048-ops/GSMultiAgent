@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — 整体架构图</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --border:#2d3a4f; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#3fb950; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+    header { background: linear-gradient(135deg, #161b22 0%, #21262d 100%); border-bottom: 1px solid var(--border); padding: 2rem 2.5rem; }
+    header h1 { font-size: 1.75rem; margin-bottom: .5rem; }
+    header p { color: var(--muted); max-width: 900px; }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 2.5rem; background: #161b22; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    nav a { color: var(--accent); text-decoration: none; padding: .35rem .75rem; border-radius: 6px; font-size: .875rem; border: 1px solid transparent; }
+    nav a:hover, nav a.active { background: var(--card); border-color: var(--border); }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.35rem; margin-bottom: 1rem; color: var(--accent); border-left: 4px solid var(--accent); padding-left: .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .75rem; color: var(--accent2); }
+    p, li { color: #c9d1d9; margin-bottom: .6rem; }
+    ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+    .mermaid { background: #0d1117; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .9rem; }
+    th, td { border: 1px solid var(--border); padding: .65rem .85rem; text-align: left; vertical-align: top; }
+    th { background: #21262d; color: var(--accent); }
+    code { background: #21262d; padding: .12rem .35rem; border-radius: 4px; font-size: .85em; }
+    .note { background: #21262d; border-left: 4px solid #d29922; padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 1rem 0; font-size: .9rem; }
+    footer { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>GSMultiAgent — 整体架构图</h1>
+    <p>制导系统多智能体设计与优化框架。CLI 驱动的 AI 工程系统（非 Web 应用）；逻辑上分为交互层、编排层、服务层、存储层。</p>
+  </header>
+  <nav>
+    <a href="index.html">索引</a>
+    <a href="01-overall-architecture.html" class="active">整体架构</a>
+    <a href="02-module-division.html">模块划分</a>
+    <a href="03-core-business-flow.html">业务流程</a>
+    <a href="04-tech-stack.html">技术选型</a>
+    <a href="05-design-patterns.html">设计模式</a>
+    <a href="06-security-design.html">安全设计</a>
+    <a href="LaysIntr.html">三层与 T4 路径</a>
+    <a href="PPO_intr.html">PPO 详解</a>
+  </nav>
+  <main>
+    <section>
+      <h2>1. 三层智能体架构</h2>
+      <p>架构定义见 <code>config.yaml</code> 头部注释，主入口为 <code>cli_agent.py</code>，独立 RL 入口为 <code>run_rl_optimize.py</code>。</p>
+      <div class="mermaid">
+flowchart TB
+    subgraph L1["Layer 1 — 交互与主循环"]
+        CLI["cli_agent.py"]
+        RLCLI["run_rl_optimize.py<br/>（无 Hermes 独立 RL）"]
+        CFG["config.yaml + .env"]
+    end
+
+    subgraph L2["Layer 2 — Hermes 工具编排"]
+        HERMES["HermesIntegration / AIAgent"]
+        PLAN["IntelligentTaskPlanner"]
+        TOOLS["Tools: RAG / generate_matlab / run_simulation<br/>syntax_check / verify_compat / judge_requirements"]
+    end
+
+    subgraph L3["Layer 3 — 优化工作流"]
+        OWF["OptimizationWorkflow"]
+        EXPERT["Expert 调参（LLM 引导）"]
+        PPO["MatlabRLOptimizer<br/>9维 Contextual Bandit PPO"]
+        REFL["ReflectionAgent — RL 早停权威"]
+        JUDGE["JudgmentAgent — 规则+LLM 判据"]
+    end
+
+    subgraph SIM["仿真引擎"]
+        GS["GuidanceSimulator"]
+        MC["monte_carlo_single.m"]
+    end
+
+    subgraph STORE["持久化"]
+        RAG["ChromaDB RAG"]
+        PE["ParameterExperience JSON"]
+        LOG["logs/ 运行日志"]
+    end
+
+    CLI --> PLAN --> HERMES
+    CLI --> OWF
+    HERMES --> TOOLS --> GS --> MC
+    OWF --> EXPERT --> PPO
+    OWF --> REFL
+    PPO --> GS
+    CLI --> RAG
+    CLI --> PE
+    RLCLI --> PPO
+      </div>
+    </section>
+
+    <section>
+      <h2>2. 层级职责对照</h2>
+      <table>
+        <thead><tr><th>层级</th><th>入口/核心</th><th>职责</th></tr></thead>
+        <tbody>
+          <tr><td>Layer 1</td><td><code>cli_agent.py</code></td><td>自然语言任务、T/G/AP/R 工况解析、<code>max_iterations</code> 外层循环、报告与 PE 回写、Ctrl+C 人机菜单</td></tr>
+          <tr><td>Layer 2</td><td><code>hermes_integration.py</code></td><td>LLM 工具编排：检索知识库、生成/修改 MATLAB、语法检查、仿真、需求判断；<strong>不含</strong> RL 工具</td></tr>
+          <tr><td>Layer 3</td><td><code>optimization_workflow.py</code></td><td>Expert 或 PPO 参数搜索；Reflection 驱动早停与 <code>next_action</code>；Judgment 辅助评估</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. 部署拓扑（单机）</h2>
+      <div class="mermaid">
+flowchart LR
+    DEV["开发者工作站"]
+    PY["Python 3.10+ 进程"]
+    LLM["OpenAI 兼容 API"]
+    ME["MATLAB / Octave<br/>子进程或 Engine API"]
+    CHROMA["chroma_db/ 本地向量库"]
+    OUT["guidance_output/<br/>parameter_experience_base/"]
+
+    DEV --> PY
+    PY --> LLM
+    PY --> ME
+    PY --> CHROMA
+    PY --> OUT
+      </div>
+      <div class="note">
+        Windows 下 <code>cli_agent.py</code> 使用 <code>WindowsSelectorEventLoopPolicy</code> 以避免 httpx 与子进程 pipe 兼容问题。Python 3.13+ 跳过 MATLAB Engine API，回退 subprocess。
+      </div>
+    </section>
+
+    <section>
+      <h2>4. 数据流概要</h2>
+      <ul>
+        <li><strong>输入</strong>：用户 prompt → 工况条件 <code>{T,G,AP,R: [sub_indices]}</code></li>
+        <li><strong>脚本</strong>：Hermes 生成 <code>guidance_output/scripts/*.m</code>，含 <code>RL_PARAMS_BEGIN…END</code> 块</li>
+        <li><strong>仿真</strong>：stdout 解析 → <code>hit_rate, SEP, peak_ny, peak_ny_max, pitch_PM, pitch_BW</code>（安全约束看 <code>peak_ny_max</code>）</li>
+        <li><strong>优化</strong>：PPO patch <code>rl_w1…rl_N_pn</code> → 再仿真 → 奖励 → 策略更新</li>
+        <li><strong>输出</strong>：报告 JSON/MD、PE 短/长期记忆、最优模型副本</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>5. 关键配置入口</h2>
+      <table>
+        <thead><tr><th>配置段</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td><code>ablation.*</code></td><td>六维消融：适配验证、语法检查、RL、PE 复用、Reflection、记忆搜索</td></tr>
+          <tr><td><code>workflow.max_iterations</code></td><td>外层迭代轮次（默认 5）</td></tr>
+          <tr><td><code>matlab_rl_optimizer.*</code></td><td>PPO 超参、Layer3 策略 expert/ppo/auto、奖励权重</td></tr>
+          <tr><td><code>matlab_rl_optimizer.exploration.adaptive_*</code></td><td>PPO 自适应 log_std 缩放（奖励平台/发散时收缩探索）</td></tr>
+          <tr><td><code>t4_low_risk.*</code></td><td>T4 确定性 APN gf()、保守初值、MODIFY 后 Expert 优先、episode 上限</td></tr>
+          <tr><td><code>simulation.physics_bounds_*</code></td><td>MODIFY_LAW 后 gf() 极值桩探测（默认 20g 限幅）</td></tr>
+          <tr><td><code>simulation.engine</code></td><td>matlab_engine / matlab / octave / python / auto</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 并发隔离与业务安全（横切）</h2>
+      <table>
+        <thead><tr><th>机制</th><th>模块</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td>任务沙箱</td><td><code>TaskWorkspace</code></td><td>每轮 Layer 3 在 <code>guidance_output/tasks/{uuid}/</code> 隔离脚本与 <code>rltmp_*.m</code></td></tr>
+          <tr><td>参数防火墙</td><td><code>parameter_firewall.py</code></td><td>Expert/Reflection JSON 经白名单 + 数值边界校验后再进仿真/PPO</td></tr>
+          <tr><td>RL 临时文件</td><td><code>MatlabRLOptimizer</code></td><td>episode 级 <code>rltmp_{uuid}.m</code>，finally 删除 + stale sweep</td></tr>
+          <tr><td>智能体边界</td><td>Reflection / Judgment</td><td>仅输出结构化 JSON；仿真由 Layer 3 / Hermes 执行，无反向工具调用</td></tr>
+          <tr><td>物理限幅探测</td><td><code>physics_bounds.py</code></td><td>MODIFY_LAW 脚本在进 Layer3 前用桩状态调用 gf()，peak_cmd&gt;limit 则拦截</td></tr>
+          <tr><td>T4 低风险策略</td><td><code>t4_low_risk.py</code></td><td>确定性克制 APN、保守 autopilot、MODIFY 失败禁 TUNE、post-MODIFY 强制 Expert</td></tr>
+          <tr><td>设计路径策略</td><td><code>design_path_policy.py</code></td><td>4/5 仅 peak 超标 → modify_law；Reflection 输出经策略覆盖</td></tr>
+          <tr><td>异步任务</td><td><code>multi_agent/async/</code></td><td><code>--async-run</code> 后台子进程；<code>--serve-tasks</code> HTTP 轮询 PPO 进度</td></tr>
+        </tbody>
+      </table>
+      <div class="note">CLI 仍为主入口；异步层解决 PPO 长任务阻塞与外部编排器 60~300s 超时问题。详见 <a href="06-security-design.html">安全设计 §8</a>。</div>
+    </section>
+
+    <section>
+      <h2>7. 版本能力演进</h2>
+      <h3>v0.4.1（2026-06-11）</h3>
+      <table>
+        <thead><tr><th>能力</th><th>模块</th><th>要点</th></tr></thead>
+        <tbody>
+          <tr><td>Layer2 Gate</td><td><code>layer2_script_gate.py</code>、<code>cli_agent.py</code></td><td>进 Layer3 前：语法/KB 重生 → smoke（<code>layer2_smoke_nmc</code>）→ T4 MODIFY 闭环快扫（<code>modify_gate_nmc</code>）；PeakNy_max&gt;<code>modify_gate_peak_g</code> 则 BLOCK</td></tr>
+          <tr><td>Gate near-miss TUNE</td><td><code>t4_low_risk.should_gate_near_miss_tune</code></td><td>Gate 拦截但 20g&lt;PeakNy_max≤30g 且 hit/SEP OK → 同轮 <code>task_mode=TUNE_PARAMS</code> 进 Layer3，不 <code>continue</code> MODIFY 循环</td></tr>
+          <tr><td>cli 指标复核</td><td><code>cli_agent.py</code>、<code>judge_requirements_tool._rule_check</code></td><td>进入 Layer3 前对 <code>hermes_sim_metrics</code>（stdout/<code>last_metrics</code>）做规则复核；避免 judge LLM 手填与仿真解析不一致导致误跳过 RL</td></tr>
+          <tr><td>仿真超时</td><td><code>simulation_tool</code>、<code>config.yaml</code></td><td><code>matlab_timeout_sec</code>（默认 900）、按 Nmc 动态下限；长 MODIFY/Gate 轮次不易被 300s 截断</td></tr>
+          <tr><td>终态约束校验</td><td><code>optimization_workflow.py</code></td><td>反思后以 <code>constraints_satisfied</code> 二次校验；规则未全过则不标 <code>done</code></td></tr>
+        </tbody>
+      </table>
+      <h3>v0.4.0（2026-06-09）</h3>
+      <table>
+        <thead><tr><th>能力</th><th>模块</th><th>要点</th></tr></thead>
+        <tbody>
+          <tr><td>Judge 口径统一</td><td><code>parse_sim_stdout</code>、<code>judge_requirements_tool</code></td><td>分离 <code>peak_ny</code>（均值）与 <code>peak_ny_max</code>（MC 最大）；硬约束禁止 LLM 翻案</td></tr>
+          <tr><td>自适应 PPO 探索</td><td><code>adaptive_exploration.py</code></td><td>按奖励 EMA / 参数步长动态缩放 log_std，低 reward 时收缩</td></tr>
+          <tr><td>MODIFY 物理安全</td><td><code>physics_bounds.py</code>、<code>layer2_script_gate.py</code></td><td>gf() 桩探测 + 文本校验，未通过则拒绝进 RL</td></tr>
+          <tr><td>T4 低风险 playbook</td><td><code>t4_low_risk.py</code></td><td>内置 APN 模板跳过 LLM 自由重写；w≤45、N_pn≤4.5；MODIFY 后首轮 Expert≤50 ep</td></tr>
+          <tr><td>异步任务</td><td><code>task_queue.py</code>、<code>http_server.py</code></td><td><code>GSMULTI_TASK_ID</code> 回写 episode 进度</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <footer>GSMultiAgent · 整体架构 · docsNew/01-overall-architecture.html · 2026-06-11</footer>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });</script>
+</body>
+</html>

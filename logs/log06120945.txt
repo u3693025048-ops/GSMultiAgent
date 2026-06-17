@@ -1,0 +1,41 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-12 09:45:39
+Command     : cli_agent.py --help
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06120945.txt
+================================================================================
+
+2026-06-12 09:45:39 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06120945.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06120945.txt
+usage: cli_agent.py [-h] [--skip-preflight] [--preflight-only]
+                    [--preflight-strict] [--verbose] [--quiet]
+                    [--resume-checkpoint RESUME_CHECKPOINT] [--async-run]
+                    [--task-status TASK_STATUS] [--serve-tasks]
+                    [--serve-port SERVE_PORT] [--prompt PROMPT | --file FILE]
+
+Multi-Agent Guidance CLI Agent
+
+options:
+  -h, --help            show this help message and exit
+  --skip-preflight      跳过启动前环境/配置/解析器检查
+  --preflight-only      仅运行启动前检查，不执行主流程
+  --preflight-strict    启动前检查：警告也视为失败
+  --verbose, -v         详细日志（等同 logging.verbosity=verbose）
+  --quiet, -q           精简日志（等同 logging.verbosity=quiet）
+  --resume-checkpoint RESUME_CHECKPOINT
+                        PPO checkpoint 路径（.json 文件、stem 或含 latest.json 的目录）
+  --async-run           后台异步提交任务，立即返回 task_id（可通过 --task-status 轮询）
+  --task-status TASK_STATUS
+                        查询异步任务状态（task_id）
+  --serve-tasks         启动 HTTP 任务状态服务（GET /api/tasks/{id}）
+  --serve-port SERVE_PORT
+                        --serve-tasks HTTP 端口（默认 8765）
+  --prompt PROMPT       User task description as string
+  --file FILE           Path to a text file containing the user task
+                        description
+
+================================================================================
+Finished    : 2026-06-12 09:45:39
+Exit code   : 0
+================================================================================

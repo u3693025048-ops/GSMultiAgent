@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GSMultiAgent — PPO 强化学习详细说明</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root { --bg:#0f1419; --card:#1a2332; --border:#2d3a4f; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --accent2:#3fb950; --warn:#d29922; --danger:#f85149; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.75; }
+    header { background: linear-gradient(135deg, #161b22 0%, #21262d 100%); border-bottom: 1px solid var(--border); padding: 2rem 2.5rem; }
+    header h1 { font-size: 1.75rem; margin-bottom: .5rem; }
+    header p { color: var(--muted); max-width: 960px; }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem; padding: 1rem 2.5rem; background: #161b22; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 10; }
+    nav a { color: var(--accent); text-decoration: none; padding: .35rem .75rem; border-radius: 6px; font-size: .875rem; }
+    nav a:hover, nav a.active { background: var(--card); border: 1px solid var(--border); }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 2.5rem 4rem; }
+    section { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.35rem; margin-bottom: 1rem; color: var(--accent); border-left: 4px solid var(--accent); padding-left: .75rem; }
+    h3 { font-size: 1.05rem; margin: 1.25rem 0 .75rem; color: var(--accent2); }
+    h4 { font-size: .95rem; margin: 1rem 0 .5rem; color: #79c0ff; }
+    p, li { color: #c9d1d9; margin-bottom: .55rem; }
+    ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+    .mermaid { background: #0d1117; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .875rem; }
+    th, td { border: 1px solid var(--border); padding: .6rem .8rem; text-align: left; vertical-align: top; }
+    th { background: #21262d; color: var(--accent); }
+    code, pre { font-family: "Cascadia Code", "Consolas", monospace; font-size: .82rem; }
+    code { background: #21262d; padding: .12rem .35rem; border-radius: 4px; }
+    pre { background: #0d1117; border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; overflow-x: auto; margin: 1rem 0; color: #a5d6ff; }
+    .formula { background: #21262d; border-radius: 8px; padding: 1rem 1.25rem; margin: 1rem 0; font-family: "Cambria Math", serif; font-size: 1.05rem; text-align: center; }
+    .note { background: #21262d; border-left: 4px solid var(--warn); padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 1rem 0; font-size: .9rem; }
+    .ok { background: #1a2e1a; border-left: 4px solid var(--accent2); padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 1rem 0; font-size: .9rem; }
+    footer { text-align: center; padding: 2rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>PPO 强化学习 — 详细说明</h1>
+    <p>Layer 3 参数优化核心：<code>multi_agent/rl/matlab_rl_optimizer.py</code>。Contextual Bandit 式 PPO，9 维有界绝对寻优，两阶段奖励防 T4 reward hacking。</p>
+  </header>
+  <nav>
+    <a href="index.html">索引</a>
+    <a href="01-overall-architecture.html">整体架构</a>
+    <a href="03-core-business-flow.html">业务流程</a>
+    <a href="LaysIntr.html">三层与 T4 路径</a>
+    <a href="PPO_intr.html" class="active">PPO 详解</a>
+  </nav>
+  <main>
+
+    <section>
+      <h2>1. 系统位置</h2>
+      <div class="mermaid">
+flowchart LR
+    A["Hermes 生成 .m"] --> B["baseline 仿真"]
+    B --> C{"指标满足?"}
+    C -->|否| D["MatlabRLOptimizer.optimize"]
+    D --> E["patch RL_PARAMS"]
+    E --> F["monte_carlo_single.m"]
+    F --> G["_compute_reward"]
+    G --> H["_ppo_update batch=64"]
+    H --> D
+    G --> I{"Reflection 早停?"}
+    I -->|是| J["PE 回写"]
+      </div>
+      <table>
+        <thead><tr><th>属性</th><th>值</th></tr></thead>
+        <tbody>
+          <tr><td>实现</td><td><code>matlab_rl_optimizer.py</code></td></tr>
+          <tr><td>配置</td><td><code>config.yaml → matlab_rl_optimizer</code></td></tr>
+          <tr><td>算法</td><td>PPO clipped policy gradient（Contextual Bandit, γ=0）</td></tr>
+          <tr><td>网络</td><td>ActorNet / CriticNet — 2 层 tanh MLP + NumPy Adam</td></tr>
+          <tr><td>动作维</td><td><strong>9</strong>（8 驾驶仪 + N_pn）</td></tr>
+          <tr><td>状态维</td><td><strong>16</strong>（9 参数 + 2 物理 + 5 指标）</td></tr>
+          <tr><td>独立入口</td><td><code>run_rl_optimize.py</code>（无 Hermes）</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. 状态空间（16 维）</h2>
+      <div class="formula">s = [ s<sub>auto</sub>(9) ; s<sub>phys</sub>(2) ; s<sub>metrics</sub>(5) ]</div>
+      <p><code>_build_state(_current_params, _base_phys, _last_metrics)</code> — 可调参数段来自<strong>上一轮实际执行</strong>的 <code>_current_params</code>。</p>
+      <table>
+        <thead><tr><th>索引</th><th>键</th><th>min</th><th>max</th><th>nominal</th></tr></thead>
+        <tbody>
+          <tr><td>0–2</td><td>w1, zeta1, tao1</td><td>20/0.35/0.05</td><td>60/1.20/0.35</td><td>40/0.75/0.15</td></tr>
+          <tr><td>3–5</td><td>w2, zeta2, tao2</td><td>20/0.35/0.05</td><td>60/1.20/0.35</td><td>35/0.75/0.15</td></tr>
+          <tr><td>6–7</td><td>w3, zeta3</td><td>20/0.35</td><td>60/1.20</td><td>40/0.70</td></tr>
+          <tr><td>8</td><td>N_pn</td><td>3.0</td><td>6.0</td><td>4.0</td></tr>
+          <tr><td>9–10</td><td>m, P</td><td colspan="3">÷ scale (231, 5000)</td></tr>
+          <tr><td>11–15</td><td>hit_rate, SEP, peak_ny, pitch_PM, pitch_BW</td><td colspan="3">÷ METRIC_SPECS scale</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>3. 动作空间与映射</h2>
+      <div class="ok"><strong>有界绝对寻优</strong>（非残差）：<code>param = clip(mid + a×half, min, max)</code></div>
+      <table>
+        <thead><tr><th>a</th><th>结果</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>可行域中心 mid</td></tr>
+          <tr><td>+1</td><td>上界 max</td></tr>
+          <tr><td>−1</td><td>下界 min</td></tr>
+        </tbody>
+      </table>
+      <h3>探索策略</h3>
+      <ul>
+        <li>俯仰 w1/zeta1/tao1：初始 log_std=0（σ≈1.0）</li>
+        <li>其余维度：log_std=−1（σ≈0.37）</li>
+        <li>Episode 衰减：<code>decay=max(0.15, 1−ep/max_ep)</code>，<code>log_std ← base+log(decay)</code></li>
+        <li><strong>自适应探索</strong>（v0.4.0）：<code>AdaptiveExplorationController</code> 按 reward EMA、参数步长缩放 log_std（<code>exploration.adaptive_*</code>）；低 reward / 发散时收缩至 <code>adaptive_log_std_min_scale</code></li>
+      </ul>
+      <h3>写入 MATLAB</h3>
+      <pre>%% RL_PARAMS_BEGIN
+rl_w1 = 42.5;  rl_zeta1 = 0.78;  ...  rl_N_pn = 4.2;
+%% RL_PARAMS_END</pre>
+    </section>
+
+    <section>
+      <h2>4. 奖励函数</h2>
+      <h3>4.1 结构</h3>
+      <ul>
+        <li><strong>硬截断</strong>：PeakNy&gt;50g 或 SEP/PeakNy NaN/Inf → <code>HARD_REWARD_PENALTY = −10</code></li>
+        <li><strong>Fallback</strong>：<code>_sim_source=fallback</code> 时仅 SEP 负项</li>
+        <li><strong>Phase A</strong>：SEP &gt; <code>sep_survival_threshold</code>（500m）— 无 hit/PM/BW</li>
+        <li><strong>Phase B</strong>：完整分项；PM/BW × <code>_fine_scale = max(0, 1−SEP/threshold)</code></li>
+      </ul>
+      <div class="formula">R<sub>SEP</sub> = − clip(SEP/1000, 0, 10) &nbsp;（两阶段均有）</div>
+      <h3>4.2 PeakNy 软约束</h3>
+      <p>超出 <code>peak_ny_max</code>（20g）按 overshoot 分段惩罚；读取优先 <code>get_peak_ny_max()</code>（MC max），其次 <code>peak_ny</code> 均值。权重 <code>peak_ny_penalty</code>（顶层 <code>peak_n_penalty=2.5</code> 覆盖）。</p>
+      <h3>4.3 异常 SEP</h3>
+      <p>统一经 <code>_compute_reward</code>；NaN SEP 硬截断；跳过 best 更新但参与 PPO batch；batch 满 64 仍触发更新。</p>
+    </section>
+
+    <section>
+      <h2>5. PPO 更新</h2>
+      <ol>
+        <li><code>G = R</code>（γ=0）</li>
+        <li><code>A = G − V(s)</code>，batch 内标准化</li>
+        <li>clip ratio ε=0.15；entropy_coef=0.05</li>
+        <li>梯度累积后单次 Adam；grad clip ±0.5</li>
+        <li>熵 bonus 每 batch 更新 log_std 一次</li>
+      </ol>
+      <table>
+        <thead><tr><th>超参</th><th>config 值</th></tr></thead>
+        <tbody>
+          <tr><td>max_episodes</td><td>100</td></tr>
+          <tr><td>nmc_per_eval</td><td>10</td></tr>
+          <tr><td>episodes_per_update</td><td>64</td></tr>
+          <tr><td>hidden_dim</td><td>128</td></tr>
+          <tr><td>lr_actor / lr_critic</td><td>3e-4 / 8e-4</td></tr>
+          <tr><td>gamma</td><td>0.0（强制）</td></tr>
+          <tr><td>clip_ratio</td><td>0.15</td></tr>
+          <tr><td>entropy_coef</td><td>0.05</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>6. 早停</h2>
+      <table>
+        <thead><tr><th>条件</th><th>status</th></tr></thead>
+        <tbody>
+          <tr><td>Reflection <code>needs_optimization=False</code></td><td>task_requirements_met</td></tr>
+          <tr><td>metric_requirements 数值满足</td><td>requirements_met</td></tr>
+          <tr><td>建议 modify_law</td><td>needs_design_path_change</td></tr>
+          <tr><td>Ctrl+C</td><td>interrupted</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>8. 参数安全与并发隔离</h2>
+      <table>
+        <thead><tr><th>层</th><th>机制</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>动作空间</td><td><code>_action_to_params</code></td><td>tanh 动作 → <code>mid + a×half</code>，天然落在 <code>ALL_TUNABLE_PARAM_SPECS</code> 内</td></tr>
+          <tr><td>Expert/Reflection</td><td><code>clamp_tunable_params</code></td><td>LLM JSON 经防火墙后再 patch <code>rl_w*</code></td></tr>
+          <tr><td>Episode 临时文件</td><td><code>rltmp_{uuid}.m</code></td><td>同沙箱目录内 UUID 命名，finally 删除</td></tr>
+          <tr><td>任务沙箱</td><td><code>TaskWorkspace</code></td><td>cli_agent 每轮 Layer 3 独立 <code>tasks/{uuid}/</code> 目录</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>9. 代码索引</h2>
+      <table>
+        <thead><tr><th>功能</th><th>符号</th></tr></thead>
+        <tbody>
+          <tr><td>参数规格</td><td><code>AUTOPILOT_PARAM_SPECS</code>, <code>GUIDANCE_PARAM_SPECS</code></td></tr>
+          <tr><td>指标别名</td><td><code>get_peak_ny()</code>, <code>get_peak_ny_max()</code>, <code>get_sep()</code></td></tr>
+          <tr><td>自适应探索</td><td><code>AdaptiveExplorationController</code>（<code>adaptive_exploration.py</code>）</td></tr>
+          <tr><td>状态/动作</td><td><code>_build_state</code>, <code>_action_to_params</code></td></tr>
+          <tr><td>奖励</td><td><code>_compute_reward</code></td></tr>
+          <tr><td>更新</td><td><code>_ppo_update</code>, <code>_flush_ppo_batch_if_ready</code></td></tr>
+          <tr><td>主循环</td><td><code>optimize()</code></td></tr>
+          <tr><td>参数防火墙</td><td><code>multi_agent/security/parameter_firewall.py</code></td></tr>
+          <tr><td>单元测试</td><td><code>tests/test_matlab_rl_optimizer.py</code>、<code>tests/test_adaptive_exploration.py</code></td></tr>
+        </tbody>
+      </table>
+      <div class="note"><strong>T4 与 Layer3 交互：</strong>post-MODIFY 首轮可能强制 Expert 且 cap episode（见 <code>t4_low_risk</code>），与 PPO 默认 100 ep 独立。</div>
+    </section>
+
+    <section>
+      <h2>10. 自适应探索配置</h2>
+      <table>
+        <thead><tr><th>config 键</th><th>默认</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td><code>exploration.adaptive_enabled</code></td><td>true</td><td>启用 AdaptiveExplorationController</td></tr>
+          <tr><td><code>adaptive_steepness_threshold</code></td><td>2.0</td><td>奖励曲线陡峭度阈值</td></tr>
+          <tr><td><code>adaptive_log_std_min_scale</code></td><td>0.35</td><td>探索收缩下限（相对 max_scale）</td></tr>
+          <tr><td><code>adaptive_log_std_max_scale</code></td><td>1.0</td><td>探索上限</td></tr>
+          <tr><td><code>adaptive_ema_alpha</code></td><td>0.3</td><td>奖励 EMA 平滑系数</td></tr>
+          <tr><td><code>diverge_log_std_delta</code></td><td>-0.5</td><td>发散时额外 log_std 减量</td></tr>
+          <tr><td><code>diverge_reward_threshold</code></td><td>-9.5</td><td>判定发散的 reward 阈值</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <footer>GSMultiAgent · PPO 详细说明 · docsNew/PPO_intr.html · 2026-06-11</footer>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });</script>
+</body>
+</html>

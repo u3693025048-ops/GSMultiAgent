@@ -1,0 +1,878 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-09 18:23:52
+Command     : cli_agent.py --file prompt.txt
+Working dir : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2
+Log file    : C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06091823.txt
+================================================================================
+
+2026-06-09 18:23:52 - multi_agent.logging.run_logger - INFO - Run log file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06091823.txt
+[RunLog] 运行日志: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\logs\log06091823.txt
+2026-06-09 18:23:52 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-09 18:23:55 - httpx - INFO - HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-06-09 18:23:58 - multi_agent.rl.matlab_rl_optimizer - WARNING - [LLM metric parse] LLM returned empty content
+2026-06-09 18:23:58 - multi_agent.rl.matlab_rl_optimizer - WARNING - [parse_sim_stdout] hit_rate/SEP at sentinel defaults (0%% / 50m) with no MC evidence in stdout — metrics unreliable for RL
+
+========================================================================
+  GSMultiAgent 启动前检查 (Preflight)
+========================================================================
+  [OK] python_version: Python 3.12.13
+  [OK] imports: 核心依赖 numpy / yaml / torch 可用
+  [OK] config_file: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\config.yaml
+  [OK] llm_api_key: LLM 已配置 model=deepseek-v4-pro
+  [OK] ablation_workflow: optimization_workflow / rl_optimization 已启用
+  [OK] layer2_gate_config: layer2_script_gate=true
+  [OK] simulation_engine: engine=matlab  matlab_exe=True  matlab_engine=True  octave=True
+  [OK] knowledge_base: knowledge_base 存在 (4 md, 1 m)
+  [OK] kb_template: monte_carlo_single.m 可用 (338 行)
+  [OK] layer2_gate_code: Layer2 Gate 模块与 force_kb_template 可用
+  [OK] parser: parse_sim_stdout 自检通过（含占位值检测）
+  [OK] guidance_scripts: 已扫描 1 个历史脚本，RL 校验均通过
+  [OK] hermes: Hermes run_agent 可用
+  [OK] cli_agent_gate: cli_agent 已集成 Gate + Preflight
+------------------------------------------------------------------------
+  结论: 全部通过，可以启动主流程。
+========================================================================
+
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-09 18:23:58
+Task: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+运行工况：RUN_CASE='T'; SUB_IDX=4;
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+命中率     >= 92%
+SEP脱靶量  <= 7 m
+PeakNy峰值法向过载 <= 20 g
+PM相位裕度 在 45°~ 70° 范围内
+BW带宽     在 20 ~ 85 rad/s 范围内
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+设计约束
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 模板要求: 以 monte_carlo_single.m 为基础模板
+   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）
+   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数
+   - rl_N_pn对应制导律参数
+   - base=struct(...) 中引用上述 rl_* 变量
+
+2. 不可大变动的部分（接口与变量可改）:
+   - 六自由度弹道模型（df/rk4f 函数）
+   - 驾驶仪设计函数（cg 函数）
+   - 气动力计算（af 函数）
+   - 控制律（cf 函数）
+
+3. 可选修改:
+   - 制导律（gf 函数）：可修改导引律结构，但接口不变
+   - 初始交战参数（base struct 中的目标/导弹参数）
+
+4.MATLAB代码要求：
+- 要符合matlab语法规范
+- 变量定义完整，且整体一致
+- 不出现未定义变量
+- 保持原有接口兼容
+- 对关键参数和新增项加注释
+
+4. 仿真输出格式要求（RL优化器解析依赖）:
+   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm
+   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg
+   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB
+
+注意：
+若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-09 18:24:27 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-09 18:24:27 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-09 18:24:28 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+C:\Users\Lenovo\anaconda3\envs\GS312\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_135731.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_142254.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_144411.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 3/3 documents
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 3 docs from 'guidance_output\reports'
+  Indexed 3 report file(s) from ./guidance_output/reports (source_tag=reports)
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_135731.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_142254.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260524_144411.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_164604.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_174034.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260604_184439.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_000409.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260605_204045.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_013916.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_161335.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_182024.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260608_232509.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_065502.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_175242.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_20260609_181819.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:29 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\report_latest.md' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-09 18:24:31 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-09 18:24:32 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-09 18:24:32 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 16/16 documents
+2026-06-09 18:24:32 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 16 docs from 'guidance_output'
+  Indexed 16 report file(s) from ./guidance_output (source_tag=reports)
+2026-06-09 18:24:33 - multi_agent.memory.rag_knowledge_base - INFO - purge_stale_pe_docs: removed 19 non-KB doc(s) from collection.
+  [RAG Purge] Removed 19 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.
+2026-06-09 18:24:33 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-09 18:24:33 - langchain_openai.chat_models._client_utils - INFO - langchain-openai detected system proxy configuration and no explicit `http_socket_options` / `http_client` / `http_async_client` / `openai_proxy`; skipping the custom `httpx` transport so httpx's env-proxy auto-detection applies. Pass `http_socket_options=[...]` to opt back into kernel-level TCP keepalive tuning on top of the env proxy.
+
+[Pre-Step] Parsing mission conditions from prompt…
+  [DEBUG] args.prompt = "制导系统设计任务（三层架构系统输入示例）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n任务工况（基于 monte_carlo_single.m T/G/AP/R 体系）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n运行工况：RUN_CASE='T'; SUB_IDX=4;\n\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n性能指标要求（Layer1 自动解析，Layer3 判断/反思智能体评估）\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n命中率     >= 92%\nSEP脱靶量  <= 7 m\nPeakNy峰值法向过载 <= 20 g\nPM相位裕度 在 45°~ 70° 范围内\nBW带宽     在 20 ~ 85 rad/s 范围内\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n设计约束\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n1. 模板要求: 以 monte_carlo_single.m 为基础模板\n   - 保持 RL_PARAMS_BEGIN/END 注入块结构不变（RL优化器通过此块修改参数）\n   - rl_w1, rl_zeta1, rl_w2, rl_zeta2, rl_w3, rl_zeta3 对应驾驶仪参数\n   - rl_N_pn对应制导律参数\n   - base=struct(...) 中引用上述 rl_* 变量\n\n2. 不可大变动的部分（接口与变量可改）:\n   - 六自由度弹道模型（df/rk4f 函数）\n   - 驾驶仪设计函数（cg 函数）\n   - 气动力计算（af 函数）\n   - 控制律（cf 函数）\n\n3. 可选修改:\n   - 制导律（gf 函数）：可修改导引律结构，但接口不变\n   - 初始交战参数（base struct 中的目标/导弹参数）\n\n4.MATLAB代码要求：\n- 要符合matlab语法规范\n- 变量定义完整，且整体一致\n- 不出现未定义变量\n- 保持原有接口兼容\n- 对关键参数和新增项加注释\n\n4. 仿真输出格式要求（RL优化器解析依赖）:\n   - print_summary 格式: 命中率(miss<10m): X%  SEP: X.XXm\n   - 峰值法向过载行: 峰值法向过载: X.XX±Y.XXg\n   - 俯仰参数行: 俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB\n\n注意：\n若修改制导律则：仿真报告需要包括- 制导律设计思路，修改后的制导律说明"
+  [DEBUG] parse_mission_conditions → {'T': [4]}
+  Category T (目标机动 (Target Maneuver)): ['4']
+  Initializing Hermes persistent memory...
+2026-06-09 18:24:33 - multi_agent.memory.hermes_agent_memory - INFO - [HermesAgentMemory] Loaded 0 entries from C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guidance_output\hermes_agent_memory.json
+2026-06-09 18:24:33 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:1624 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (14 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 14 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:34 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:34.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+2026-06-09 18:24:35 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+2026-06-09 18:24:35 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] rag_agent → tools: ['rag_query', 'rag_retrieve', 'rag_expand']
+2026-06-09 18:24:35 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] matlab_agent → tools: ['generate_matlab', 'syntax_check_matlab', 'verify_guidance_compat']
+2026-06-09 18:24:35 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] sim_agent → tools: ['run_simulation', 'syntax_check_matlab']
+2026-06-09 18:24:35 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] analysis_agent → tools: ['judge_requirements', 'parameter_experience_best', 'parameter_experience_search']
+2026-06-09 18:24:35 - multi_agent.integration.sub_agent - INFO - [SubAgentFactory] memory_agent → tools: ['agent_memory_remember', 'agent_memory_recall', 'agent_memory_list', 'agent_memory_forget']
+2026-06-09 18:24:35 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] Specialized agents registered: ['rag_agent', 'matlab_agent', 'sim_agent', 'analysis_agent', 'memory_agent']
+2026-06-09 18:24:35 - run_agent - INFO - OpenAI client created (agent_init, shared=True) thread=MainThread:1624 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+🤖 AI Agent initialized with model: deepseek-v4-pro
+🔗 Using custom base URL: https://api.deepseek.com
+🔑 Using API key: sk-4ac30...52c8
+✅ Enabled toolset 'guidance_system': agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Final tool selection (15 tools): agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+🛠️  Loaded 15 tools: agent_memory_forget, agent_memory_list, agent_memory_recall, agent_memory_remember, call_specialist, generate_matlab, judge_requirements, parameter_experience_best, parameter_experience_search, rag_expand, rag_query, rag_retrieve, run_simulation, syntax_check_matlab, verify_guidance_compat
+   ✅ Enabled toolsets: guidance_system
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking openrouter unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary Nous client unavailable: no Nous authentication found (run: hermes auth).
+2026-06-09 18:24:35 - agent.auxiliary_client - WARNING - Auxiliary: marking nous unhealthy for 60s (payment / credit error). Subsequent auxiliary calls will skip it until 18:25:35.
+⚠️  Some tools may not work due to missing requirements: ['browser', 'browser-cdp', 'computer_use', 'cronjob', 'discord', 'discord_admin', 'feishu_doc', 'feishu_drive', 'hermes-yuanbao', 'homeassistant', 'image_gen', 'kanban', 'messaging', 'moa', 'spotify', 'video', 'video_gen', 'vision', 'web', 'x_search']
+2026-06-09 18:24:36 - agent.context_compressor - INFO - Context compressor initialized: model=deepseek-v4-pro context_length=1000000 threshold=500000 (50%) target_ratio=20% tail_budget=100000 provider=custom base_url=https://api.deepseek.com
+📊 Context limit: 1,000,000 tokens (compress at 50% = 500,000)
+  Hermes initialized with tools (task_prompt auto-injected).
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+2026-06-09 18:24:36 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-09 18:24:36 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-09 18:24:36 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-09 18:24:36 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] Initialized with 3 phases | SEP: 100.0m → 7.0m | HitRate: 50.0% → 92.0%
+2026-06-09 18:24:36 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] SEP thresholds: ['100.0', '53.5', '7.0']
+2026-06-09 18:24:36 - multi_agent.rl.feasible_region_explorer - INFO - [FRE] HitRate thresholds: ['50.0', '71.0', '92.0']
+2026-06-09 18:24:36 - multi_agent.rl.matlab_rl_optimizer - INFO - [FRE] preset SEP 100→7m | HitRate 50→92% | phases=3 x 20 ep
+2026-06-09 18:24:36 - multi_agent.integration.judgment_agent - INFO - [JudgmentAgent] Regex requirements: {'hit_rate_min': 92.0, 'sep_max': 7.0, 'peak_ny_max': 20.0}
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+
+  [Miss Hint] Detected user requirement: miss distance ≤ 7.00 m
+  Note: only the reflection agent's evaluation of ALL stated
+        requirements (PM/GM/hit rate/miss/etc.) will trigger early exit.
+
+========================================
+Iteration 1/1
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+2026-06-09 18:24:36 - multi_agent.integration.task_planner - INFO - [Planner] Analyzing task with LLM: 制导系统设计任务（三层架构系统输入示例）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━...
+2026-06-09 18:24:36 - multi_agent.integration.task_planner - INFO - [Planner] expert_design_path.md read directly from knowledge_base\expert design path.md (80 chars, full document)
+2026-06-09 18:24:36 - multi_agent.integration.task_planner - INFO - [Planner] monte_mean_2.md read directly from knowledge_base\monte mean results.md (1982 chars)
+2026-06-09 18:24:36 - multi_agent.integration.task_planner - INFO - [Planner] Extracted gf/cg source from monte_carlo_single.m (2391 chars) for structural analysis
+2026-06-09 18:24:36 - multi_agent.integration.task_planner - INFO - [Planner] Using Hermes agent with tools for planning analysis...
+2026-06-09 18:24:36 - agent.conversation_loop - INFO - conversation turn: session=20260609_182435_b2c50e model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]  任务描述： 制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━...'
+💬 Starting conversation: '[任务规划分析 — 仅检索+分析+输出JSON，禁止执行仿真或生成任何文件]
+
+任务描述：
+制导系统设计任务（三层架构系...'
+2026-06-09 18:24:37 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-7 (_call):47544 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+按步骤执行任务规划分析。首先并行执行步骤1-4的检索任务。2026-06-09 18:24:44 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-7 (_call):47544 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:24:44 - agent.conversation_loop - INFO - API call #1: model=deepseek-v4-pro provider=custom in=6517 out=476 total=6993 latency=7.2s cache=4992/6517 (77%)
+  📞 Tool 1: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "top_k": 5, "detail_level": "snippet"}
+  [Tool →] call_00_wZDIyh8JxW1M7bhtZfAf2061
+2026-06-09 18:24:45 - agent.tool_executor - INFO - tool rag_retrieve completed (0.16s, 4252 chars)
+  [Tool ✓] call_00_wZDIyh8JxW1M7bhtZfAf2061
+  ✅ Tool 1 completed in 0.16s - {"status": "success", "query": "conditions.md 工况分类 T G AP R 子工况 目标机动 交战几何", "detail_level": "snippet...
+  📞 Tool 2: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "top_k": 5, "detail_level": "snipp...
+  [Tool →] call_01_H2SI1RJXegB3nAXySvgn4821
+2026-06-09 18:24:46 - agent.tool_executor - INFO - tool rag_retrieve completed (0.13s, 4154 chars)
+  [Tool ✓] call_01_H2SI1RJXegB3nAXySvgn4821
+  ✅ Tool 2 completed in 0.13s - {"status": "success", "query": "仿真报告 历史优化结果 BW PM 命中率 SEP optimization report result", "detail_level...
+  📞 Tool 3: rag_retrieve(['query', 'top_k', 'detail_level']) - {"query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "top_k": 5, "detail_leve...
+  [Tool →] call_02_GUbXyaFxd0R7pw9MsMGg9740
+2026-06-09 18:24:47 - agent.tool_executor - INFO - tool rag_retrieve completed (0.22s, 4301 chars)
+  [Tool ✓] call_02_GUbXyaFxd0R7pw9MsMGg9740
+  ✅ Tool 3 completed in 0.22s - {"status": "success", "query": "expert design path TUNE_PARAMS MODIFY_LAW REUSE_HISTORY 调参路径选择", "de...
+  📞 Tool 4: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"run_case": "T", "sub_idx": 4, "mission_type": "目标机动"}, "top_k": 5}
+  [Tool →] call_03_huNxryeafA4ym6Hjxotn9192
+2026-06-09 18:24:48 - agent.tool_executor - INFO - tool parameter_experience_best completed (0.00s, 169 chars)
+  [Tool ✓] call_03_huNxryeafA4ym6Hjxotn9192
+  ✅ Tool 4 completed in 0.00s - {"status": "success", "task_context": {"run_case": "T", "sub_idx": 4, "mission_type": "目标机动"}, "resu...
+2026-06-09 18:24:48 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-11 (_call):4016 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+步骤1-3检索到关键文档，步骤4返回0条PE记录。需要展开关键文档获取完整数据。2026-06-09 18:24:59 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-11 (_call):4016 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:24:59 - agent.conversation_loop - INFO - API call #2: model=deepseek-v4-pro provider=custom in=11760 out=653 total=12413 latency=11.0s cache=6400/11760 (54%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\conditions.md", "max_chars": 6000}
+  [Tool →] call_00_zcln61ukKZCpH6FEmcf29534
+2026-06-09 18:24:59 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 2311 chars)
+  [Tool ✓] call_00_zcln61ukKZCpH6FEmcf29534
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\conditions.md", "metadata": {"source_tag": "kn...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\monte mean results.md", "max_chars": 6000}
+  [Tool →] call_01_BQ1uwmlRqrtbu47uCtmx4290
+2026-06-09 18:25:00 - agent.tool_executor - INFO - tool rag_expand completed (0.01s, 2365 chars)
+  [Tool ✓] call_01_BQ1uwmlRqrtbu47uCtmx4290
+  ✅ Tool 2 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\monte mean results.md", "metadata": {"filename...
+  📞 Tool 3: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\expert design path.md", "max_chars": 3000}
+  [Tool →] call_02_AoCkYnpDXcI3nOSlWvkO7956
+2026-06-09 18:25:01 - agent.tool_executor - INFO - tool rag_expand completed (0.01s, 440 chars)
+  [Tool ✓] call_02_AoCkYnpDXcI3nOSlWvkO7956
+  ✅ Tool 3 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\expert design path.md", "metadata": {"source":...
+2026-06-09 18:25:01 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-12 (_call):50168 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+所有数据已就绪。现在进行步骤5逐项比对和步骤6 mode决策。
+
+---
+
+## 步骤1 — 工况分类识别
+
+从 `conditions.md` 提取：
+- **工况类别**: T（目标机动）
+- **子工况编号**: 4 → **T4: 高频大幅度机动**
+- **标称参数**: 目标z向机动幅度 120 m/s，目标y向匀速横移 60 m/s，目标z向机动频率 1.2 rad/s
+- **MC散布**: z向机动幅度 ±36 m/s，z向频率 ±0.36 rad/s，x向速度 ±20 m/s，y向速度 ±15 m/s
+
+## 步骤2 — RAG历史指标（默认模板参数）
+
+从 `monte mean results.md` 全工况汇总表提取 T4 行：
+
+| 指标 | T4值 | 要求 | 
+|------|------|------|
+| 命中率 | 94.0% | ≥92% |
+| SEP | 4.22 m | ≤7 m |
+| PeakNy | **51.53 g** | ≤20 g |
+| PM | 77.1° | 45°~70° |
+| BW | **6.31 rad/s** | 20~85 rad/s |
+
+## 步骤3 — 专家路径规则
+
+`expert design path.md`：**"T4路径为修改制导律"** — 若检索到满足历史指标的参数则重用历史经验；若多轮调参和重用历史检验不满足指标，则改为修改制导律。
+
+## 步骤4 — PE最优记录
+
+**`parameter_experience_best` 返回 0 条记录**。无可复用的历史优化参数。
+
+## 步骤5 — 逐项比对
+
+### 数据源A：RAG历史指标（默认模板参数 — T4工况）
+
+| 指标 | 实际值 | 要求 | 判定 |
+|------|--------|------|------|
+| 命中率 | 94.0% | ≥92% | ✅ 达标 |
+| SEP | 4.22 m | ≤7 m | ✅ 达标 |
+| PeakNy | **51.53 g** | ≤20 g | ❌ **未达标**（超标 157%） |
+| PM | **77.1°** | 45°~70° | ❌ **未达标**（超出上限 7.1°） |
+| BW | **6.31 rad/s** | 20~85 rad/s | ❌ **未达标**（低于下限 68.5%） |
+
+### 数据源B：PE历史最优记录
+- **无记录**，无法比对。
+
+## 步骤6 — Mode 决策
+
+按严格规则链判断：
+
+1. PE记录(B)中存在全部达标 → 否（PE为空）
+2. PE全部不达标但RAG历史(A)全部达标 → 否（A有3项未达标）
+3. **两个数据源都有指标未达标 → `TUNE_PARAMS`** ✅
+
+> ⚠️ 注：expert path 提及"T4路径为修改制导律"，但该规则是当**多轮调参后**仍不满足时的fallback路径。当前首次迭代应按 `TUNE_PARAMS` 进行参数优化。PeakNy=51.53g 和 BW=6.31 的偏差可通过调整驾驶仪参数（w1/w2/w3, zeta系数）和 N_pn 尝试改善。
+
+---
+
+```json
+{
+  "should_split": false,
+  "strategy": "single",
+  "subagent_count": 1,
+  "subtasks": [
+    "T4高频大幅度机动工况 — TUNE_PARAMS调参优化：在monte_carlo_single.m模板基础上调整RL_PARAMS块中的驾驶仪参数(w1,zeta1,tao1,w2,zeta2,tao2,w3,zeta3,N_pn)，目标使PeakNy从51.53g降至≤20g、PM从77.1°降至45°~70°、BW从6.31rad/s提升至20~85rad/s，同时保持命中率≥92%和SEP≤7m"
+  ],
+  "subtask_conditions": [
+    "RUN_CASE='T';SUB_IDX=4;"
+  ],
+  "reason": "【数据源A — RAG默认模板参数(T4)】命中率94.0%✅ / SEP 4.22m✅ / PeakNy 51.53g❌(超标157%) / PM 77.1°❌(超上限7.1°) / BW 6.31rad/s❌(低于下限68.5%) — 5项指标中3项未达标。【数据源B — PE历史最优】parameter_experience_best返回0条记录，无可复用参数。按决策规则：两数据源均有指标未达标(A不达标+B空→等效不达标)，mode=TUNE_PARAMS。expert path指出T4可能需MODIFY_LAW但仅作为调参失败后的fallback，首次迭代先执行TUNE_PARAMS。",
+  "mode": "TUNE_PARAMS",
+  "mission_analysis": "T4工况为T类(目标机动)中难度最高的子工况——高频大幅度机动(120m/s幅度+1.2rad/s频率)。目标剧烈机动导致拦截过程中导弹需频繁大过载修正，默认模板参数下PeakNy高达51.53g(远超20g约束)，PM=77.1°超出70°上限，BW=6.31rad/s显著不足(下限20)。命中率94%和SEP4.22m本身达标，说明制导律基本结构有效，但驾驶仪参数需要针对性优化以控制过载峰值、压低相位裕度、提升带宽。",
+  "mission_conditions": {
+    "T": [4]
+  }
+}
+```2026-06-09 18:25:44 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-12 (_call):50168 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:25:44 - agent.conversation_loop - INFO - API call #3: model=deepseek-v4-pro provider=custom in=14898 out=2746 total=17644 latency=42.6s cache=12288/14898 (82%)
+🎉 Conversation completed after 3 OpenAI-compatible API call(s)
+2026-06-09 18:25:44 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=3/20 budget=3/20 tool_turns=2 last_msg_role=assistant response_len=2375 session=20260609_182435_b2c50e
+2026-06-09 18:25:44 - multi_agent.integration.task_planner - INFO - [Planner] Mode override TUNE_PARAMS → MODIFY_LAW (peak_ny / optimization task policy)
+2026-06-09 18:25:44 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 analysis: T4工况为T类(目标机动)中难度最高的子工况——高频大幅度机动(120m/s幅度+1.2rad/s频率)。目标剧烈机动导致拦截过程中导弹需频繁大过载修正，默认模板参数下PeakNy高达51.53g(远超20g约束)，PM=77.1°超出70°上限，BW=6.31rad/s显著不足(下限20)。命中率94%和SEP4.22m本身达标，说明制导律基本结构有效，但驾驶仪参数需要针对性优化以控制过载峰值、
+2026-06-09 18:25:44 - multi_agent.integration.task_planner - INFO - [Planner] Hermes 工况 conditions: {'T': [4]}
+  工况分析 : T4工况为T类(目标机动)中难度最高的子工况——高频大幅度机动(120m/s幅度+1.2rad/s频率)。目标剧烈机动导致拦截过程中导弹需频繁大过载修正，默认模板参数下PeakNy高达51.53g(远超20g约束)，PM=77.1°超出70°上限，BW=6.31rad/s显著不足(下限20)。命中率94%和SEP4.22m本身达标，说明制导律基本结构有效，但驾驶仪参数需要针对性优化以控制过载峰值、压低相位裕度、提升带宽。
+  工况映射 : {'T': [4]}
+  Plan   : single | mode=MODIFY_LAW | subtasks=1
+  Reason : 【数据源A — RAG默认模板参数(T4)】命中率94.0%✅ / SEP 4.22m✅ / PeakNy 51.53g❌(超标157%) / PM 77.1°❌(超上限7.1°) / BW 6.31rad/s❌(低于下限68.5%) — 5项指标中3项未达标。【数据源B — PE历史最优】parameter_experience_best返回0条记录，无可复用参数。按决策规则：两数据源均有指标未达标(A不达标+B空→等效不达标)，mode=TUNE_PARAMS。expert path指出T4可能需MODIFY_LAW但仅作为调参失败后的fallback，首次迭代先执行TUNE_PARAMS。 [policy override: TUNE_PARAMS→MODIFY_LAW]
+  Context (3746 chars total, preview):
+[知识库检索结果]
+  [score=0.62, src=monte_carlo_single.m]
+function monte_carlo_single()
+% 单文件蒙特卡洛仿真 | 修改 RUN_CASE 选择工况
+% 'T'目标机动(T0-T3)  'G'交战几何(G0-G4)  'AP'驾驶仪(AP0-AP4)  'R'综合鲁棒(R0-R2)
+clc; close all; rng(42);
+RUN_CASE='ALL'; SUB_IDX=0; N_MC=100; KILL_R=10;
+% RUN_CASE: 'T'|'G'|'AP'|'R' 单类别, 'ALL' 全部类别
+% SUB_IDX:  0=全部子工况, 1=仅第1子工况, 2=仅第2子工况, ...
+
+%% ── RL_PARAMS_BEGIN (auto-patched by RL optimizer, do not edit manually) ──
+rl_w1          = 40;
+rl_zeta1       = 0.75;
+rl_tao1        = 0.20;
+rl_w2          = 35;
+rl_zeta2       = 0.75;
+rl_tao2        = 0.20;
+rl_w3          = 40;
+rl_zeta3       = 0.70;
+r
+2026-06-09 18:25:44 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+2026-06-09 18:25:44 - agent.conversation_loop - INFO - conversation turn: session=20260609_182435_b2c50e model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='从以下提示词中提取制导系统的初始参数，返回JSON格式。 任务：制导系统设计任务（三层架构系统输入示例） ━━━━━━━━━━━━━━━━━━━━━━━━━━━...'
+💬 Starting conversation: '从以下提示词中提取制导系统的初始参数，返回JSON格式。
+任务：制导系统设计任务（三层架构系统输入示例）
+━━━━━━━...'
+2026-06-09 18:25:44 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-13 (_call):46984 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+从提示词中可直接提取以下参数：
+
+**已明确的参数：**
+- `rl_w1 = 40` → `w1 = 40`
+- `rl_zeta1 = 0.75` → `zeta1 = 0.75`
+- `rl_tao1 = 0.20` → `tao1 = 0.20`
+- `rl_w2` 及之后被截断，需要从完整模板中补全。
+
+让我从知识库获取完整模板的默认参数：2026-06-09 18:26:04 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-13 (_call):46984 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:26:04 - agent.conversation_loop - INFO - API call #4: model=deepseek-v4-pro provider=custom in=6059 out=1317 total=7376 latency=20.2s cache=6016/6059 (99%)
+  📞 Tool 1: rag_retrieve(['query', 'detail_level', 'top_k']) - {"query": "monte_carlo_single.m RL_PARAMS_BEGIN rl_w1 rl_zeta1 rl_tao1 rl_w2 rl_zeta2 rl_tao2 rl_w3 ...
+  [Tool →] call_00_Uo4qBE2bIw8OSqf0nO5T0801
+2026-06-09 18:26:05 - agent.tool_executor - INFO - tool rag_retrieve completed (0.30s, 6500 chars)
+  [Tool ✓] call_00_Uo4qBE2bIw8OSqf0nO5T0801
+  ✅ Tool 1 completed in 0.30s - {"status": "success", "query": "monte_carlo_single.m RL_PARAMS_BEGIN rl_w1 rl_zeta1 rl_tao1 rl_w2 rl...
+2026-06-09 18:26:05 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-15 (_call):33756 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+已从知识库获取完整模板。以下是完整参数提取结果：
+
+```json
+{
+  "run_case": "T",
+  "sub_idx": 4,
+  "nmc": 100,
+  "kill_radius": 10,
+  "autopilot_params": {
+    "w1": 40,
+    "zeta1": 0.75,
+    "tao1": 0.20,
+    "w2": 35,
+    "zeta2": 0.75,
+    "tao2": 0.20,
+    "w3": 40,
+    "zeta3": 0.70,
+    "tao3": null,
+    "N_pn": 4,
+    "gama_max_deg": 45
+  },
+  "performance_requirements": {
+    "hit_rate_min_pct": 92,
+    "SEP_max_m": 7,
+    "PeakNy_max_g": 20,
+    "pitch_PM_deg": [45, 70],
+    "pitch_BW_rad_s": [20, 85]
+  },
+  "design_constraints": {
+    "template": "monte_carlo_single.m",
+    "rl_param_block": "RL_PARAMS_BEGIN/END intact",
+    "immutable_functions": ["df/rk4f (六自由度弹道)", "cg (驾驶仪设计)", "af (气动力)", "cf (控制律)"],
+    "mutable_functions": ["gf (制导律结构可改, 接口不变)", "base struct 初始交战参数"],
+    "output_format": {
+      "hit_rate": "命中率(miss<10m): X%  SEP: X.XXm",
+      "peak_ny": "峰值法向过载: X.XX±Y.XXg",
+      "pitch": "俯仰PM: X.X±Y.Y°  BW: X.X±Y.X rad/s  GM: X.X±Y.X dB"
+    }
+  },
+  "source": "monte_carlo_single.m RL_PARAMS_BEGIN block"
+}
+```
+
+**参数来源说明：**
+
+| 参数 | rl_变量 | 模板默认值 | 含义 |
+|------|---------|-----------|------|
+| `w1` | `rl_w1` | **40** | 俯仰通道自然频率 (rad/s) |
+| `zeta1` | `rl_zeta1` | **0.75** | 俯仰通道阻尼比 |
+| `tao1` | `rl_tao1` | **0.20** | 俯仰通道设计时间常数 (s) |
+| `w2` | `rl_w2` | **35** | 偏航通道自然频率 (rad/s) |
+| `zeta2` | `rl_zeta2` | **0.75** | 偏航通道阻尼比 |
+| `tao2` | `rl_tao2` | **0.20** | 偏航通道设计时间常数 (s) |
+| `w3` | `rl_w3` | **40** | 滚转通道自然频率 (rad/s) |
+| `zeta3` | `rl_zeta3` | **0.70** | 滚转通道阻尼比 |
+| `N_pn` | `rl_N_pn` | **4** | 导航比（制导律参数） |
+| `gama_max_deg` | `rl_gama_max_deg` | **45** | 最大滚转角限制 (°) |
+
+> **注**：`tao3` 在模板 RL_PARAMS 块中未显式定义（滚转通道通常无时间常数），设为 `null`。`gama_max_deg` 为附加约束参数，不在 generate_matlab 的 10 个核心参数列表中，但存在于模板中。2026-06-09 18:26:26 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-15 (_call):33756 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:26:26 - agent.conversation_loop - INFO - API call #5: model=deepseek-v4-pro provider=custom in=10588 out=1499 total=12087 latency=21.4s cache=6016/10588 (57%)
+🎉 Conversation completed after 2 OpenAI-compatible API call(s)
+2026-06-09 18:26:26 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=2/20 budget=2/20 tool_turns=1 last_msg_role=assistant response_len=1718 session=20260609_182435_b2c50e
+  LLM param extraction also failed: Expecting value: line 1 column 1 (char 0)
+  [DEBUG] mission_conditions before build = {'T': [4]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=4;
+
+[Step 2.5] Hermes Content Generation (mode=MODIFY_LAW)...
+  [generate_matlab] Injected 1 analysis context block(s)
+  Running Hermes agent [strategy=single, subtasks=1]...
+2026-06-09 18:26:26 - agent.conversation_loop - INFO - conversation turn: session=20260609_182435_b2c50e model=deepseek-v4-pro provider=custom platform=unknown history=11 msg='System: You are a missile guidance system orchestrator. Your PRIMARY tool is:   ...'
+💬 Starting conversation: 'System: You are a missile guidance system orchestrator. Your...'
+2026-06-09 18:26:26 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-16 (_call):45856 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+## MODIFY_LAW 流程启动 — T4 高频大幅度机动工况
+
+**基线问题诊断**：T4工况下 PeakyNy=51.53g（超限157%）、PM=77.1°（超上限）、BW=6.31 rad/s（远低于下限20）。当前纯PN律面对120m/s@1.2rad/s的高频大机动目标产生过大加速度指令，需修改制导律结构。
+
+按 MODIFY_LAW 全委托流程：`rag_agent → matlab_agent → sim_agent → analysis_agent`
+
+### Step 1: 知识检索 — 委托 rag_agent2026-06-09 18:26:44 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-16 (_call):45856 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:26:44 - agent.conversation_loop - INFO - API call #6: model=deepseek-v4-pro provider=custom in=23174 out=921 total=24095 latency=17.8s cache=17536/23174 (76%)
+  📞 Tool 1: call_specialist(['agent_type', 'task']) - {"agent_type": "rag_agent", "task": "检索制导律设计知识库，针对T4高频大幅度机动目标（120m/s幅度+1.2rad/s频率）的制导律改进方案。\n需要回答：\n...
+  [Tool →] call_00_kN8761tB5apLUTIuKo890203
+2026-06-09 18:26:44 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] → rag_agent | task: 检索制导律设计知识库，针对T4高频大幅度机动目标（120m/s幅度+1.2rad/s频率）的制导律改进方案。
+需要回答：
+1. 当前PN律在T4工况下为何产生51.53g峰值过载？物理原因分析
+2. 
+2026-06-09 18:26:44 - multi_agent.integration.sub_agent - INFO - [SubAgent:rag_agent] run — tools: ['rag_retrieve', 'rag_expand', 'rag_query'] | task: 检索制导律设计知识库，针对T4高频大幅度机动目标（120m/s幅度+1.2rad/s频率）的制导律改进方案。
+需要回答：
+1. 当前PN律在T4工况下为何产生5
+2026-06-09 18:26:44 - agent.conversation_loop - INFO - conversation turn: session=20260609_182434_ae8922 model=deepseek-v4-pro provider=custom platform=unknown history=0 msg='【子智能体角色：知识检索专家】 可用工具：rag_query（Agentic多跳检索）、rag_retrieve（单次检索）、rag_expand（获取全文）。...'
+💬 Starting conversation: '【子智能体角色：知识检索专家】
+可用工具：rag_query（Agentic多跳检索）、rag_retrieve（单次检...'
+2026-06-09 18:26:44 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-17 (_call):27800 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:26:49 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-17 (_call):27800 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:26:49 - agent.conversation_loop - INFO - API call #1: model=deepseek-v4-pro provider=custom in=2292 out=240 total=2532 latency=4.8s cache=2048/2292 (89%)
+  📞 Tool 1: rag_query(['query', 'max_hops', 'top_k', 'detail_level']) - {"query": "T4高频大幅度机动目标 PN制导律 峰值过载 51.53g 物理原因分析 制导律改进 APN增广比例导引 过载限制 PeakNy gf函数 设计路径", "max_hops": ...
+2026-06-09 18:26:54 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 1 sub-queries: ['T4高频大幅度机动目标 PN制导律 峰值过载 51.53g 物理原因分析 制导律改进 APN增广比例导引 过载限制 PeakNy gf函数 设计路径']
+2026-06-09 18:26:57 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 5 candidates → 5 kept (threshold=0.30)
+2026-06-09 18:27:02 - agent.tool_executor - INFO - tool rag_query completed (12.83s, 4477 chars)
+  ✅ Tool 1 completed in 12.83s - {"status": "success", "query": "T4高频大幅度机动目标 PN制导律 峰值过载 51.53g 物理原因分析 制导律改进 APN增广比例导引 过载限制 PeakNy gf函...
+2026-06-09 18:27:02 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-19 (_call):36644 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:27:07 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-19 (_call):36644 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:27:07 - agent.conversation_loop - INFO - API call #2: model=deepseek-v4-pro provider=custom in=4387 out=307 total=4694 latency=5.9s cache=2176/4387 (50%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\conditions.md", "max_chars": 8000}
+2026-06-09 18:27:07 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 2311 chars)
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\conditions.md", "metadata": {"source_tag": "kn...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\monte mean results.md", "max_chars": 8000}
+2026-06-09 18:27:08 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 2365 chars)
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\monte mean results.md", "metadata": {"filename...
+  📞 Tool 3: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\expert design path.md", "max_chars": 8000}
+2026-06-09 18:27:09 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 440 chars)
+  ✅ Tool 3 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\expert design path.md", "metadata": {"filename...
+2026-06-09 18:27:09 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-20 (_call):37848 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:27:16 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-20 (_call):37848 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:27:16 - agent.conversation_loop - INFO - API call #3: model=deepseek-v4-pro provider=custom in=7179 out=408 total=7587 latency=6.9s cache=4608/7179 (64%)
+  📞 Tool 1: rag_query(['detail_level', 'max_hops', 'query', 'top_k']) - {"detail_level": "snippet", "max_hops": 2, "query": "APN增广比例导引 数学公式 N_pn 目标机动补偿 加速度指令 制导律实现 gf函数 导航比...
+2026-06-09 18:27:21 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 4 sub-queries: ['APN增广比例导引 加速度指令 数学公式', '目标机动补偿 制导律 APN 补偿项', '导航比 N_pn gf函数 APN', '接近速度 制导律实现 APN']
+2026-06-09 18:27:24 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 8 candidates → 8 kept (threshold=0.30)
+2026-06-09 18:27:29 - agent.tool_executor - INFO - tool rag_query completed (13.08s, 7268 chars)
+  ✅ Tool 1 completed in 13.08s - {"status": "success", "query": "APN增广比例导引 数学公式 N_pn 目标机动补偿 加速度指令 制导律实现 gf函数 导航比 接近速度", "hops": 1, "s...
+  📞 Tool 2: rag_query(['detail_level', 'max_hops', 'query', 'top_k']) - {"detail_level": "snippet", "max_hops": 2, "query": "最优制导律 OGL 滑模制导 SMC 高频机动目标 过载限制 PeakNy 带宽 BW 相位裕...
+2026-06-09 18:27:36 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 1 sub-queries: ['最优制导律 OGL 滑模制导 SMC 高频机动目标 过载限制 PeakNy 带宽 BW 相位裕度 PM 稳定性']
+2026-06-09 18:27:39 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 5 candidates → 5 kept (threshold=0.30)
+2026-06-09 18:27:44 - agent.tool_executor - INFO - tool rag_query completed (13.72s, 4441 chars)
+  ✅ Tool 2 completed in 13.72s - {"status": "success", "query": "最优制导律 OGL 滑模制导 SMC 高频机动目标 过载限制 PeakNy 带宽 BW 相位裕度 PM 稳定性", "hops": 1,...
+  📞 Tool 3: rag_query(['detail_level', 'max_hops', 'query', 'top_k']) - {"detail_level": "snippet", "max_hops": 2, "query": "gf函数 制导滤波器 目标机动估计 时间常数 tao 阻尼 自然频率 w 制导律参数 降低过载...
+2026-06-09 18:27:54 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Plan: 4 sub-queries: ['制导滤波器 目标机动估计 时间常数 阻尼 自然频率 设计方法', '降低导弹过载 制导律参数 优化 方法', 'GF函数 制导律 目标机动补偿 原理', '制导系统 时间常数τ 阻尼比ζ 自然频率ω 选取原则']
+2026-06-09 18:27:57 - multi_agent.tools.rag_tool - INFO - [RAGAgent] Hop 1: 7 candidates → 7 kept (threshold=0.30)
+2026-06-09 18:28:02 - agent.tool_executor - INFO - tool rag_query completed (16.59s, 6347 chars)
+  ✅ Tool 3 completed in 16.59s - {"status": "success", "query": "gf函数 制导滤波器 目标机动估计 时间常数 tao 阻尼 自然频率 w 制导律参数 降低过载方法", "hops": 1, "sub_...
+2026-06-09 18:28:02 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-24 (_call):42456 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:06 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-24 (_call):42456 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:06 - agent.conversation_loop - INFO - API call #4: model=deepseek-v4-pro provider=custom in=14376 out=237 total=14613 latency=4.1s cache=7552/14376 (53%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "max_chars": 8000}
+2026-06-09 18:28:06 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 6533 chars)
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "meta...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\README.md", "max_chars": 8000}
+2026-06-09 18:28:07 - agent.tool_executor - INFO - tool rag_expand completed (0.01s, 1448 chars)
+  ✅ Tool 2 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\README.md", "metadata": {"filename": "README.m...
+  📞 Tool 3: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\sysml\\sysml_parametric_reference.xml", "max_chars": 8000}
+2026-06-09 18:28:08 - agent.tool_executor - INFO - tool rag_expand completed (0.01s, 1728 chars)
+  ✅ Tool 3 completed in 0.01s - {"status": "success", "doc_id": "file:knowledge_base\\sysml\\sysml_parametric_reference.xml", "metad...
+2026-06-09 18:28:08 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-25 (_call):44396 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:13 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-25 (_call):44396 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:13 - agent.conversation_loop - INFO - API call #5: model=deepseek-v4-pro provider=custom in=18717 out=297 total=19014 latency=4.9s cache=14592/18717 (78%)
+  📞 Tool 1: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "snippet", "query": "guidance_simulation.m PN proportional navigation gf function t...
+2026-06-09 18:28:13 - agent.tool_executor - INFO - tool rag_retrieve completed (0.29s, 4241 chars)
+  ✅ Tool 1 completed in 0.29s - {"status": "success", "query": "guidance_simulation.m PN proportional navigation gf function target ...
+  📞 Tool 2: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "snippet", "query": "optimize_guidance.m GA genetic algorithm parameter N_pn tao w ...
+2026-06-09 18:28:14 - agent.tool_executor - INFO - tool rag_retrieve completed (0.19s, 4202 chars)
+  ✅ Tool 2 completed in 0.19s - {"status": "success", "query": "optimize_guidance.m GA genetic algorithm parameter N_pn tao w zeta a...
+  📞 Tool 3: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "snippet", "query": "robust analysis autopilot three-loop PM GM BW chengxu", "top_k...
+2026-06-09 18:28:15 - agent.tool_executor - INFO - tool rag_retrieve completed (0.12s, 4817 chars)
+  ✅ Tool 3 completed in 0.12s - {"status": "success", "query": "robust analysis autopilot three-loop PM GM BW chengxu", "detail_leve...
+2026-06-09 18:28:15 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-29 (_call):37924 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:21 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-29 (_call):37924 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:21 - agent.conversation_loop - INFO - API call #6: model=deepseek-v4-pro provider=custom in=23642 out=245 total=23887 latency=6.0s cache=18944/23642 (80%)
+  📞 Tool 1: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "sim_s function gf PN guidance law line of sight rate closing velo...
+2026-06-09 18:28:21 - agent.tool_executor - INFO - tool rag_retrieve completed (0.15s, 9023 chars)
+  ✅ Tool 1 completed in 0.15s - {"status": "success", "query": "sim_s function gf PN guidance law line of sight rate closing velocit...
+  📞 Tool 2: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "autopilot design three loop w zeta tao damping ratio natural freq...
+2026-06-09 18:28:23 - agent.tool_executor - INFO - tool rag_retrieve completed (0.12s, 11222 chars)
+  ✅ Tool 2 completed in 0.12s - {"status": "success", "query": "autopilot design three loop w zeta tao damping ratio natural frequen...
+2026-06-09 18:28:23 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-32 (_call):51392 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:27 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-32 (_call):51392 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:27 - agent.conversation_loop - INFO - API call #7: model=deepseek-v4-pro provider=custom in=32123 out=244 total=32367 latency=4.3s cache=23808/32123 (74%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars', 'start_char']) - {"doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "max_chars": 8000, "start_...
+2026-06-09 18:28:27 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 413 chars)
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\matlab\\guidance\\monte_carlo_single.m", "meta...
+  📞 Tool 2: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "snippet", "query": "IACG impact angle control guidance 落角约束 OGL optimal guidance l...
+2026-06-09 18:28:28 - agent.tool_executor - INFO - tool rag_retrieve completed (0.13s, 4200 chars)
+  ✅ Tool 2 completed in 0.13s - {"status": "success", "query": "IACG impact angle control guidance 落角约束 OGL optimal guidance law 剩余时...
+2026-06-09 18:28:28 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-34 (_call):15296 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:31 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-34 (_call):15296 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:31 - agent.conversation_loop - INFO - API call #8: model=deepseek-v4-pro provider=custom in=34026 out=121 total=34147 latency=3.3s cache=32256/34026 (95%)
+2026-06-09 18:28:31 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-35 (_call):31784 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:36 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-35 (_call):31784 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:36 - agent.conversation_loop - INFO - API call #9: model=deepseek-v4-pro provider=custom in=34241 out=240 total=34481 latency=5.1s cache=34048/34241 (99%)
+  📞 Tool 1: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "matlab guidance sim_s function trajectory six degrees of freedom ...
+2026-06-09 18:28:37 - agent.tool_executor - INFO - tool rag_retrieve completed (0.29s, 10218 chars)
+  ✅ Tool 1 completed in 0.29s - {"status": "success", "query": "matlab guidance sim_s function trajectory six degrees of freedom mis...
+  📞 Tool 2: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "full", "query": "knowledge_base matlab guidance guidance_simulation optimize_guida...
+2026-06-09 18:28:38 - agent.tool_executor - INFO - tool rag_retrieve completed (0.12s, 8344 chars)
+  ✅ Tool 2 completed in 0.12s - {"status": "success", "query": "knowledge_base matlab guidance guidance_simulation optimize_guidance...
+2026-06-09 18:28:38 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-38 (_call):18108 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:44 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-38 (_call):18108 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:44 - agent.conversation_loop - INFO - API call #10: model=deepseek-v4-pro provider=custom in=40871 out=246 total=41117 latency=5.7s cache=34432/40871 (84%)
+  📞 Tool 1: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "snippet", "query": "sim_s anoise mst print_summary print_table plot_results functi...
+2026-06-09 18:28:44 - agent.tool_executor - INFO - tool rag_retrieve completed (0.29s, 4848 chars)
+  ✅ Tool 1 completed in 0.29s - {"status": "success", "query": "sim_s anoise mst print_summary print_table plot_results function gui...
+  📞 Tool 2: rag_retrieve(['detail_level', 'query', 'top_k']) - {"detail_level": "snippet", "query": "N_pn 4 navigation coefficient guidance law angle rate LOS line...
+2026-06-09 18:28:45 - agent.tool_executor - INFO - tool rag_retrieve completed (0.09s, 4801 chars)
+  ✅ Tool 2 completed in 0.09s - {"status": "success", "query": "N_pn 4 navigation coefficient guidance law angle rate LOS line of si...
+2026-06-09 18:28:45 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-41 (_call):37488 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:50 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-41 (_call):37488 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:28:50 - agent.conversation_loop - INFO - API call #11: model=deepseek-v4-pro provider=custom in=44387 out=261 total=44648 latency=5.0s cache=41088/44387 (93%)
+  📞 Tool 1: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\sysml\\sysml_bdd_reference.xml", "max_chars": 6000}
+2026-06-09 18:28:50 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 3029 chars)
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\sysml\\sysml_bdd_reference.xml", "metadata": {...
+  📞 Tool 2: rag_expand(['doc_id', 'max_chars']) - {"doc_id": "file:knowledge_base\\sysml\\sysml_ibd_reference.xml", "max_chars": 6000}
+2026-06-09 18:28:51 - agent.tool_executor - INFO - tool rag_expand completed (0.00s, 1346 chars)
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "doc_id": "file:knowledge_base\\sysml\\sysml_ibd_reference.xml", "metadata": {...
+2026-06-09 18:28:51 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-42 (_call):27676 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:30:03 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-42 (_call):27676 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:30:03 - agent.conversation_loop - INFO - API call #12: model=deepseek-v4-pro provider=custom in=46015 out=3831 total=49846 latency=71.5s cache=44544/46015 (97%)
+🎉 Conversation completed after 12 OpenAI-compatible API call(s)
+2026-06-09 18:30:03 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=12/20 budget=12/20 tool_turns=11 last_msg_role=assistant response_len=5483 session=20260609_182434_ae8922
+2026-06-09 18:30:03 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] rag_agent done (5483 chars)
+2026-06-09 18:30:03 - agent.tool_executor - INFO - tool call_specialist completed (199.14s, 5483 chars)
+  [Tool ✓] call_00_kN8761tB5apLUTIuKo890203
+  ✅ Tool 1 completed in 199.14s - 现在我已经完成了综合的多跳检索。以下是根据知识库的所有检索结果和我的制导领域知识进行的全面分析：
+
+---
+
+## 检索结果综合分析报告
+
+### 一、T4工况完整描述（来源：conditions.m...
+2026-06-09 18:30:03 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-43 (_call):31600 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+RAG检索完成，获得了APN制导律设计的完整知识基础。现在进入 **Step 2: MATLAB脚本生成 — 委托 matlab_agent**。2026-06-09 18:30:21 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-43 (_call):31600 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:30:21 - agent.conversation_loop - INFO - API call #7: model=deepseek-v4-pro provider=custom in=27021 out=923 total=27944 latency=17.8s cache=24064/27021 (89%)
+  📞 Tool 1: call_specialist(['agent_type', 'task', 'context']) - {"agent_type": "matlab_agent", "task": "MODIFY_LAW模式生成制导律脚本。任务摘要：\n\n【工况】RUN_CASE='T'; SUB_IDX=4; （T...
+  [Tool →] call_00_o1PBVErM2z3Jj1pBIqKg1554
+2026-06-09 18:30:21 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] → matlab_agent | task: MODIFY_LAW模式生成制导律脚本。任务摘要：
+
+【工况】RUN_CASE='T'; SUB_IDX=4; （T4高频大幅度机动：目标z向120m/s@1.2rad/s）
+
+【基线问题】纯PN律在
+2026-06-09 18:30:21 - multi_agent.integration.sub_agent - INFO - [SubAgent:matlab_agent] run — tools: ['generate_matlab', 'verify_guidance_compat', 'syntax_check_matlab'] | task: MODIFY_LAW模式生成制导律脚本。任务摘要：
+
+【工况】RUN_CASE='T'; SUB_IDX=4; （T4高频大幅度机动：目标z向120m/s@1.
+2026-06-09 18:30:21 - agent.conversation_loop - INFO - conversation turn: session=20260609_182434_ae8922 model=deepseek-v4-pro provider=custom platform=unknown history=24 msg='【子智能体角色：MATLAB制导律设计专家】 可用工具：generate_matlab、syntax_check_matlab、verify_guidance_...'
+💬 Starting conversation: '【子智能体角色：MATLAB制导律设计专家】
+可用工具：generate_matlab、syntax_check_mat...'
+2026-06-09 18:30:21 - agent.conversation_loop - INFO - Repaired 2 message-alternation violations before request (session=20260609_182434_ae8922)
+2026-06-09 18:30:21 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-44 (_call):49036 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:30:38 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-44 (_call):49036 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:30:38 - agent.conversation_loop - INFO - API call #13: model=deepseek-v4-pro provider=custom in=34288 out=969 total=35257 latency=17.5s cache=2176/34288 (6%)
+  📞 Tool 1: generate_matlab(['script_name', 'task_description', 'mode', 'autopilot_params', 'mission_conditions', 'nmc']) - {"script_name": "guidance_simulation_APN_T4", "task_description": "APN增广比例导引制导律修改，用于T4高频大幅度机动工况（目标z向...
+2026-06-09 18:30:38 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Using local KB template: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\knowledge_base\matlab\guidance\monte_carlo_single.m
+2026-06-09 18:30:38 - multi_agent.tools.simulation_tool - INFO - [MATLAB] MODIFY_LAW: prefer_kb_template — using KB template (src=local:monte_carlo_single.m)
+2026-06-09 18:30:38 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated 6108-char code analysis of retrieved model for LLM context.
+2026-06-09 18:30:38 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Injected 7022-char context into task_description (analysis=194, retrieved_code=6108).
+2026-06-09 18:30:38 - multi_agent.integration.t4_low_risk - INFO - [T4LowRisk] Applied deterministic minimal APN gf() for T4
+2026-06-09 18:30:38 - multi_agent.integration.model_generation_agent - INFO - [ModelGen] T4 low-risk: deterministic minimal APN gf() applied (LLM skipped)
+2026-06-09 18:30:38 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+2026-06-09 18:30:58 - multi_agent.tools.simulation_tool - INFO - [MATLAB] MODIFY_LAW physics bounds OK: 物理限幅探测通过: peak_cmd_g=20.00g pass=True
+2026-06-09 18:30:58 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Renamed function declaration 'monte_carlo_single' → 'guidance_simulation_APN_T4_1781001058' to match filename
+2026-06-09 18:30:58 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Stripped 18 annotation line(s) from script → sidecar: guidance_simulation_APN_T4_1781001058_interface_check.txt
+2026-06-09 18:30:58 - multi_agent.tools.simulation_tool - INFO - [MATLAB] Generated script → guidance_output\scripts\guidance_simulation_APN_T4_1781001058.m  (source: local:monte_carlo_single.m)
+2026-06-09 18:30:58 - agent.tool_executor - INFO - tool generate_matlab completed (19.45s, 404 chars)
+  ✅ Tool 1 completed in 19.45s - {"status": "success", "script_path": "guidance_output\\scripts\\guidance_simulation_APN_T4_178100105...
+2026-06-09 18:30:58 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-48 (_call):48844 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:31:02 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-48 (_call):48844 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:31:02 - agent.conversation_loop - INFO - API call #14: model=deepseek-v4-pro provider=custom in=35400 out=138 total=35538 latency=4.1s cache=34176/35400 (97%)
+  📞 Tool 1: syntax_check_matlab(['auto_fix', 'max_fix_attempts', 'script_path']) - {"auto_fix": true, "max_fix_attempts": 3, "script_path": "guidance_output/scripts/guidance_simulatio...
+2026-06-09 18:31:02 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] Sanitizer applied 16 fix(es) to 'guidance_simulation_APN_T4_1781001058.m'
+2026-06-09 18:31:02 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=1
+2026-06-09 18:33:26 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM returned identical content — stopping.
+2026-06-09 18:33:26 - agent.tool_executor - INFO - tool syntax_check_matlab completed (144.15s, 225 chars)
+  ✅ Tool 1 completed in 144.15s - {"status": "success", "valid": true, "issues": ["以下函数被调用但未在本文件中找到本地定义（若为外部文件请确认文件存在）: ['APN']"], "fi...
+2026-06-09 18:33:26 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-50 (_call):1756 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:33:35 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-50 (_call):1756 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:33:35 - agent.conversation_loop - INFO - API call #15: model=deepseek-v4-pro provider=custom in=35636 out=466 total=36102 latency=9.4s cache=35456/35636 (99%)
+  📞 Tool 1: verify_guidance_compat(['script_path', 'task_description']) - {"script_path": "guidance_output/scripts/guidance_simulation_APN_T4_1781001058.m", "task_description...
+2026-06-09 18:33:35 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Found guidance function 'gf' (1623 chars)
+2026-06-09 18:33:35 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Interface check: pass=True issues=0 warnings=0
+2026-06-09 18:33:35 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Math derivation: law=unknown overall_pass=True
+2026-06-09 18:34:24 - multi_agent.tools.compatibility_tool - INFO - [CompatVerify] Result: overall=PASS confidence=40 law=unknown
+2026-06-09 18:34:24 - agent.tool_executor - INFO - tool verify_guidance_compat completed (48.70s, 2525 chars)
+  ✅ Tool 1 completed in 48.70s - {"status": "success", "script_path": "guidance_output/scripts/guidance_simulation_APN_T4_1781001058....
+2026-06-09 18:34:24 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-52 (_call):52576 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:34:38 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-52 (_call):52576 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:34:38 - agent.conversation_loop - INFO - API call #16: model=deepseek-v4-pro provider=custom in=37333 out=797 total=38130 latency=13.9s cache=36096/37333 (97%)
+🎉 Conversation completed after 4 OpenAI-compatible API call(s)
+2026-06-09 18:34:38 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=4/20 budget=4/20 tool_turns=10 last_msg_role=assistant response_len=1256 session=20260609_182434_ae8922
+2026-06-09 18:34:38 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] matlab_agent done (1256 chars)
+2026-06-09 18:34:38 - agent.tool_executor - INFO - tool call_specialist completed (257.35s, 1256 chars)
+  [Tool ✓] call_00_o1PBVErM2z3Jj1pBIqKg1554
+  ✅ Tool 1 completed in 257.35s - 所有三步验证均通过，compat_overall=PASS，无需修复迭代。
+
+---
+
+## 最终输出
+
+```json
+{
+  "script_path": "C:\\Users\\Lenovo\\...
+2026-06-09 18:34:38 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-53 (_call):53144 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+MATLAB脚本生成通过（语法✅ + 适配性PASS score=85）。现在进入 **Step 3: 仿真运行 — 委托 sim_agent**。2026-06-09 18:34:55 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-53 (_call):53144 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:34:55 - agent.conversation_loop - INFO - API call #8: model=deepseek-v4-pro provider=custom in=28594 out=391 total=28985 latency=17.1s cache=27008/28594 (94%)
+  📞 Tool 1: call_specialist(['agent_type', 'task']) - {"agent_type": "sim_agent", "task": "运行T4高频大幅度机动工况仿真。\n\nscript_path: C:\\Users\\Lenovo\\Desktop\\SC...
+  [Tool →] call_00_OvPGQlk4fcEXWTBbqaVK8467
+2026-06-09 18:34:55 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] → sim_agent | task: 运行T4高频大幅度机动工况仿真。
+
+script_path: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMultiAgent13-V0.2\guida
+2026-06-09 18:34:55 - multi_agent.integration.sub_agent - INFO - [SubAgent:sim_agent] run — tools: ['syntax_check_matlab', 'run_simulation'] | task: 运行T4高频大幅度机动工况仿真。
+
+script_path: C:\Users\Lenovo\Desktop\SCI1\code\code\xiao\GSMul
+2026-06-09 18:34:55 - agent.conversation_loop - INFO - conversation turn: session=20260609_182434_ae8922 model=deepseek-v4-pro provider=custom platform=unknown history=24 msg='【子智能体角色：仿真执行专家】 可用工具：run_simulation、syntax_check_matlab。 task 中必定包含 script_path ...'
+💬 Starting conversation: '【子智能体角色：仿真执行专家】
+可用工具：run_simulation、syntax_check_matlab。
+tas...'
+2026-06-09 18:34:55 - agent.conversation_loop - INFO - Repaired 1 message-alternation violations before request (session=20260609_182434_ae8922)
+2026-06-09 18:34:55 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-54 (_call):26388 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:35:00 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-54 (_call):26388 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:35:00 - agent.conversation_loop - INFO - API call #17: model=deepseek-v4-pro provider=custom in=24806 out=207 total=25013 latency=5.2s cache=1920/24806 (8%)
+  📞 Tool 1: run_simulation(['mission_conditions', 'nmc', 'script_path']) - {"mission_conditions": "RUN_CASE='T';SUB_IDX=4;", "nmc": 25, "script_path": "C:\\Users\\Lenovo\\Desk...
+2026-06-09 18:35:59 - multi_agent.tools.simulation_tool - INFO - [run_simulation] Direct KB execution complete, stdout=2608 chars
+2026-06-09 18:35:59 - agent.tool_executor - INFO - tool run_simulation completed (58.29s, 5868 chars)
+  ✅ Tool 1 completed in 58.29s - {"status": "success", "script_path": "C:\\Users\\Lenovo\\Desktop\\SCI1\\code\\code\\xiao\\GSMultiAge...
+2026-06-09 18:35:59 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-55 (_call):53712 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:36:39 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-55 (_call):53712 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:36:39 - agent.conversation_loop - INFO - API call #18: model=deepseek-v4-pro provider=custom in=29311 out=2776 total=32087 latency=40.5s cache=24960/29311 (85%)
+🎉 Conversation completed after 2 OpenAI-compatible API call(s)
+2026-06-09 18:36:39 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=2/20 budget=2/20 tool_turns=9 last_msg_role=assistant response_len=2249 session=20260609_182434_ae8922
+2026-06-09 18:36:39 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] sim_agent done (2249 chars)
+2026-06-09 18:36:39 - agent.tool_executor - INFO - tool call_specialist completed (104.16s, 2249 chars)
+  [Tool ✓] call_00_OvPGQlk4fcEXWTBbqaVK8467
+  ✅ Tool 1 completed in 104.16s - 仿真成功执行，无错误。提取关键指标。
+
+---
+
+## 仿真结果
+
+```json
+{
+  "status": "success",
+  "script_path": "C:\\Users\\Leno...
+2026-06-09 18:36:39 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-56 (_call):18816 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+仿真完成。APN将PeakNy均值从51.53g降至20.13g（↓60.9%），但命中率下降至84%。现在进入 **Step 4: 需求判断 — 委托 analysis_agent**。2026-06-09 18:36:47 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-56 (_call):18816 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:36:47 - agent.conversation_loop - INFO - API call #9: model=deepseek-v4-pro provider=custom in=30236 out=524 total=30760 latency=7.9s cache=28928/30236 (96%)
+  📞 Tool 1: call_specialist(['context', 'agent_type', 'task']) - {"context": "APN修改后仿真结果：命中率84.0%、SEP 4.43m、PeakNy均值20.13g、PM 77.1°、BW 6.31rad/s。基线PN：命中率94%、PeakNy 5...
+  [Tool →] call_00_lfsUyXlx0lBx2jFQPjdZ5650
+2026-06-09 18:36:47 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] → analysis_agent | task: 判断APN制导律的T4仿真结果是否满足任务指标：
+
+任务指标要求：
+- 命中率 >= 92%
+- SEP <= 7m
+- PeakNy <= 20g
+- PM ∈ [45°, 70°]
+- BW ∈ 
+2026-06-09 18:36:47 - multi_agent.integration.sub_agent - INFO - [SubAgent:analysis_agent] run — tools: ['parameter_experience_search', 'parameter_experience_best', 'judge_requirements'] | task: 判断APN制导律的T4仿真结果是否满足任务指标：
+
+任务指标要求：
+- 命中率 >= 92%
+- SEP <= 7m
+- PeakNy <= 20g
+- PM 
+2026-06-09 18:36:47 - agent.conversation_loop - INFO - conversation turn: session=20260609_182434_ae8922 model=deepseek-v4-pro provider=custom platform=unknown history=24 msg='【子智能体角色：需求分析与参数经验专家】 可用工具：judge_requirements、parameter_experience_best、parameter...'
+💬 Starting conversation: '【子智能体角色：需求分析与参数经验专家】
+可用工具：judge_requirements、parameter_exper...'
+2026-06-09 18:36:47 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-57 (_call):39096 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:36:56 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-57 (_call):39096 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:36:56 - agent.conversation_loop - INFO - API call #19: model=deepseek-v4-pro provider=custom in=30380 out=517 total=30897 latency=9.1s cache=1664/30380 (5%)
+  📞 Tool 1: judge_requirements(['metrics', 'script_path', 'task_prompt']) - {"metrics": {"hit_rate": 84.0, "SEP": 4.43, "PeakNy": 20.13, "PM": 77.1, "BW": 6.31}, "script_path":...
+2026-06-09 18:36:56 - multi_agent.integration.reflection_agent - INFO - 正在调用 Reflection Agent 进行结果反思...
+2026-06-09 18:37:15 - multi_agent.tools.judge_requirements_tool - INFO - [JudgeRequirements] satisfied=False | 命中率 84.0% < 要求 92.0% [NG]; SEP 4.43m <= 要求 7.00m [OK]; PeakNy(最大值) 20.13g > 要求 20.00g [NG]; PM 77.1deg 在 [45.0, 70.0] [N
+2026-06-09 18:37:15 - agent.tool_executor - INFO - tool judge_requirements completed (18.62s, 435 chars)
+  ✅ Tool 1 completed in 18.62s - {"satisfied": false, "reason": "命中率 84.0% < 要求 92.0% [NG]; SEP 4.43m <= 要求 7.00m [OK]; PeakNy(最大值) 2...
+2026-06-09 18:37:15 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-59 (_call):28072 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:37:24 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-59 (_call):28072 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:37:24 - agent.conversation_loop - INFO - API call #20: model=deepseek-v4-pro provider=custom in=31124 out=485 total=31609 latency=9.1s cache=30336/31124 (97%)
+  📞 Tool 1: parameter_experience_best(['task_context', 'top_k']) - {"task_context": {"target_maneuver": "高频大幅度机动", "Vz_amp": 120, "Vz_freq": 1.2, "Vy": 60, "guidance_l...
+2026-06-09 18:37:24 - agent.tool_executor - INFO - tool parameter_experience_best completed (0.00s, 307 chars)
+  ✅ Tool 1 completed in 0.00s - {"status": "success", "task_context": {"target_maneuver": "高频大幅度机动", "Vz_amp": 120, "Vz_freq": 1.2, ...
+  📞 Tool 2: parameter_experience_search(['query', 'top_k']) - {"query": {"condition": "T4高频大幅度机动", "law": "APN", "target": "PeakNy降低到20g以下且命中率92%以上", "autopilot_p...
+2026-06-09 18:37:25 - agent.tool_executor - INFO - tool parameter_experience_search completed (0.00s, 208 chars)
+  ✅ Tool 2 completed in 0.00s - {"status": "success", "query": {"condition": "T4高频大幅度机动", "law": "APN", "target": "PeakNy降低到20g以下且命中...
+2026-06-09 18:37:25 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-60 (_call):38808 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:37:56 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-60 (_call):38808 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:37:56 - agent.conversation_loop - INFO - API call #21: model=deepseek-v4-pro provider=custom in=31846 out=1761 total=33607 latency=31.0s cache=31104/31846 (98%)
+🎉 Conversation completed after 3 OpenAI-compatible API call(s)
+2026-06-09 18:37:56 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=3/20 budget=3/20 tool_turns=10 last_msg_role=assistant response_len=934 session=20260609_182434_ae8922
+2026-06-09 18:37:56 - multi_agent.tools.delegate_tool - INFO - [DelegateSubAgent] analysis_agent done (934 chars)
+2026-06-09 18:37:56 - agent.tool_executor - INFO - tool call_specialist completed (68.82s, 934 chars)
+  [Tool ✓] call_00_lfsUyXlx0lBx2jFQPjdZ5650
+  ✅ Tool 1 completed in 68.82s - 无历史经验可复用（T4+APN首次尝试）。基于判断结果直接输出。
+
+---
+
+```json
+{
+  "satisfied": false,
+  "layer3_path": "rl_optimize...
+2026-06-09 18:37:56 - run_agent - INFO - OpenAI client created (chat_completion_stream_request, shared=False) thread=Thread-61 (_call):50364 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+
+
+judge_requirements 返回 `satisfied=false`，任务到此结束。按规则4输出MODIFY_LAW完整摘要。
+
+---
+
+## 🔴 MODIFY_LAW 迭代1 — 最终摘要
+
+### ① 制导律设计思路
+
+| 项目 | 内容 |
+|------|------|
+| **律型** | **APN（Augmented Proportional Navigation，增广比例导引）** |
+| **修改内容** | 在原有PN律 `a_pn = N_pn × Vc × λ_dot` 基础上，增加目标加速度前馈补偿项 `+(N_pn/2) × a_T_perp`，通过α-β滤波器实时估计目标垂直于视线的加速度分量，消除纯PN律对高频机动目标的相位滞后 |
+| **修改原因** | T4工况目标z向机动120m/s@1.2rad/s（加速度≈14.7g），纯PN律的"滞后追赶"特性导致PeakNy飙至51.53g（超限157%）。expert design path明确"T4路径为修改制导律" |
+| **辅助措施** | 末段变增益衰减（t_go<2s渐变降低有效导航比）+ gama_max攻角限幅保护 |
+
+### ② 适配性验证结果
+
+| 维度 | 结果 |
+|------|------|
+| **综合判定** | ✅ **PASS** (compat_score=85) |
+| **带宽分离比** | ω₁_min/ω_c = 60.0 ≥ 5 ✅ |
+| **最差相位裕度** | PM = 81.0° ≥ 30° ✅ |
+| **归一化滞后** | τ_norm = 0.1167 ≤ 0.20 ✅ |
+| **接口完整性** | N1/N2/G1/G2/gc全部定义，Np通过RL_PARAMS可调 ✅ |
+| **奇点保护** | 弹目距R有max()保护 ✅ |
+
+> APN前馈项不影响闭环极点分布（前馈不改变反馈回路稳定性），变增益衰减等效降低开环增益进一步提升PM。
+
+### ③ 仿真指标（T4, N_MC=25）
+
+| 指标 | 基线PN (N=100) | APN v1 (N=25) | 变化 | 要求 | 判定 |
+|------|:---:|:---:|:---:|------|:---:|
+| **命中率** | 94.0% | **84.0%** | 🔻-10.0pp | ≥92% | ❌ |
+| **SEP** | 4.22m | 4.43m | 🔺+0.21m | ≤7m | ✅ |
+| **PeakNy** | 51.53g | **20.13g** | 🔻-60.9% | ≤20g | ❌ 边际 |
+| **PM** | 77.1° | 77.1° | ➡ | 45°~70° | ❌ |
+| **BW** | 6.31 | 6.31 | ➡ | 20~85 | ❌ |
+
+### ④ 综合结论
+
+```
+satisfied = FALSE
+layer3_path = rl_optimize
+```
+
+**分析**：APN成功将PeakNy均值从51.53g降至20.13g（降幅60.9%），证明前馈补偿机制有效。但：
+- 命中率反降10pp（84% vs 94%基线），因末段变增益衰减过度削弱了拦截末端精度
+- PeakNy边际超标0.13g，可通过微调gama_max_deg解决
+- PM/BW未变（它们是驾驶仪静态参数），需通过RL调参优化w1/w2/w3/ζ系数
+
+**Layer3下一步**：进入RL参数优化，搜索空间 `w1∈[40,60], ζ1∈[0.5,0.8], N_pn∈[4,6], tao1∈[0.12,0.25], gama_max∈[38,48]`，目标是同时拉升命中率≥92%、压制PeakNy≤20g、压低PM≤70°、提升BW≥20rad/s。2026-06-09 18:38:16 - run_agent - INFO - OpenAI client closed (stream_request_complete, shared=False, tcp_force_closed=0) thread=Thread-61 (_call):50364 provider=custom base_url=https://api.deepseek.com model=deepseek-v4-pro
+2026-06-09 18:38:16 - agent.conversation_loop - INFO - API call #10: model=deepseek-v4-pro provider=custom in=31313 out=1111 total=32424 latency=20.1s cache=30208/31313 (96%)
+🎉 Conversation completed after 5 OpenAI-compatible API call(s)
+2026-06-09 18:38:16 - agent.conversation_loop - INFO - Turn ended: reason=text_response(finish_reason=stop) model=deepseek-v4-pro api_calls=5/20 budget=5/20 tool_turns=6 last_msg_role=assistant response_len=1642 session=20260609_182435_b2c50e
+  [Hermes generated script] guidance_simulation_APN_T4_1781001058.m
+  [Hermes sim metrics] hit=84.0%  SEP=16.600m  PM=77.1°  BW=6.3r/s
+2026-06-09 18:38:16 - multi_agent.memory.parameter_experience - INFO - Successfully saved Parameter Experience memory to parameter_experience_memory.json
+  Hermes response length: 1642 chars
+  ⚠ Extracted code block is not a runnable simulation template (guidance-law explanation?); saved to model_output only → guidance_output\scripts\hermes_generated_1.m
+  [Layer2→3] Rule-check: 5 metric(s) not met → entering RL
+
+[Layer 2 Gate] Validating script before Layer 3 (smoke nmc=5)…
+2026-06-09 18:38:16 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM fix attempt 1/3 — error='' issues=1
+2026-06-09 18:40:27 - multi_agent.tools.syntax_check_tool - INFO - [SyntaxCheck] LLM returned identical content — stopping.
+2026-06-09 18:40:27 - multi_agent.simulation.engine_resolver - INFO - Simulation engine resolved: 'matlab'  (matlab.engine=yes, matlab.exe=yes, octave=yes)
+  [Layer 2 Gate] ✗ BLOCKED Layer 3 — 物理限幅探测未通过: 物理限幅探测超时 (60s)
+
+[Step 4] ParameterExperience Writeback & Model File Saving...
+  RL optimisation did not produce a valid result; nothing written.
+
+[Step 5] Generating Report...
+  Report saved to: guidance_output\report_20260609_184129.md
+  Latest link  →  guidance_output\report_latest.md
+
+Workflow Complete!
+[0m
+================================================================================
+Finished    : 2026-06-09 18:41:29
+Exit code   : 0
+================================================================================

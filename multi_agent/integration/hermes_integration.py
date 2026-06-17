@@ -3,6 +3,7 @@
 Hermes Agent Integration Layer
 """
 
+import asyncio
 import os
 import logging
 from pathlib import Path
@@ -175,6 +176,8 @@ try:
                 if isinstance(result, str):
                     return result
                 return _json.dumps(result, ensure_ascii=False, default=str)
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                raise
             except TypeError as exc:
                 # Most likely an argument-name mismatch from the LLM.
                 logger.error(
@@ -251,6 +254,7 @@ try:
             model: str = None,
             provider: str = None,
             api_key: str = None,
+            max_history_turns: int = 3,
         ):
             from ..config_loader import get_config
 
@@ -262,6 +266,16 @@ try:
             self.base_url = cfg.base_url
             self.agent: Optional[Any] = None
             self._initialized = False
+            # Cross-iteration conversation history.
+            # Stores non-system messages from previous run_with_tools() calls
+            # and passes them as conversation_history= on the next call so
+            # the LLM retains context across outer-loop iterations.
+            self._prior_messages: List[Dict[str, Any]] = []
+            # Each "turn" = 1 user msg + N assistant/tool msgs.  We keep
+            # at most max_history_turns * 8 messages to bound context growth.
+            self.max_history_turns: int = max(1, max_history_turns)
+            # Optional reference to HermesAgentMemory for conversation sync.
+            self._hermes_memory: Optional[Any] = None
 
         @staticmethod
         def _make_thinking_callbacks(verbose: bool = True):
@@ -324,6 +338,18 @@ try:
                 logger.error(f"Failed to initialize Hermes: {e}")
                 return False
 
+        def reset_conversation(self) -> None:
+            """Clear cross-iteration history (call at task start or when context is stale)."""
+            self._prior_messages.clear()
+            if self._hermes_memory is not None:
+                self._hermes_memory.clear_conversation()
+            logger.info("[Hermes] Conversation history cleared.")
+
+        @property
+        def conversation_history(self) -> List[Dict[str, Any]]:
+            """Read-only view of the accumulated cross-iteration message history."""
+            return list(self._prior_messages)
+
         async def run_with_tools(
             self,
             user_message: str,
@@ -359,15 +385,48 @@ try:
                     if hasattr(self.agent, attr):
                         setattr(self.agent, attr, fn)
 
+                # Pass cross-iteration history so the LLM retains context.
+                # Strip system messages — they are regenerated fresh each call
+                # in the caller's full_msg / system_message argument.
+                _prior = [m for m in self._prior_messages if m.get("role") != "system"]
+
                 import inspect
                 if inspect.iscoroutinefunction(self.agent.run_conversation):
-                    response = await self.agent.run_conversation(user_message)
+                    result = await self.agent.run_conversation(
+                        user_message,
+                        conversation_history=_prior if _prior else None,
+                    )
                 else:
-                    response = self.agent.run_conversation(user_message)
+                    result = self.agent.run_conversation(
+                        user_message,
+                        conversation_history=_prior if _prior else None,
+                    )
 
-                if isinstance(response, dict):
-                    return response.get("final_response", str(response))
-                return response
+                # ── Update cross-iteration history ────────────────────────
+                if isinstance(result, dict):
+                    _new_msgs: List[Dict] = [
+                        m for m in result.get("messages", [])
+                        if m.get("role") != "system"
+                    ]
+                    # Sliding window: keep at most max_history_turns * 8 msgs.
+                    _cap = self.max_history_turns * 8
+                    self._prior_messages = _new_msgs[-_cap:] if len(_new_msgs) > _cap else _new_msgs
+                    # Sync to HermesAgentMemory.conversation for external access.
+                    if self._hermes_memory is not None:
+                        self._hermes_memory.clear_conversation()
+                        for _m in self._prior_messages:
+                            self._hermes_memory.add_message(
+                                _m.get("role", "user"), _m.get("content", "")
+                            )
+                    logger.debug(
+                        "[Hermes] History updated: %d msgs retained (cap=%d)",
+                        len(self._prior_messages), _cap,
+                    )
+                    return result.get("final_response", str(result))
+
+                return result
+            except (asyncio.CancelledError, KeyboardInterrupt):
+                raise
             except Exception as e:
                 logger.error(f"Conversation failed: {e}")
                 return None
@@ -396,50 +455,52 @@ try:
             """Simple text generation using the agent"""
             return await self.run_with_tools(prompt, tools=[])
 
-        def get_all_tools(self) -> List[Any]:
+        def get_all_tools(self, include_delegate: bool = True) -> List[Any]:
             """Get all available tools from the tools directory.
 
             Layer 2 Hermes tool set (NO RL tool):
               RL optimization is exclusively handled by Layer 3 OptimizationWorkflow.
               1. rag_retrieve             — unified KB + PE search
               2. generate_matlab          — generate .m script (monte_carlo_single template)
-              3. generate_sysml           — generate SysML models
-              4. syntax_check_matlab      — validate/fix .m file
-              5. run_simulation           — run monte_carlo_single simulation
+              3. syntax_check_matlab      — validate/fix .m file
+              4. run_simulation           — run monte_carlo_single simulation
+              5. verify_guidance_compat   — verify modified guidance law is compatible with autopilot/CF
               6. judge_requirements       — check if sim metrics satisfy task requirements
               7. parameter_experience_*   — PE search/best
-              8. extract_matlab_params    — extract params from script
-              9. agent_memory_remember    — persist info to long-term memory (JSON)
-             10. agent_memory_recall      — retrieve from long-term memory
-             11. agent_memory_list        — list all remembered keys
-             12. agent_memory_forget      — delete a memory entry
+              8. agent_memory_remember    — persist info to long-term memory (JSON)
+              9. agent_memory_recall      — retrieve from long-term memory
+             10. agent_memory_list        — list all remembered keys
+             11. agent_memory_forget      — delete a memory entry
             """
             from ..tools import (
                 RAGRetrievalTool,
+                RAGExpandTool,
+                RAGAgentTool,
                 ParameterExperienceSearchTool,
                 ParameterExperienceBestTool,
-                GenerateSysMLTool,
                 GenerateMATLABTool,
+                GuidanceLawCompatibilityTool,
                 RunSimulationTool,
-                ExtractMatlabParamsTool,
                 AgentMemoryRememberTool,
                 AgentMemoryRecallTool,
                 AgentMemoryListTool,
                 AgentMemoryForgetTool,
+                DelegateSubAgentTool,
             )
             from ..tools.syntax_check_tool import SyntaxCheckMATLABTool
             from ..tools.judge_requirements_tool import JudgeRequirementsTool
 
             tools = [
                 RAGRetrievalTool(),
+                RAGExpandTool(),
+                RAGAgentTool(),
                 ParameterExperienceSearchTool(),
                 ParameterExperienceBestTool(),
-                GenerateSysMLTool(),
                 GenerateMATLABTool(),
+                GuidanceLawCompatibilityTool(),
                 SyntaxCheckMATLABTool(),
                 RunSimulationTool(),
                 JudgeRequirementsTool(),
-                ExtractMatlabParamsTool(),
                 # Persistent memory tools (hermes-agent-demo pattern)
                 AgentMemoryRememberTool(),
                 AgentMemoryRecallTool(),
@@ -448,6 +509,8 @@ try:
                 # matlab_rl_optimize intentionally excluded:
                 # RL is exclusively Layer 3 (OptimizationWorkflow), not Hermes.
             ]
+            if include_delegate:
+                tools.append(DelegateSubAgentTool())
             return tools
 
         def format_tools_for_agent(self, tools: List[Any]) -> List[Dict[str, Any]]:
@@ -478,6 +541,7 @@ try:
             user_prompt: Optional[str] = None,
             ablation=None,
             hermes_agent_memory=None,
+            include_delegate: bool = True,
         ) -> bool:
             """Initialize Hermes agent with all tools registered.
 
@@ -494,24 +558,38 @@ try:
                 # Done BEFORE the registry registration so each tool has
                 # its rag_kb / parameter_experience / simulator / etc.
                 # references in place when the LLM eventually calls it.
-                tools = self.get_all_tools()
+                tools = self.get_all_tools(include_delegate=include_delegate)
 
                 # ── Ablation: remove tools for disabled components ────────
                 # Tool names excluded per flag:
-                #   rl_optimization / hermes_rl_tool → "matlab_rl_optimize"
-                #   parameter_experience_reuse       → "parameter_experience_*"
-                #   reflection_agent                 → "reflect_on_results"
+                #   rl_optimization / hermes_rl_tool    → "matlab_rl_optimize"
+                #   parameter_experience_reuse           → "parameter_experience_*"
+                #   guidance_compat_verification         → "verify_guidance_compat"
+                #   syntax_check                         → "syntax_check_matlab"
                 _pe_tool_names = {
                     "parameter_experience_search",
                     "parameter_experience_best",
                 }
                 if ablation is not None:
                     _removed: list = []
+                    _memory_tool_names = {
+                        "agent_memory_remember",
+                        "agent_memory_recall",
+                        "agent_memory_list",
+                        "agent_memory_forget",
+                        "session_search",
+                    }
                     def _abl_keep(t) -> bool:
                         n = getattr(t, "name", "")
                         # matlab_rl_optimize is no longer in the Hermes tool set;
                         # RL is exclusively in Layer 3 OptimizationWorkflow.
                         if n in _pe_tool_names and not ablation.parameter_experience_reuse:
+                            return False
+                        if n in _memory_tool_names and not ablation.memory_search:
+                            return False
+                        if n == "verify_guidance_compat" and not ablation.guidance_compat_verification:
+                            return False
+                        if n == "syntax_check_matlab" and not ablation.syntax_check:
                             return False
                         return True
                     filtered = [t for t in tools if _abl_keep(t)]
@@ -524,6 +602,7 @@ try:
 
                 self._tools = tools
                 self._user_prompt = user_prompt
+                self._hermes_memory = hermes_agent_memory
 
                 for tool in tools:
                     # RAG knowledge base (covers GenerateSysMLTool, GenerateMATLABTool, RAGRetrievalTool, etc.)
@@ -541,8 +620,75 @@ try:
                         tool.set_reflection_agent(reflection_agent)
                     if user_prompt and hasattr(tool, "set_task_prompt"):
                         tool.set_task_prompt(user_prompt)
-                    if hermes_agent_memory and hasattr(tool, "set_memory"):
+                    if hermes_agent_memory is not None and hasattr(tool, "set_memory"):
                         tool.set_memory(hermes_agent_memory)
+
+                _run_sim_tool = next(
+                    (t for t in tools if getattr(t, "name", "") == "run_simulation"),
+                    None,
+                )
+                _judge_tool = next(
+                    (t for t in tools if getattr(t, "name", "") == "judge_requirements"),
+                    None,
+                )
+                if _run_sim_tool and _judge_tool and hasattr(
+                    _judge_tool, "set_run_simulation_tool"
+                ):
+                    _judge_tool.set_run_simulation_tool(_run_sim_tool)
+
+                # ── 1b. Wire sub-agent into DelegateSubAgentTool ──────────
+                # Create a separate HermesIntegration instance for sub-tasks.
+                # include_delegate=False prevents infinite recursion.
+                if include_delegate:
+                    _delegate_tool = next(
+                        (t for t in tools if getattr(t, "name", "") == "call_specialist"),
+                        None,
+                    )
+                    if _delegate_tool is not None:
+                        try:
+                            sub_hermes = HermesIntegration(
+                                api_key=self.api_key,
+                                provider=self.provider,
+                                model=self.model,
+                            )
+                            await sub_hermes.initialize_with_tools(
+                                rag_kb=rag_kb,
+                                parameter_experience=parameter_experience,
+                                simulator=simulator,
+                                optimizer=optimizer,
+                                orchestrator=orchestrator,
+                                reflection_agent=reflection_agent,
+                                user_prompt=user_prompt,
+                                ablation=ablation,
+                                hermes_agent_memory=hermes_agent_memory,
+                                include_delegate=False,  # no nested delegation
+                            )
+                            _delegate_tool.set_sub_agent(sub_hermes)
+                            logger.info("[DelegateSubAgent] Hermes fallback sub-agent wired.")
+
+                            # ── Build specialized sub-agents ──────────────
+                            # Each has only its domain tools; no call_specialist
+                            # to prevent recursion.  They share the same LLM
+                            # config as the parent but have unique toolsets.
+                            try:
+                                from multi_agent.integration.sub_agent import (
+                                    build_specialized_agents,
+                                )
+                                # Collect all non-delegate tools (already dep-injected above)
+                                _spec_agents = build_specialized_agents(
+                                    sub_hermes=sub_hermes,
+                                )
+                                _delegate_tool.register_specialized_agents(_spec_agents)
+                                logger.info(
+                                    "[DelegateSubAgent] %d specialized agents ready: %s",
+                                    len(_spec_agents), list(_spec_agents.keys()),
+                                )
+                            except Exception as _se:
+                                logger.warning(
+                                    "[DelegateSubAgent] Specialized agent build failed: %s", _se
+                                )
+                        except Exception as _de:
+                            logger.warning(f"[DelegateSubAgent] Sub-agent init failed: {_de}")
 
                 # ── 2. Register every tool with Hermes' tool registry ────
                 # CRITICAL: this MUST happen BEFORE AIAgent() is instantiated.
@@ -565,9 +711,11 @@ try:
                 # default 26 tools (browser_*, patch, process, …) so the
                 # LLM only sees our domain tools.  Agent-level tools that
                 # are dispatched in ``_invoke_tool`` BEFORE
-                # ``handle_function_call`` (todo, clarify, delegate_task,
+                # ``handle_function_call`` (todo, clarify, the built-in delegate_task,
                 # session_search, memory) are still available because
                 # they bypass the registry filter entirely.
+                # NOTE: our orchestration tool is named 'call_specialist'
+                # (not 'delegate_task') to avoid colliding with that built-in.
                 cbs = self._make_thinking_callbacks(verbose=True)
                 self.agent = AIAgent(
                     base_url=self.base_url,

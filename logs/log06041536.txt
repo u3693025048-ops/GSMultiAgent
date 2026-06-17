@@ -1,0 +1,193 @@
+================================================================================
+GSMultiAgent Run Log
+Started     : 2026-06-04 15:36:25
+Command     : cli_agent.py --prompt test
+Working dir : E:\PythonProject\GSMultiAgent13
+Log file    : E:\PythonProject\GSMultiAgent13\logs\log06041536.txt
+================================================================================
+
+2026-06-04 15:36:25 - multi_agent.logging.run_logger - INFO - Run log file: E:\PythonProject\GSMultiAgent13\logs\log06041536.txt
+[RunLog] 运行日志: E:\PythonProject\GSMultiAgent13\logs\log06041536.txt
+================================================================================
+Multi-Agent Guidance System - CLI Workflow
+================================================================================
+Start Time: 2026-06-04 15:36:25
+Task: test
+================================================================================
+
+[Step 1] Initializing components...
+  [Ablation Study] All components enabled (full system).
+2026-06-04 15:36:34 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+2026-06-04 15:36:34 - multi_agent.memory.rag_knowledge_base - INFO - Initialized RAG with custom/text-embedding-v3
+  Indexing knowledge_base into RAG (source_tag=knowledge_base)...
+2026-06-04 15:36:35 - httpx - INFO - HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings "HTTP/1.1 200 OK"
+E:\PythonProject\GSMultiAgent13\.venv\Lib\site-packages\chromadb\api\types.py:2839: UserWarning: Could not reconstruct embedding function openai: The OPENAI_API_KEY environment variable is not set.. Setting to None.
+  result.float_list = cls._deserialize_float_list_value_type(
+2026-06-04 15:36:36 - multi_agent.memory.rag_knowledge_base - INFO - Indexed 9/9 documents
+2026-06-04 15:36:36 - multi_agent.memory.rag_knowledge_base - INFO - index_directory: indexed 9 docs from './knowledge_base'
+2026-06-04 15:36:36 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_135731.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:36 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_142254.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+2026-06-04 15:36:36 - multi_agent.memory.rag_knowledge_base - WARNING - index_directory: 'guidance_output\reports\report_20260524_144411.json' → tagged 'pe_result' (path=True, name=False); excluded from KB.
+  Indexed 3 report file(s) from ./guidance_output/reports (source_tag=reports)
+  Indexed 4 report file(s) from ./guidance_output (source_tag=reports)
+  [RAG Purge] Removed 7 stale PE/intermediate doc(s) from ChromaDB.
+  [RAG Tag Audit] total=9 | knowledge_base:9
+  [RAG Tag Audit] ✓ All indexed documents are KB-tagged.
+
+[Pre-Step] Parsing mission conditions from prompt…
+  [DEBUG] args.prompt = 'test'
+  [DEBUG] parse_mission_conditions → {'T': [0, 1, 2, 3]}
+  Category T (目标机动 (Target Maneuver)): ['T1:匀速直飞', 'T2:低频小幅度机动', 'T3:中频中等幅度机动', 'T4:高频大幅度机动']
+  Initializing Hermes persistent memory...
+
+[Step 1b] Initializing Layer 3 components (RL optimizer, Judgment, Workflow)...
+  Layer 3 ready: rl=enabled judgment=enabled reflection=enabled
+
+========================================
+Iteration 1/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+  Hermes not available. Skipping task planning.
+  [DEBUG] mission_conditions before build = {'T': [0, 1, 2, 3]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=0;
+
+[Layer 3] Optimization Workflow | script=guidance_T4_PN_SL_1780393327.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → E:\PythonProject\GSMultiAgent13\guidance_output\tasks\42f8c723a2e2464587b8f7c6d7911b9c
+  [DEBUG Layer3] mission_conditions = {'T': [0, 1, 2, 3]}
+  [Layer 3] Strategy selected: PPO
+  [Layer 3] Best params carried to next iteration: ['w1', 'zeta1', 'tao1', 'w2', 'zeta2', 'tao2', 'w3', 'zeta3', 'N_pn'] (9 values)
+
+  [Layer 3 Result] status=needs_iteration
+  hit=91.0%  SEP=6.30m  PeakNy=8.35g  PM=57.6°  BW=45.8r/s
+  Feeding back to Layer 2: next_action=modify_law
+  Suggestion: 当前命中率91.02%，脱靶量6.30m，仍有较大提升空间；俯仰PM=57.6°、GM=8.0dB合格，但俯仰带宽45.75Hz过高，可能放大噪声。制导律源码硬编码导引比N=4，完全忽略可调参数N_pn，且无目标加速度补偿，属于标准PN结构，难以应对机动目标。建议本轮修改制导律，引入可调导引比和目标加速度补偿，并后续调参降低带宽。
+
+【设计路径分析】当前gf()为固定N=4的标准PN，未使用传入的
+
+========================================
+Iteration 2/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+  Hermes not available. Skipping task planning.
+  [DEBUG] mission_conditions before build = {'T': [0, 1, 2, 3]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=0;
+
+[Layer 3] Optimization Workflow | script=guidance_T4_PN_SL_1780393327.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → E:\PythonProject\GSMultiAgent13\guidance_output\tasks\a4391027f375477fbc1665ae3d6d43fe
+  [DEBUG Layer3] mission_conditions = {'T': [0, 1, 2, 3]}
+  [Layer 3] Strategy selected: PPO
+  [Layer 3] Best params carried to next iteration: ['w1', 'zeta1', 'tao1', 'w2', 'zeta2', 'tao2', 'w3', 'zeta3', 'N_pn'] (9 values)
+
+  [Layer 3 Result] status=needs_iteration
+  hit=91.0%  SEP=6.30m  PeakNy=8.35g  PM=57.6°  BW=45.8r/s
+  Feeding back to Layer 2: next_action=modify_law
+  Suggestion: 逐项分析：(1)命中率91.0%，存在约9%脱靶，未达到一般的高命中率要求（如>95%）；(2)脱靶量SEP=6.30m，偏大，末制导精度不足；(3)俯仰PM=57.6°、GM=8.0dB合格，但带宽=45.75Hz显著偏高，可能引入过量噪声；(4)PeakNy=8.35g在限幅范围内。核心问题是制导律采用固定N=4的标准PN，未利用可调参数N_pn且无目标加速度补偿，导致对机动目标拦截能力差，且
+
+========================================
+Iteration 3/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+  Hermes not available. Skipping task planning.
+  [DEBUG] mission_conditions before build = {'T': [0, 1, 2, 3]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=0;
+  [Pre-RL] PE check — optimizer=ok auto_params=9 keys  script=ok
+  [Pre-RL] Re-simulating PE params under current conditions (nmc=10)…
+  [Pre-RL] Fresh sim result: hit=91.0% SEP=6.295m PM=57.6° BW=45.8
+  [Pre-RL] Fresh sim shows PE params do not satisfy requirements. Proceeding to RL. Hint: 命中率91.0%，未达到>95%要求；脱靶量SEP=6.30m偏大；俯仰PM=57.6°、GM=8.0dB合格，但带宽45.75Hz显著偏高，可能引入过量噪声并影响稳定性。核心问题：制导律结构为固定导引比标准PN，缺乏目标加速度补偿，导致对
+
+[Layer 3] Optimization Workflow | script=guidance_T4_PN_SL_1780393327.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → E:\PythonProject\GSMultiAgent13\guidance_output\tasks\fca6306e5e4147d08c860fa2d971d721
+  [DEBUG Layer3] mission_conditions = {'T': [0, 1, 2, 3]}
+  [Layer 3] Strategy selected: PPO
+  [Layer 3] Best params carried to next iteration: ['w1', 'zeta1', 'tao1', 'w2', 'zeta2', 'tao2', 'w3', 'zeta3', 'N_pn'] (9 values)
+  [Reflection] RL hyperparameter suggestions for next iteration: {'hit_rate_weight': 2.0, 'sep_low_bonus': 2.0, 'bw_penalty': 2.0, 'lr_actor': 0.0003, 'lr_critic': 0.001}
+
+  [Layer 3 Result] status=needs_iteration
+  hit=91.0%  SEP=6.30m  PeakNy=8.35g  PM=57.6°  BW=45.8r/s
+  Feeding back to Layer 2: next_action=modify_law
+  Suggestion: 1. 命中率91.0%，未达到通常要求（>95%），存在明显脱靶；
+2. 脱靶量SEP=6.30m偏大，末制导精度不足；
+3. 俯仰PM=57.6°、GM=8.0dB合格，但带宽=45.75Hz显著偏高，可能引入噪声；
+4. 峰值过载8.35g在限幅范围内。
+核心问题：制导律gf()为固定N=4的标准PN，忽略可调参数N_pn且无目标加速度补偿，对机动目标拦截能力差，导致脱靶量偏大且命中率无法提升
+
+========================================
+Iteration 4/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+  Hermes not available. Skipping task planning.
+  [DEBUG] mission_conditions before build = {'T': [0, 1, 2, 3]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=0;
+  [Pre-RL] PE check — optimizer=ok auto_params=9 keys  script=ok
+  [Pre-RL] Re-simulating PE params under current conditions (nmc=10)…
+  [Pre-RL] Fresh sim result: hit=91.0% SEP=6.295m PM=57.6° BW=45.8
+  [Pre-RL] Fresh sim shows PE params do not satisfy requirements. Proceeding to RL. Hint: 命中率91.0%（未达通常的>95%要求），脱靶量SEP=6.30m偏大，俯仰通道带宽45.75Hz显著偏高（易引入噪声）。当前制导律为固定N=4的标准PN，未利用可调参数N_pn，且无目标加速度补偿，难以应对机动目标，需修改制导律结构。
+
+[Layer 3] Optimization Workflow | script=guidance_T4_PN_SL_1780393327.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → E:\PythonProject\GSMultiAgent13\guidance_output\tasks\4748d361415541efb01cd718bb706f26
+  [ParameterFirewall] Applied RL hyperparams: {'hit_rate_weight': 2.0, 'sep_low_bonus': 2.0, 'bw_penalty': 2.0, 'lr_actor': 0.0003, 'lr_critic': 0.001}
+  [DEBUG Layer3] mission_conditions = {'T': [0, 1, 2, 3]}
+  [Layer 3] Strategy selected: PPO
+  [Layer 3] Best params carried to next iteration: ['w1', 'zeta1', 'tao1', 'w2', 'zeta2', 'tao2', 'w3', 'zeta3', 'N_pn'] (9 values)
+  [Reflection] RL hyperparameter suggestions for next iteration: {'max_episodes': 120, 'hit_rate_weight': 6.0, 'sep_low_bonus': 4.0, 'sep_mid_weight': 3.0, 'bw_penalty': 4.0, 'peak_ny_penalty': 5.0}
+
+  [Layer 3 Result] status=needs_iteration
+  hit=91.0%  SEP=6.30m  PeakNy=8.35g  PM=57.6°  BW=45.8r/s
+  Feeding back to Layer 2: next_action=modify_law
+  Suggestion: 1. 命中率91.0%，未达到通常要求≥95%，尚未达标。
+2. 脱靶量SEP=6.30m偏大，末制导精度不足，需降低至≤3m。
+3. 俯仰PM=57.6°、GM=8.0dB满足典型稳定性要求，但带宽45.75 rad/s（约7.3 Hz）偏高，可能引入噪声，需降低。
+4. 峰值过载8.35g在20g限幅内，可接受。
+连续三轮TUNE_PARAMS指标完全停滞，根本原因是制导律gf()固定导引比N
+
+========================================
+Iteration 5/5
+========================================
+
+[Step 2] Task Planning & Parameter Extraction...
+  Hermes not available. Skipping task planning.
+  [DEBUG] mission_conditions before build = {'T': [0, 1, 2, 3]}
+  Resolved mission conditions: RUN_CASE='T';SUB_IDX=0;
+  [Pre-RL] PE check — optimizer=ok auto_params=9 keys  script=ok
+  [Pre-RL] Re-simulating PE params under current conditions (nmc=10)…
+  [Pre-RL] Fresh sim result: hit=91.0% SEP=6.295m PM=57.6° BW=45.8
+  [Pre-RL] Fresh sim shows PE params do not satisfy requirements. Proceeding to RL. Hint: 1. 命中率91.0%，低于通常要求的≥95%，未达标。2. 脱靶量SEP=6.30m，超出≤3m的要求，未达标。3. 俯仰稳定裕度PM=57.6°、GM=8.0dB，满足≥45°和≥6dB的典型要求，达标。4. 带宽BW=45.75 ra
+
+[Layer 3] Optimization Workflow | script=guidance_T4_PN_SL_1780393327.m
+  directly_satisfied=False
+  [TaskWorkspace] isolated script → E:\PythonProject\GSMultiAgent13\guidance_output\tasks\ea266b45b56d49eb90193722827dc1cc
+  [ParameterFirewall] Applied RL hyperparams: {'max_episodes': 120, 'hit_rate_weight': 6.0, 'sep_low_bonus': 4.0, 'sep_mid_weight': 3.0, 'bw_penalty': 4.0, 'peak_ny_penalty': 5.0}
+  [DEBUG Layer3] mission_conditions = {'T': [0, 1, 2, 3]}
+  [Layer 3] Strategy selected: PPO
+  [Layer 3] Best params carried to next iteration: ['w1', 'zeta1', 'tao1', 'w2', 'zeta2', 'tao2', 'w3', 'zeta3', 'N_pn'] (9 values)
+  [Reflection] RL hyperparameter suggestions for next iteration: {'lr_actor': 0.00015, 'lr_critic': 0.0003, 'max_episodes': 120, 'hit_rate_weight': 6.0, 'sep_low_bonus': 3.0, 'sep_mid_weight': 2.0, 'bw_penalty': 5.0}
+
+  [Layer 3 Result] status=needs_iteration
+  hit=91.0%  SEP=6.30m  PeakNy=8.35g  PM=57.6°  BW=45.8r/s
+  Reached max iterations.
+
+[Step 4] ParameterExperience Writeback & Model File Saving...
+  RL best params persisted (RL completed): miss=6.2952 m, hit=91.0%, PM=57.6 deg.
+  Experience written (memory_id=a1f618b2b8128da7, layer=SHORT_TERM).
+  Auto-promoted 18 short-term entries to LONG_TERM.
+  Successful MATLAB model saved to: parameter_experience_base\models\short_term\a1f618b2b8128da7_guidance_T4_PN_SL_1780393327.m
+  MATLAB model already in model_output: guidance_output\scripts\guidance_T4_PN_SL_1780393327.m
+
+[Step 5] Generating Report...
+  Report saved to: guidance_output\report_20260604_174034.md
+  Latest link  →  guidance_output\report_latest.md
+
+Workflow Complete!
+
+================================================================================
+Finished    : 2026-06-04 17:40:35
+Exit code   : 0
+================================================================================

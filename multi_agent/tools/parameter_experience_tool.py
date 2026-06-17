@@ -12,6 +12,36 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
+def _coerce_pe_search_query(
+    query: Any = None,
+    *,
+    sub_query: Any = None,
+    keywords: Any = None,
+) -> Dict[str, Any]:
+    """Normalize LLM/Hermes variants (sub_query, keywords, str query) to a dict."""
+    raw = query
+    if raw is None and sub_query is not None:
+        raw = sub_query
+    if raw is None and keywords is not None:
+        raw = keywords
+    if raw is None:
+        return {}
+    if isinstance(raw, str):
+        text = raw.strip()
+        if not text:
+            return {}
+        return {"task": text, "description": text, "keywords": text}
+    if isinstance(raw, dict):
+        return dict(raw)
+    if isinstance(raw, (list, tuple)):
+        text = " ".join(str(x).strip() for x in raw if str(x).strip())
+        if not text:
+            return {}
+        return {"task": text, "description": text, "keywords": text}
+    text = str(raw).strip()
+    return {"task": text, "description": text} if text else {}
+
+
 class ParameterExperienceToolMixin:
     """Mixin class to add ParameterExperience capabilities to tools"""
 
@@ -37,7 +67,20 @@ class ParameterExperienceSearchTool(ParameterExperienceToolMixin):
     input_schema = {
         "type": "object",
         "properties": {
-            "query": {"type": "object", "description": "Task context to search for"},
+            "query": {
+                "description": (
+                    "Task context to search for (object preferred). "
+                    "May also be a plain string, e.g. 'T4 N_pn w1'."
+                ),
+            },
+            "sub_query": {
+                "type": "string",
+                "description": "Alias for query when passing a short text search string.",
+            },
+            "keywords": {
+                "type": "string",
+                "description": "Alias for query (keyword-style search string).",
+            },
             "top_k": {
                 "type": "integer",
                 "description": "Number of similar experiences to retrieve",
@@ -50,15 +93,32 @@ class ParameterExperienceSearchTool(ParameterExperienceToolMixin):
                 "default": "all",
             },
         },
-        "required": ["query"],
     }
 
     async def execute(
-        self, query: Dict[str, Any], top_k: int = 5, memory_type: str = "all"
+        self,
+        query: Any = None,
+        top_k: int = 5,
+        memory_type: str = "all",
+        sub_query: Any = None,
+        keywords: Any = None,
+        mode: Any = None,
+        **_: Any,
     ) -> Dict[str, Any]:
         """Execute ParameterExperience search"""
         if not self.parameter_experience:
             return {"status": "error", "message": "ParameterExperience not initialized"}
+
+        query_dict = _coerce_pe_search_query(
+            query, sub_query=sub_query, keywords=keywords,
+        )
+        if mode and isinstance(mode, str) and mode.strip():
+            query_dict.setdefault("search_mode", mode.strip())
+        if not query_dict:
+            return {
+                "status": "error",
+                "message": "query (or sub_query / keywords) is required",
+            }
 
         try:
             from ..memory.parameter_experience import MemoryType
@@ -70,12 +130,12 @@ class ParameterExperienceSearchTool(ParameterExperienceToolMixin):
                 mem_type = MemoryType.LONG_TERM
 
             results = await self.parameter_experience.retrieve_similar(
-                query=query, top_k=top_k, memory_type=mem_type
+                query=query_dict, top_k=top_k, memory_type=mem_type
             )
 
             return {
                 "status": "success",
-                "query": query,
+                "query": query_dict,
                 "results_count": len(results),
                 "experiences": results,
             }
@@ -157,10 +217,23 @@ class ParameterExperienceBestTool(ParameterExperienceToolMixin):
     input_schema = {
         "type": "object",
         "properties": {
-            "task_context": {"type": "object", "description": "Task context to match against"},
+            "task_context": {
+                "description": (
+                    "Task context to match against experiences (object preferred). "
+                    "Can include: mission_type, guidance_law, autopilot_params, etc."
+                ),
+            },
+            "sub_query": {
+                "type": "string",
+                "description": "Short text alias — converted to task_context.task / keywords.",
+            },
+            "query": {
+                "type": "string",
+                "description": "Alias for sub_query (keyword search string).",
+            },
             "top_k": {
                 "type": "integer",
-                "description": "Number of best experiences to retrieve",
+                "description": "Number of best experiences to retrieve (default: 5)",
                 "default": 5,
             },
             "param_ranges": {
@@ -173,7 +246,7 @@ class ParameterExperienceBestTool(ParameterExperienceToolMixin):
                 ),
             },
         },
-        "required": ["task_context"],
+        "required": [],
     }
 
     @staticmethod
@@ -195,13 +268,27 @@ class ParameterExperienceBestTool(ParameterExperienceToolMixin):
 
     async def execute(
         self,
-        task_context: Dict[str, Any],
+        task_context: Optional[Any] = None,
         top_k: int = 5,
         param_ranges: Optional[Dict[str, Any]] = None,
+        sub_query: Any = None,
+        query: Any = None,
+        **_: Any,
     ) -> Dict[str, Any]:
         """Execute ParameterExperience best retrieval with optional range filtering."""
         if not self.parameter_experience:
             return {"status": "error", "message": "ParameterExperience not initialized"}
+
+        if task_context is None:
+            task_context = {}
+        elif isinstance(task_context, str):
+            task_context = _coerce_pe_search_query(task_context)
+        elif not isinstance(task_context, dict):
+            task_context = _coerce_pe_search_query(task_context)
+
+        if sub_query or query:
+            _extra = _coerce_pe_search_query(sub_query=sub_query or query)
+            task_context = {**_extra, **task_context}
 
         try:
             fetch_k = top_k * 4 if param_ranges else top_k
