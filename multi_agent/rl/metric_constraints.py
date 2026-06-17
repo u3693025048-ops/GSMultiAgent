@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Set, Tuple
 
 from multi_agent.integration.judgment_agent import _rule_based_check
 from multi_agent.rl.metric_utils import (
@@ -10,6 +10,15 @@ from multi_agent.rl.metric_utils import (
     get_peak_ny_limit,
     get_peak_ny_max,
     get_sep,
+)
+
+# Canonical metric keys used by the per-metric satisfaction map.
+METRIC_KEYS: Tuple[str, ...] = (
+    "hit_rate",
+    "SEP",
+    "peak_ny",
+    "pitch_PM",
+    "pitch_BW",
 )
 
 
@@ -134,3 +143,92 @@ def resolve_requirements(
     if judgment_agent is not None and getattr(judgment_agent, "_reqs", None):
         return normalize_peak_ny_requirements(dict(judgment_agent._reqs))
     return normalize_peak_ny_requirements({})
+
+
+def per_metric_satisfied(
+    metrics: Dict[str, float],
+    reqs: Dict[str, Any],
+) -> Dict[str, bool]:
+    """Per-metric pass/fail for every metric that has a stated requirement.
+
+    Returns a dict keyed by canonical metric name (subset of ``METRIC_KEYS``)
+    mapping to whether that single metric meets its requirement. Metrics with
+    no stated requirement are omitted, so callers can treat "missing" as
+    "unconstrained". Bound semantics mirror ``judgment_agent._rule_based_check``.
+    """
+    if not reqs:
+        return {}
+
+    out: Dict[str, bool] = {}
+
+    if "hit_rate_min" in reqs:
+        hr = metrics.get("hit_rate", 0.0)
+        out["hit_rate"] = hr >= reqs["hit_rate_min"]
+
+    if "sep_max" in reqs:
+        out["SEP"] = get_sep(metrics, 999.0) <= reqs["sep_max"]
+
+    if "peak_ny_max" in reqs or "peak_ny_mean_max" in reqs:
+        from multi_agent.rl.metric_utils import (
+            check_peak_ny,
+            normalize_peak_ny_requirements,
+        )
+
+        ok_peak, _ = check_peak_ny(metrics, normalize_peak_ny_requirements(reqs))
+        out["peak_ny"] = ok_peak
+
+    if "pm_min" in reqs:
+        pm = metrics.get("pitch_PM", 0.0)
+        if "pm_max" in reqs:
+            out["pitch_PM"] = reqs["pm_min"] <= pm <= reqs["pm_max"]
+        else:
+            out["pitch_PM"] = pm >= reqs["pm_min"]
+
+    if "bw_min" in reqs and "bw_max" in reqs:
+        bw = metrics.get("pitch_BW", 0.0)
+        out["pitch_BW"] = reqs["bw_min"] <= bw <= reqs["bw_max"]
+
+    return out
+
+
+def satisfied_metric_keys(
+    metrics: Dict[str, float],
+    reqs: Dict[str, Any],
+) -> Set[str]:
+    """Set of metric keys that individually meet their requirement."""
+    return {k for k, ok in per_metric_satisfied(metrics, reqs).items() if ok}
+
+
+def regressed_satisfied_metrics(
+    baseline_metrics: Dict[str, float],
+    candidate_metrics: Dict[str, float],
+    reqs: Dict[str, Any],
+    *,
+    protected: Optional[Set[str]] = None,
+) -> Set[str]:
+    """Metrics that were satisfied (in baseline / ``protected``) but fail in candidate.
+
+    ``protected`` overrides the baseline-derived satisfied set when given, which
+    lets callers carry a monotonically-growing set of metrics that must stay
+    satisfied across iterations.
+    """
+    base_sat = protected if protected is not None else satisfied_metric_keys(
+        baseline_metrics, reqs
+    )
+    if not base_sat:
+        return set()
+    cand_sat = satisfied_metric_keys(candidate_metrics, reqs)
+    return set(base_sat) - cand_sat
+
+
+def no_satisfied_regression(
+    baseline_metrics: Dict[str, float],
+    candidate_metrics: Dict[str, float],
+    reqs: Dict[str, Any],
+    *,
+    protected: Optional[Set[str]] = None,
+) -> bool:
+    """True when the candidate keeps every already-satisfied metric satisfied."""
+    return not regressed_satisfied_metrics(
+        baseline_metrics, candidate_metrics, reqs, protected=protected
+    )

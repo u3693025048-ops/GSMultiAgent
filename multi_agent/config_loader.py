@@ -381,6 +381,10 @@ class RLConstraintLocalSearchConfig:
     borderline_hit_min_pct: float = 92.0
     borderline_sep_max_m: float = 7.0
     prefer_ppo_best_peak: bool = True
+    # Reject candidates that knock an already-met metric back below its
+    # requirement, so satisfied metrics stay satisfied while the search keeps
+    # pushing the unmet ones.
+    protect_satisfied: bool = True
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RLConstraintLocalSearchConfig":
@@ -393,6 +397,7 @@ class RLConstraintLocalSearchConfig:
             borderline_hit_min_pct=float(data.get("borderline_hit_min_pct", 92.0)),
             borderline_sep_max_m=float(data.get("borderline_sep_max_m", 7.0)),
             prefer_ppo_best_peak=bool(data.get("prefer_ppo_best_peak", True)),
+            protect_satisfied=bool(data.get("protect_satisfied", True)),
         )
 
 

@@ -636,6 +636,7 @@ class OptimizationWorkflow:
                 borderline_hit_min_pct=getattr(cfg, "borderline_hit_min_pct", 92.0),
                 borderline_sep_max_m=getattr(cfg, "borderline_sep_max_m", 7.0),
                 prefer_reference_peak=getattr(cfg, "prefer_ppo_best_peak", True),
+                protect_satisfied=getattr(cfg, "protect_satisfied", True),
             )
             logger.info(
                 f"[OptimWorkflow] CLS done | selection={out.get('selection_criteria')} | "
