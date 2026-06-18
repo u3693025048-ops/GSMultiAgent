@@ -270,9 +270,28 @@ class ConstraintLocalSearch:
                             f"PeakN_max={get_peak_ny_max(metrics):.2f}g SEP={sep:.2f}m"
                         )
 
-                # Accept as working best if improves fitness or mean peak vs centre
+                # Accept as working best. When protect mode is active and at least
+                # one metric is already satisfied (e.g. only PeakNy_avg unmet), the
+                # goal is to drive the *unmet* metric down while the no-regression
+                # gate above keeps the satisfied ones satisfied. Tracking the
+                # blended fitness here would instead drift toward polishing
+                # already-satisfied SEP/PM (higher fitness, higher peak), so the
+                # search never reduces PeakNy_avg. Switch to greedy descent on the
+                # constrained rank (PeakNy mean overshoot → SEP → fitness) so the
+                # working best — and thus the perturbation centre — tracks the
+                # lowest-peak feasible candidate. Empty protected set (no parsed
+                # requirements) falls through to the original fitness/mean-peak
+                # behaviour, preserving prior semantics.
                 pny = get_peak_ny(metrics)
-                if fitness > best_fitness or (
+                if protect_satisfied and protected_satisfied:
+                    if is_better_constrained(
+                        metrics, fitness, best_metrics, best_fitness
+                    ):
+                        best_params = copy.deepcopy(candidate)
+                        best_metrics = copy.deepcopy(metrics)
+                        best_fitness = fitness
+                        _improved = True
+                elif fitness > best_fitness or (
                     pny > 0
                     and get_peak_ny(best_metrics) > 0
                     and pny < get_peak_ny(best_metrics)
