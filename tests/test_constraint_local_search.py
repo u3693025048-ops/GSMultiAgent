@@ -202,6 +202,77 @@ class TestConstraintLocalSearch(unittest.IsolatedAsyncioTestCase):
         )
         self.assertLess(result["best_metrics"].get("pitch_PM", 99.0), 45.0)
 
+    def _peak_descent_backend(self):
+        """Center meets hit/SEP/PM/BW with PeakNy_avg unmet (23.3g). Candidates:
+        a high-fitness/high-peak point (lower SEP), then a low-peak point (higher
+        SEP), then high-fitness/high-peak again — mirroring the real run where the
+        blended fitness pulls the working best toward polishing already-satisfied
+        SEP at the cost of PeakNy. Fitness rises as SEP falls.
+        """
+        backend = MatlabRLOptimizer()
+        backend._compute_reward = MagicMock(return_value=0.5)
+        backend._compute_pe_fitness = (
+            lambda m: 1.0 / (1.0 + float(m.get("SEP", m.get("miss_distance", 100.0))))
+        )
+
+        from multi_agent.rl.matlab_rl_optimizer import ALL_TUNABLE_PARAM_SPECS
+
+        center = {k: float(v["nominal"]) for k, v in ALL_TUNABLE_PARAM_SPECS.items()}
+        calls = {"n": 0}
+        # (peak_ny, SEP) by call: center, then three candidates.
+        seq = [(23.3, 5.0), (24.0, 4.0), (21.0, 6.5), (24.5, 4.0)]
+
+        async def fake_sim(params, mission, script, nmc):
+            calls["n"] += 1
+            pny, sep = seq[min(calls["n"] - 1, len(seq) - 1)]
+            return {
+                "hit_rate": 100.0, "SEP": sep, "miss_distance": sep,
+                "peak_ny": pny, "peak_ny_max": pny,
+                "pitch_PM": 55.0, "pitch_BW": 40.0,
+            }
+
+        backend._run_simulation_with_params = fake_sim
+        backend.extract_params_from_script = MagicMock()
+        # Full five-metric optimization prompt → borderline pick is skipped, so the
+        # final selection is the working best (the bug surfaces here, not via the
+        # independent borderline tracker).
+        task_prompt = (
+            "命中率 >= 92% SEP <= 7 m PeakNy <= 20 g "
+            "PM 在 45°~70° BW 在 20~85 rad/s"
+        )
+        return backend, center, task_prompt, calls
+
+    async def test_protect_satisfied_descends_unmet_peak(self):
+        """Only PeakNy_avg unmet: the working best must track the lowest-peak
+        feasible candidate (21.0g), not drift to the higher-fitness/higher-peak
+        one — i.e. PeakNy_avg is actually reduced below the center while the other
+        four metrics stay satisfied."""
+        backend, center, task_prompt, _ = self._peak_descent_backend()
+        cls = ConstraintLocalSearch(backend, max_iterations=3, step_scale=0.05, seed=7)
+        result = await cls.refine(
+            center, script_path="dummy.m", mission_conditions={"T": [4]},
+            nmc=5, task_prompt=task_prompt, protect_satisfied=True,
+        )
+        self.assertNotEqual(result["selection_criteria"], "borderline")
+        # PeakNy reduced below the center (23.3g) — the lowest feasible peak found.
+        self.assertLessEqual(result["best_metrics"].get("peak_ny", 99.0), 21.0)
+        # The already-satisfied metrics are still satisfied.
+        self.assertGreaterEqual(result["best_metrics"].get("pitch_PM", 0.0), 45.0)
+        self.assertLessEqual(result["best_metrics"].get("pitch_PM", 0.0), 70.0)
+        self.assertGreaterEqual(result["best_metrics"].get("pitch_BW", 0.0), 20.0)
+
+    async def test_fitness_drift_without_protect_descent(self):
+        """Reproduces the bug: with the no-regression gate off, the working best is
+        chosen by blended fitness and drifts to the high-fitness/high-peak point,
+        so PeakNy_avg is NOT reduced (ends at/above the center)."""
+        backend, center, task_prompt, _ = self._peak_descent_backend()
+        cls = ConstraintLocalSearch(backend, max_iterations=3, step_scale=0.05, seed=7)
+        result = await cls.refine(
+            center, script_path="dummy.m", mission_conditions={"T": [4]},
+            nmc=5, task_prompt=task_prompt, protect_satisfied=False,
+        )
+        self.assertGreaterEqual(result["best_metrics"].get("peak_ny", 0.0), 24.0)
+
 
 if __name__ == "__main__":
     unittest.main()
