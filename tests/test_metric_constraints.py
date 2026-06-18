@@ -7,9 +7,23 @@ from multi_agent.rl.metric_constraints import (
     constrained_rank_key,
     constraints_satisfied,
     is_better_constrained,
+    no_satisfied_regression,
+    per_metric_satisfied,
+    regressed_satisfied_metrics,
+    satisfied_metric_keys,
     should_adopt_cls_result,
 )
 from multi_agent.rl.metric_utils import get_peak_ny_max
+
+FULL_REQS = {
+    "hit_rate_min": 92.0,
+    "sep_max": 7.0,
+    "peak_ny_max": 20.0,
+    "pm_min": 45.0,
+    "pm_max": 70.0,
+    "bw_min": 20.0,
+    "bw_max": 85.0,
+}
 
 
 class TestMetricConstraints(unittest.TestCase):
@@ -110,6 +124,83 @@ class TestMetricConstraints(unittest.TestCase):
         }
         self.assertTrue(
             should_adopt_cls_result(prior, 0.5, cls, 0.6, reqs=reqs, task_prompt="PeakNy")
+        )
+
+
+class TestNoSatisfiedRegression(unittest.TestCase):
+    """Per-metric satisfaction and the no-regression gate (option 1)."""
+
+    def test_per_metric_satisfied_mixed(self):
+        metrics = {
+            "hit_rate": 100.0,   # OK
+            "SEP": 9.0,          # NG (>7)
+            "peak_ny": 18.0,     # OK
+            "pitch_PM": 40.0,    # NG (<45)
+            "pitch_BW": 40.0,    # OK
+        }
+        result = per_metric_satisfied(metrics, FULL_REQS)
+        self.assertEqual(
+            result,
+            {
+                "hit_rate": True,
+                "SEP": False,
+                "peak_ny": True,
+                "pitch_PM": False,
+                "pitch_BW": True,
+            },
+        )
+        self.assertEqual(
+            satisfied_metric_keys(metrics, FULL_REQS),
+            {"hit_rate", "peak_ny", "pitch_BW"},
+        )
+
+    def test_per_metric_only_stated_requirements(self):
+        # Only hit + SEP stated → other metrics are unconstrained / omitted.
+        reqs = {"hit_rate_min": 92.0, "sep_max": 7.0}
+        metrics = {"hit_rate": 95.0, "SEP": 8.0, "pitch_PM": 10.0}
+        self.assertEqual(
+            per_metric_satisfied(metrics, reqs), {"hit_rate": True, "SEP": False}
+        )
+
+    def test_no_requirements_is_unprotected(self):
+        # Empty reqs → nothing protected → never a regression (original behaviour).
+        self.assertEqual(satisfied_metric_keys({"hit_rate": 100.0}, {}), set())
+        self.assertTrue(no_satisfied_regression({"pitch_PM": 60.0}, {"pitch_PM": 0.0}, {}))
+
+    def test_regression_detected_when_met_metric_breaks(self):
+        baseline = {
+            "hit_rate": 100.0, "SEP": 5.0, "peak_ny": 25.0,
+            "pitch_PM": 60.0, "pitch_BW": 40.0,
+        }  # peak unmet, PM/BW/hit/SEP met
+        candidate = {
+            "hit_rate": 100.0, "SEP": 5.0, "peak_ny": 18.0,
+            "pitch_PM": 40.0, "pitch_BW": 40.0,
+        }  # fixes peak but breaks PM
+        self.assertEqual(
+            regressed_satisfied_metrics(baseline, candidate, FULL_REQS), {"pitch_PM"}
+        )
+        self.assertFalse(no_satisfied_regression(baseline, candidate, FULL_REQS))
+
+    def test_no_regression_when_unmet_metric_improves(self):
+        baseline = {
+            "hit_rate": 100.0, "SEP": 5.0, "peak_ny": 25.0,
+            "pitch_PM": 60.0, "pitch_BW": 40.0,
+        }
+        candidate = {  # fixes peak, keeps everything else satisfied
+            "hit_rate": 100.0, "SEP": 5.0, "peak_ny": 18.0,
+            "pitch_PM": 60.0, "pitch_BW": 40.0,
+        }
+        self.assertTrue(no_satisfied_regression(baseline, candidate, FULL_REQS))
+
+    def test_protected_set_overrides_baseline(self):
+        # Even if baseline no longer satisfies PM, an explicit protected set holds.
+        baseline = {"pitch_PM": 40.0}
+        candidate = {"pitch_PM": 40.0}
+        self.assertEqual(
+            regressed_satisfied_metrics(
+                baseline, candidate, FULL_REQS, protected={"pitch_PM"}
+            ),
+            {"pitch_PM"},
         )
 
 

@@ -23,7 +23,9 @@ from multi_agent.rl.metric_constraints import (
     is_better_borderline_peak,
     is_better_constrained,
     is_borderline_hit_sep_ok,
+    regressed_satisfied_metrics,
     resolve_requirements,
+    satisfied_metric_keys,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,6 +88,7 @@ class ConstraintLocalSearch:
         borderline_hit_min_pct: float = 92.0,
         borderline_sep_max_m: float = 7.0,
         prefer_reference_peak: bool = True,
+        protect_satisfied: bool = True,
     ) -> Dict[str, Any]:
         reqs = resolve_requirements(metric_requirements, task_prompt, judgment_agent)
         centre = copy.deepcopy(center_params)
@@ -154,6 +157,19 @@ class ConstraintLocalSearch:
                 extra={"phase": "center"},
             )
 
+        # Metrics already meeting their requirement at the working best must not
+        # regress: candidates that break any of these are rejected. The set grows
+        # monotonically as the best improves. Empty when no requirement is parsed,
+        # which reduces to the original (unprotected) behaviour.
+        protected_satisfied = (
+            satisfied_metric_keys(best_metrics, reqs) if protect_satisfied else set()
+        )
+        if protected_satisfied:
+            logger.info(
+                "[CLS] protect_satisfied on — already-met metrics held: "
+                f"{sorted(protected_satisfied)}"
+            )
+
         history: List[Dict[str, Any]] = []
         iterations_run = 0
 
@@ -210,6 +226,20 @@ class ConstraintLocalSearch:
                 if isinstance(sep, float) and (math.isnan(sep) or math.isinf(sep)):
                     continue
 
+                # No-regression gate: drop candidates that knock an already-met
+                # metric back below its requirement, so satisfied metrics stay
+                # satisfied while the search keeps pushing the unmet ones.
+                if protect_satisfied and protected_satisfied:
+                    _regressed = regressed_satisfied_metrics(
+                        best_metrics, metrics, reqs, protected=protected_satisfied
+                    )
+                    if _regressed:
+                        logger.debug(
+                            f"  [CLS {it}/{self.max_iterations}] rejected — would break "
+                            f"already-met {sorted(_regressed)}"
+                        )
+                        continue
+
                 if constrained and is_better_constrained(
                     metrics,
                     fitness,
@@ -252,6 +282,9 @@ class ConstraintLocalSearch:
                     best_metrics = copy.deepcopy(metrics)
                     best_fitness = fitness
                     _improved = True
+
+                if protect_satisfied:
+                    protected_satisfied |= satisfied_metric_keys(best_metrics, reqs)
 
                 _summary = metrics_summary_line(metrics)
                 if should_log_cls_step(it, self.max_iterations, improved=_improved):

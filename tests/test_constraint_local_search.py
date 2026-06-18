@@ -143,6 +143,65 @@ class TestConstraintLocalSearch(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(result["selection_criteria"], "borderline")
         self.assertGreater(result["best_metrics"].get("pitch_BW", 0), 85.0)
 
+    def _peak_only_unmet_backend(self):
+        """Center meets hit/SEP/PM/BW (peak unmet); every candidate fixes peak
+        but breaks PM. Returns (backend, center, reqs, calls)."""
+        backend = MatlabRLOptimizer()
+        backend._compute_reward = MagicMock(return_value=0.5)
+        backend._compute_pe_fitness = MagicMock(return_value=0.6)
+
+        from multi_agent.rl.matlab_rl_optimizer import ALL_TUNABLE_PARAM_SPECS
+
+        center = {k: float(v["nominal"]) for k, v in ALL_TUNABLE_PARAM_SPECS.items()}
+        calls = {"n": 0}
+
+        async def fake_sim(params, mission, script, nmc):
+            calls["n"] += 1
+            if calls["n"] == 1:  # center: peak too high, PM/BW/hit/SEP all OK
+                return {
+                    "hit_rate": 100.0, "SEP": 5.0, "miss_distance": 5.0,
+                    "peak_ny": 25.0, "peak_ny_max": 25.0,
+                    "pitch_PM": 60.0, "pitch_BW": 40.0,
+                }
+            # candidates: peak now OK but PM dropped below the 45 floor
+            return {
+                "hit_rate": 100.0, "SEP": 5.0, "miss_distance": 5.0,
+                "peak_ny": 18.0, "peak_ny_max": 18.0,
+                "pitch_PM": 40.0, "pitch_BW": 40.0,
+            }
+
+        backend._run_simulation_with_params = fake_sim
+        backend.extract_params_from_script = MagicMock()
+        reqs = {
+            "hit_rate_min": 92.0, "sep_max": 7.0, "peak_ny_max": 20.0,
+            "pm_min": 45.0, "pm_max": 70.0, "bw_min": 20.0, "bw_max": 85.0,
+        }
+        return backend, center, reqs, calls
+
+    async def test_protect_satisfied_rejects_metric_regression(self):
+        """A candidate that fixes the unmet metric but breaks an already-met one
+        is rejected, so the working best keeps the satisfied metric."""
+        backend, center, reqs, _ = self._peak_only_unmet_backend()
+        cls = ConstraintLocalSearch(backend, max_iterations=3, step_scale=0.05, seed=42)
+        result = await cls.refine(
+            center, script_path="dummy.m", mission_conditions={"T": [4]},
+            nmc=5, metric_requirements=reqs, protect_satisfied=True,
+        )
+        # All PM-breaking candidates rejected → no fully-constrained pick, PM held.
+        self.assertNotEqual(result["selection_criteria"], "constrained")
+        self.assertGreaterEqual(result["best_metrics"].get("pitch_PM", 0.0), 45.0)
+
+    async def test_protect_satisfied_off_allows_regression(self):
+        """With the gate disabled, the peak-improving candidate is adopted even
+        though it breaks PM — reproduces the original 'satisfied → unsatisfied'."""
+        backend, center, reqs, _ = self._peak_only_unmet_backend()
+        cls = ConstraintLocalSearch(backend, max_iterations=3, step_scale=0.05, seed=42)
+        result = await cls.refine(
+            center, script_path="dummy.m", mission_conditions={"T": [4]},
+            nmc=5, metric_requirements=reqs, protect_satisfied=False,
+        )
+        self.assertLess(result["best_metrics"].get("pitch_PM", 99.0), 45.0)
+
 
 if __name__ == "__main__":
     unittest.main()

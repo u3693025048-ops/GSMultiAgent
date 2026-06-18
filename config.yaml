@@ -315,6 +315,9 @@ matlab_rl_optimizer:
     borderline_hit_min_pct: 92.0
     borderline_sep_max_m: 7.0
     prefer_ppo_best_peak: true
+    # 已达标的指标不回退：若某候选会让已满足的指标重新跌回不满足，则丢弃该候选，
+    # 只保留"在保住已达标指标前提下改善未达标指标"的解。设为 false 可恢复旧行为。
+    protect_satisfied: true
 
   checkpoint:
     enabled: true
